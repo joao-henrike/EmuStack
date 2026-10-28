@@ -47,7 +47,27 @@ jobs:
           assert len(ids) == 20 and len(set(ids)) == 20, "environment IDs invalid"
           assert set(ids) == set(cids), "catalog/environment IDs differ"
           print(f"catalog/environments: {len(ids)} matching IDs")
+          compose = yaml.safe_load((root / "compose.yaml").read_text())
+          dashboard = compose["services"]["dashboard"]
+          trusted = set(dashboard["environment"]["EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS"].split(","))
+          expected_gateways = set()
+          assert len(ids) == 20
+          for index, env_id in enumerate(ids, 1):
+              network_name = f"env-{env_id}-net"
+              service = compose["services"][f"env-{env_id}"]
+              network = compose["networks"][network_name]
+              assert service["networks"][network_name]["ipv4_address"] == f"172.28.{index}.2", env_id
+              assert dashboard["networks"][network_name]["ipv4_address"] == f"172.28.{index}.3", env_id
+              ipam = network["ipam"]["config"][0]
+              assert ipam["subnet"] == f"172.28.{index}.0/24", env_id
+              assert ipam["gateway"] == f"172.28.{index}.1", env_id
+              assert network.get("internal") is True, env_id
+              expected_gateways.add(f"172.28.{index}.1")
+          assert trusted == expected_gateways, "control client allowlist must match isolated network gateways"
+          print("dashboard/agent source-address boundary: 20 isolated static networks validated")
           PY
+      - name: Validate Docker Compose merged configuration
+        run: docker compose -f compose.yaml config --quiet
       - name: Check browser asset contracts
         run: |
           test -s web/index.html
