@@ -1,0 +1,66 @@
+name: Assemble exact EmuStack web assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".staging/READY"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: emustack-assemble-web-assets
+  cancel-in-progress: false
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - name: Reassemble and verify source files from byte-safe chunks
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          [[ "$(cat .staging/READY)" == "assemble-web-v1" ]]
+          mkdir -p web
+          assemble() {
+            local name="$1" expected="$2"
+            local target="web/$name"
+            local parts=".staging/frontend/$name"
+            [[ -d "$parts" ]]
+            shopt -s nullglob
+            local chunks=("$parts"/part-*)
+            shopt -u nullglob
+            (( ${#chunks[@]} > 0 ))
+            printf '%s\n' "Assembling $target from ${#chunks[@]} chunks"
+            cat "${chunks[@]}" > "$target"
+            actual="$(git hash-object "$target")"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "Blob SHA mismatch for $target: expected $expected got $actual" >&2
+              exit 1
+            fi
+          }
+          assemble index.html b103acd3be6443f9b9e0e75022e9fc4f74c1c213
+          assemble app.css bac054f46ec9e45301259b0debbef91f47806524
+          assemble app.js 1c8882244d24be28f11c0b3df1a5743def6a26fa
+          test -f web/launch-utils.js
+          test -f web/favicon.svg
+          git diff --check
+          rm -rf .staging
+          git add web/index.html web/app.css web/app.js .staging
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m "feat: publish complete EmuStack dashboard assets"
+          git push origin HEAD:main
+      - name: Verify frontend files on branch
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(git hash-object web/index.html)" = b103acd3be6443f9b9e0e75022e9fc4f74c1c213
+          test "$(git hash-object web/app.css)" = bac054f46ec9e45301259b0debbef91f47806524
+          test "$(git hash-object web/app.js)" = 1c8882244d24be28f11c0b3df1a5743def6a26fa
+          git status --short
