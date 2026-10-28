@@ -329,7 +329,7 @@ def main() -> int:
         " print('HTTP',exc.code)",
         " raise SystemExit(0 if exc.code == 403 else 1)",
     ])
-    health_probe = "import json,urllib.request; data=json.load(urllib.request.urlopen('http://dashboard:8765/api/health',timeout=3)); print(data); raise SystemExit(0 if data.get('healthy') is True and 'environments' not in data else 1)
+    health_probe = "import json,urllib.request; data=json.load(urllib.request.urlopen('http://dashboard:8765/api/health',timeout=3)); print(data); raise SystemExit(0 if data.get('healthy') is True and 'environments' not in data else 1)"
     for env_id, container in env_containers.items():
         for name, probe in (("spoofed POST", spoof_probe), ("metadata GET", metadata_probe), ("minimal health", health_probe)):
             result = run(["docker", "exec", container["Id"], "python3", "-c", probe], check=False, timeout=8)
