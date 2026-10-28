@@ -4,7 +4,7 @@ Private repository for the EmuStack console-emulation orchestrator.
 
 ## Import the verified 0.7.0 source bundle
 
-Download [`EmuStack-Docker-0.7.0.zip`](sandbox:/mnt/data/EmuStack-Docker-0.7.0.zip) from the ChatGPT conversation to your computer. Then clone this private repository and run the importer with Bash (do not `chmod` it first, so the working tree remains clean):
+Download `EmuStack-Docker-0.7.0.zip` from the ChatGPT conversation to your computer. Then clone this private repository and run the importer with Bash (do not `chmod` it first, so the working tree remains clean):
 
 ```bash
 gh auth login
