@@ -1,6 +1,6 @@
 'use strict';
 // Static UI contracts: data-system-action maps to dataset.systemAction.
-// xemu's HDD declaration is hash-bound, but cannot prove which dashboard is inside.
+// xemu's HDD declaration is hash-bound; isso não comprova o dashboard do HDD.
 
 const state={view:'overview',catalog:{emulators:[]},environments:[],systems:[],games:[],sources:{sources:[],categories:[],platform_guidance:[]},docs:[],processes:[],selectedSourceCategory:'all',selectedSourcePlatform:'all',selectedDoc:null};
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
