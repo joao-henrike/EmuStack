@@ -53,7 +53,7 @@ def api(path: str, method: str = "GET", payload: dict | None = None):
         HOST_API_REACHABLE = False
         if not DASHBOARD_CONTAINER_ID:
             raise RuntimeError("Dashboard container ID is not available for internal API fallback")
-        script = "\\n".join([
+        script = "\n".join([
             "import json,sys,urllib.request,urllib.error",
             "path,method,payload=sys.argv[1:4]",
             "obj=json.loads(payload) if payload else None",
