@@ -1,0 +1,22 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const html = fs.readFileSync(path.join(root, 'web', 'index.html'), 'utf8');
+const js = fs.readFileSync(path.join(root, 'web', 'app.js'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'web', 'app.css'), 'utf8');
+
+assert.match(html, /data-view="consoles"/);
+assert.match(html, /id="view-consoles"/);
+assert.match(html, /id="console-system-grid"/);
+assert.match(html, /value="needs-verification"/);
+assert.match(html, /id="system-setup-dialog"/);
+assert.match(js, /async function launchConsoleSystem/);
+assert.match(js, /api\('\/api\/console-systems'/);
+assert.match(js, /function showSystemSetup/);
+assert.match(js, /data-system-action/);
+assert.match(css, /\.console-system-grid/);
+assert.match(css, /\.system-setup-dialog/);
+assert.match(html, /não desenha dashboards falsos/i);
+console.log('Console-system UI static tests passed (11 assertions).');
