@@ -24,15 +24,15 @@ branch="$(git -C "$repo_root" branch --show-current)"
 remote="$(git -C "$repo_root" remote get-url origin 2>/dev/null || true)"
 case "$remote" in
   https://github.com/joao-henrike/EmuStack.git|https://github.com/joao-henrike/EmuStack|git@github.com:joao-henrike/EmuStack.git|ssh://git@github.com/joao-henrike/EmuStack.git) ;;
-  *) die "Remote origin inesperado: '$remote'. O destino deve ser https://github.com/joao-henrike/EmuStack.git." ;;
+  *) die "Remote origin inesperado: '$remote'. O destino deve ser o repositório privado joao-henrike/EmuStack." ;;
 esac
 
 status="$(git -C "$repo_root" status --porcelain)"
 [[ -z "$status" ]] || die "A árvore de trabalho não está limpa. Não sobrescreverei alterações locais; confira: git status"
 
 tracked="$(git -C "$repo_root" ls-files | LC_ALL=C sort)"
-expected_tracked="$(printf '%s\n' IMPORT-LOCAL.sh README.md docs/GAME_SOURCES.md | LC_ALL=C sort)"
-[[ "$tracked" == "$expected_tracked" ]] || die "O repositório contém arquivos rastreados além dos arquivos de bootstrap esperados. Revise antes de importar."
+expected_tracked="$(printf '%s\n' .github/workflows/import-source.yml IMPORT-LOCAL.sh README.md docs/GAME_SOURCES.md | LC_ALL=C sort)"
+[[ "$tracked" == "$expected_tracked" ]] || die "O repositório contém arquivos rastreados além dos arquivos de bootstrap esperados. Revise antes do import."
 
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
@@ -40,9 +40,8 @@ info "Validando a estrutura do ZIP"
 unzip -tqq "$archive" || die "O ZIP está corrompido."
 unzip -q "$archive" -d "$tmp"
 src="$tmp/EmuStack-0.7.1"
-[[ -d "$src" && -f "$src/README.md" && -f "$src/Dockerfile" && -f "$src/compose.yaml" && -f "$src/emustack.py" && -f "$src/game-sources.json" && -d "$src/scripts" && -d "$src/tests" ]] || die "A árvore do pacote 0.7.1 não tem a estrutura esperada."
+[[ -d "$src" && -f "$src/README.md" && -f "$src/Dockerfile" && -f "$src/compose.yaml" && -f "$src/emustack.py" && -f "$src/game-sources.json" && -d "$src/scripts" && -d "$src/tests" && -d "$src/web" ]] || die "A árvore do pacote 0.7.1 não tem a estrutura esperada."
 
-# Never publish private user data, games, console firmware, BIOS, or keys.
 if find "$src" -type f \( -name '.env' -o -name 'id_rsa' -o -name 'id_ed25519' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .; then
   die "Foi encontrado um arquivo de segredo/chave no pacote; importação cancelada."
 fi
@@ -53,9 +52,10 @@ for rel in data/games data/bios data/home data/saves data/config data/environmen
   fi
 done
 
-info "Copiando a árvore de código EmuStack 0.7.1"
+info "Copiando a árvore completa de EmuStack 0.7.1"
 cp -a "$src/." "$repo_root/"
-rm -f -- "$repo_root/IMPORT-LOCAL.sh"
+rm -f -- "$repo_root/IMPORT-LOCAL.sh" "$repo_root/.github/workflows/import-source.yml"
+rmdir --ignore-fail-on-non-empty "$repo_root/.github/workflows" "$repo_root/.github" 2>/dev/null || true
 find "$repo_root/scripts" -maxdepth 1 -type f -name '*.sh' -exec chmod +x {} +
 
 git -C "$repo_root" add -A
@@ -63,11 +63,11 @@ git -C "$repo_root" diff --cached --check || die "A verificação de whitespace 
 info "Arquivos que serão publicados"
 git -C "$repo_root" diff --cached --stat
 
-printf '\nDestino: %s (privado)\n' "$remote"
+printf '\nDestino: %s (repositório privado)\n' "$remote"
 printf 'SHA-256 verificado: %s\n' "$actual_sha"
-read -r -p "Criar o commit e enviar o código EmuStack 0.7.1 para origin/main? [y/N] " answer
-case "$answer" in y|Y|yes|YES|s|S|sim|SIM) ;; *) die "Cancelado pelo usuário. O conteúdo foi preparado no clone local, mas não foi enviado." ;; esac
+read -r -p "Criar o commit e enviar o projeto completo EmuStack 0.7.1 para origin/main? [y/N] " answer
+case "$answer" in y|Y|yes|YES|s|S|sim|SIM) ;; *) die "Cancelado pelo usuário; nada foi enviado." ;; esac
 
-git -C "$repo_root" commit -m "Import EmuStack 0.7.1 source tree"
+git -C "$repo_root" commit -m "Import complete EmuStack 0.7.1 project source"
 git -C "$repo_root" push origin HEAD:main
-info "Importação concluída. Confira a branch main no GitHub."
+info "Importação concluída. Confira os diretórios Dockerfile, scripts/, tests/, web/ e docs/ na branch main."
