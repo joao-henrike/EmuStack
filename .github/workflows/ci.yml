@@ -67,6 +67,14 @@ jobs:
           print("dashboard/agent source-address boundary: 20 isolated static networks validated")
           PY
       - name: Prepare isolated runtime secrets and directories
+        env:
+          # GitHub hosted runners expose only two CPUs; keep test containers within that per-container ceiling.
+          EMUSTACK_CPU_LIMIT: "0.50"
+          EMUSTACK_MEMORY_LIMIT: "768m"
+          EMUSTACK_PIDS_LIMIT: "128"
+          EMUSTACK_ENV_CPU_LIMIT: "0.25"
+          EMUSTACK_ENV_MEMORY_LIMIT: "512m"
+          EMUSTACK_ENV_PIDS_LIMIT: "128"
         run: bash scripts/host-setup.sh
       - name: Validate Docker Compose merged configuration
         run: docker compose -f compose.yaml config --quiet
