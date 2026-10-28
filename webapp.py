@@ -60,7 +60,7 @@ CONTROL_TRUSTED_CLIENT_IPS = frozenset(
 )
 
 
-def _is_trusted_control_client(client_ip: str) -> bool:
+def _is_trusted_dashboard_client(client_ip: str) -> bool:
     # Accept local host clients and explicitly configured Docker gateway sources only.
     try:
         address = ipaddress.ip_address(client_ip)
@@ -574,6 +574,14 @@ def make_handler(catalog_fn, status_fn, safe_game_path_fn):
         def do_GET(self):
             parsed = urlparse(self.path)
             path = unquote(parsed.path)
+            # Agents share a network with this service so that the dashboard can
+            # reach them; do not let an agent use that route to read other environments.
+            if not _is_trusted_dashboard_client(self.client_address[0]):
+                if path == "/api/health":
+                    self._json({"healthy": True})
+                else:
+                    self._error("Acesso recusado: origem de rede não confiável.", 403)
+                return
             if path == "/api/health":
                 self._json(summarize(catalog_fn, status_fn))
                 return
@@ -732,7 +740,7 @@ def make_handler(catalog_fn, status_fn, safe_game_path_fn):
             # Host/Origin/custom headers alone are spoofable by a container on one of
             # the agent networks. Bind mutations to loopback in host-native mode or to
             # the explicitly allowlisted Docker bridge gateway IPs in Compose mode.
-            if not _is_trusted_control_client(self.client_address[0]):
+            if not _is_trusted_dashboard_client(self.client_address[0]):
                 self._error("Requisição de controle recusada: origem de rede não confiável.", 403)
                 return
             # This server is intended to be reachable only via the loopback-published host port.
@@ -1023,6 +1031,10 @@ def make_handler(catalog_fn, status_fn, safe_game_path_fn):
             self._json(result, status_code)
 
         def do_HEAD(self):
+            if not _is_trusted_dashboard_client(self.client_address[0]):
+                self.send_response(403)
+                self.end_headers()
+                return
             if self.path in ("/", "/index.html"):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
