@@ -73,7 +73,7 @@ class IsolatedArchitectureTests(unittest.TestCase):
             self.assertIn(f"ipv4_address: {dashboard_ip}", dashboard_block, env_id)
             self.assertIn(gateway, dashboard_block, env_id)
         webapp = (ROOT / "webapp.py").read_text(encoding="utf-8")
-        self.assertIn("_is_trusted_control_client(self.client_address[0])", webapp)
+        self.assertIn("_is_trusted_dashboard_client(self.client_address[0])", webapp)
         self.assertIn("ipaddress.ip_address", webapp)
 
     def test_xemu_dashboard_is_not_advertised_as_verified_original_boot(self):
