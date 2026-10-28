@@ -1,40 +1,126 @@
 <!doctype html>
-<html lang="pt-BR"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark"><meta name="theme-color" content="#0b1018">
-<title>EmuStack — Gaming Lab</title><link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/app.css">
-<script src="/assets/launch-utils.js" defer></script><script src="/assets/app.js" defer></script>
-</head><body>
-<div class="app-shell">
-<aside class="sidebar" id="sidebar">
-<a class="brand" href="#overview"><span class="brand-mark">ES</span><span><b>EmuStack</b><small>GAMING LAB · 0.7.1</small></span></a>
-<p class="eyebrow">WORKSPACE</p><nav class="nav-list" aria-label="Navegação principal">
-<button class="nav-item active" data-view="overview">◈ Visão geral</button>
-<button class="nav-item" data-view="environments">▦ Ambientes isolados</button>
-<button class="nav-item" data-view="consoles">🎮 Sistemas originais</button>
-<button class="nav-item" data-view="emulators">◉ Emuladores</button>
-<button class="nav-item" data-view="library">▤ Biblioteca</button>
-<button class="nav-item" data-view="sources">⌁ Fontes de jogos</button>
-<button class="nav-item" data-view="docs">▣ Documentação</button></nav>
-<div class="sidebar-bottom"><span class="pulse-dot"></span><div><b>Instância local</b><small id="side-health">Conectando…</small></div></div>
-</aside>
-<main class="main-area"><header class="topbar"><button class="icon-button mobile-menu" id="mobile-menu" aria-label="Abrir menu">☰</button><div class="breadcrumbs">EmuStack / <b id="crumb-current">Visão geral</b></div><div class="topbar-actions"><input id="global-search" type="search" placeholder="Buscar…" aria-label="Busca global"><button class="icon-button" id="refresh-button" title="Atualizar">↻</button></div></header>
-<div class="content-wrap">
-<section class="view active" id="view-overview"><div class="hero"><div class="eyebrow">SEU LABORATÓRIO DE JOGOS</div><h1>Todos os seus consoles.<br><span>Um único espaço.</span></h1><p>Orquestre 20 ambientes separados, preserve os arquivos de cada console e inicialize sistemas reais onde o emulador oferece suporte.</p><button class="button primary" data-goto="emulators">Explorar emuladores →</button> <button class="button" data-goto="docs">Documentação</button></div>
-<div class="metric-grid"><article class="metric-card"><small>CATÁLOGO</small><strong id="metric-emulators">20</strong><span>Projetos registrados</span></article><article class="metric-card"><small>DETECÇÃO LOCAL</small><strong id="metric-ready">—</strong><span>Launchers encontrados</span></article><article class="metric-card"><small>ARQUIVOS LOCAIS</small><strong id="metric-games">—</strong><span>Itens na biblioteca</span></article><article class="metric-card"><small>RUNTIME</small><strong id="metric-runtime">Docker</strong><span id="metric-report">Consultando runtime</span></article></div>
-<div class="section-head"><div><div class="eyebrow">CATÁLOGO</div><h2>Projetos em destaque</h2></div><button class="text-button" data-goto="emulators">Ver todos →</button></div><div class="card-grid" id="featured-grid"></div>
-<div class="two-col"><section class="panel"><h2>Biblioteca local</h2><p>Jogos separados por console em <code>data/environments/&lt;id&gt;/games/</code></p><div id="overview-library">Escaneando arquivos locais…</div><button class="button" data-goto="library">Abrir biblioteca</button></section><section class="panel"><h2>Estado do sistema</h2><div id="system-lines">Consultando runtime…</div></section></div>
-<section class="panel"><div class="section-head"><h2>Sessões de emuladores</h2><button class="button" id="refresh-sessions">Atualizar</button></div><div id="process-list">Consultando sessões…</div></section></section>
-<section class="view" id="view-environments"><div class="page-head"><div class="eyebrow">ARQUITETURA DE ISOLAMENTO</div><h1>Ambientes de console</h1><p>Cada perfil usa um contêiner e diretórios persistentes próprios.</p></div><div class="callout"><b>Isolamento por padrão</b><p>Redes e dados de cada ambiente são separados. GPU, display e áudio podem ser compartilhados se explicitamente configurados; arquivos de jogos, saves e firmware não são compartilhados.</p></div><div class="toolbar"><input id="environment-search" placeholder="Buscar console…"><select id="environment-filter"><option value="all">Todos</option><option value="online">Online</option><option value="offline">Offline</option></select></div><div class="card-grid" id="environment-grid"></div></section>
-<section class="view" id="view-consoles"><div class="page-head"><div class="eyebrow">BOOT DO SISTEMA ORIGINAL</div><h1>Sistemas originais</h1><p>O menu real vem do firmware executado pelo emulador. O EmuStack não desenha dashboards falsos.</p></div><div class="callout"><b>Sem promessas falsas</b><p>O boot depende de suporte upstream e de arquivos de sistema válidos. Um dashboard do HDD não é comprovado pela simples existência de um arquivo de configuração.</p></div><div class="toolbar"><input id="console-system-search" placeholder="Buscar sistema…"><select id="console-system-filter"><option value="all">Todas as situações</option><option value="ready">Boot configurado</option><option value="needs-setup">Precisa configurar</option><option value="needs-verification">Dashboard não verificado</option><option value="manual">Ação manual</option><option value="unsupported">Não suportado</option></select></div><div class="console-system-grid" id="console-system-grid"></div></section>
-<section class="view" id="view-emulators"><div class="page-head"><div class="eyebrow">CENTRAL DE PROJETOS</div><h1>Emuladores</h1><p>O status informa o que foi detectado nesta instalação; não é garantia de compatibilidade com jogos.</p></div><div class="toolbar"><input id="emulator-search" placeholder="Nome, console ou tecnologia…"><select id="platform-filter"><option value="all">Todas as plataformas</option></select><select id="status-filter"><option value="all">Todos os status</option><option value="ready">Encontrado</option><option value="missing">Indisponível</option><option value="experimental">Experimental</option></select></div><div class="card-grid" id="emulator-grid"></div></section>
-<section class="view" id="view-library"><div class="page-head"><div class="eyebrow">ARQUIVOS LOCAIS</div><h1>Biblioteca</h1><p>Organize apenas conteúdo que você tem direito de utilizar.</p></div><div class="toolbar"><input id="library-search" placeholder="Buscar por nome ou caminho…"><select id="extension-filter"><option value="all">Todos os formatos</option></select><select id="library-sort"><option value="name">Nome A–Z</option><option value="size">Maior tamanho</option><option value="recent">Mais recente</option></select></div><div class="table-wrap"><table><thead><tr><th>Arquivo</th><th>Formato</th><th>Tamanho</th><th>Ambiente</th><th></th></tr></thead><tbody id="library-table-body"><tr><td colspan="5">Escaneando…</td></tr></tbody></table></div><button class="button" id="refresh-library">Atualizar biblioteca</button></section>
-<section class="view" id="view-sources"><div class="page-head"><div class="eyebrow">DESCOBERTA RESPONSÁVEL</div><h1>Fontes de jogos</h1><p>Lojas oficiais, autores independentes, demos e homebrew.</p></div><div class="callout"><b>Conteúdo autorizado em primeiro lugar</b><p>EmuStack não hospeda nem baixa jogos, ROMs, BIOS, chaves ou firmware. Confira licença e autorização item por item.</p></div><div class="source-tabs" id="source-tabs"></div><h2>Filtrar por console</h2><div class="source-tabs" id="source-platform-tabs"></div><p id="source-platform-note">Repositórios de emuladores normalmente publicam código e binários do emulador, não jogos.</p><div class="card-grid" id="source-grid"></div></section>
-<section class="view" id="view-docs"><div class="page-head"><div class="eyebrow">CENTRAL DE AJUDA</div><h1>Documentação</h1></div><div class="docs-layout"><nav id="docs-nav" class="docs-nav"></nav><article id="docs-content" class="panel">Carregando documentação…</article></div></section>
-</div></main></div>
-<div id="toast-region" class="toast-region" aria-live="polite"></div>
-<dialog class="modal" id="launch-dialog"><form method="dialog" class="modal-close"><button class="icon-button">×</button></form><h2 id="launch-title">Abrir emulador</h2><p id="launch-description">Selecione um jogo ou abra a interface do emulador.</p><label>Emulador<select id="launch-emulator-select"></select></label><label>Jogo opcional<select id="launch-game-select"><option value="">Abrir interface do emulador</option></select></label><button class="button primary" id="confirm-launch">Abrir</button></dialog>
-<dialog class="modal system-setup-dialog" id="system-setup-dialog"><form method="dialog" class="modal-close"><button class="icon-button">×</button></form><h2 id="system-setup-title">Preparar sistema</h2><p id="system-setup-summary"></p><div id="system-setup-checks"></div><h3>Como preparar</h3><ol id="system-setup-steps"></ol><div id="system-setup-links"></div><button class="button" id="close-system-setup">Fechar</button></dialog>
-<dialog class="modal" id="process-log-dialog"><form method="dialog" class="modal-close"><button class="icon-button">×</button></form><h2 id="process-log-title">Logs da sessão</h2><pre id="process-log-content"></pre><button class="button" id="close-process-log">Fechar</button></dialog>
-</body></html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b1018">
+  <title>EmuStack — Gaming Lab</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/launch-utils.js" defer></script>
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#overview" aria-label="EmuStack início">
+        <span class="brand-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M11 7.5h18a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-3.5l-4.2 4.3a1.8 1.8 0 0 1-2.6 0L14.5 28.5H11a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4Z"/><path d="M13 16.5v7m-3.5-3.5h7M24 17h.1M28 22h.1"/></svg></span>
+        <span class="brand-copy"><strong>EmuStack</strong><small>GAMING LAB</small></span>
+        <span class="version-pill">0.7.1</span>
+      </a>
+      <div class="side-label">Workspace</div>
+      <nav class="nav-list" aria-label="Navegação principal">
+        <button class="nav-item active" data-view="overview"><span class="nav-icon">▦</span><span>Visão geral</span></button>
+        <button class="nav-item" data-view="environments"><span class="nav-icon">▤</span><span>Ambientes isolados</span><span class="nav-count" id="nav-environment-count">20</span></button>
+        <button class="nav-item" data-view="consoles"><span class="nav-icon">▣</span><span>Sistemas originais</span><span class="nav-count" id="nav-console-count">—</span></button>
+        <button class="nav-item" data-view="emulators"><span class="nav-icon">⌘</span><span>Emuladores</span><span class="nav-count" id="nav-emulator-count">20</span></button>
+        <button class="nav-item" data-view="library"><span class="nav-icon">▤</span><span>Biblioteca</span><span class="nav-count" id="nav-game-count">—</span></button>
+        <button class="nav-item" data-view="sources"><span class="nav-icon">↗</span><span>Fontes de jogos</span></button>
+        <button class="nav-item" data-view="docs"><span class="nav-icon">☷</span><span>Documentação</span></button>
+      </nav>
+      <div class="side-bottom">
+        <div class="side-status"><span class="pulse-dot"></span><div><b>Instância local</b><small id="side-health">Conectando ao container…</small></div></div>
+        <div class="side-foot"><span>Docker Compose</span><span>•</span><span>Linux x86-64</span></div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button class="mobile-menu icon-button" id="mobile-menu" aria-label="Abrir menu">☰</button>
+        <div class="breadcrumbs"><span>EmuStack</span><span class="crumb-slash">/</span><strong id="crumb-current">Visão geral</strong></div>
+        <div class="topbar-actions">
+          <label class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Buscar emuladores…" autocomplete="off"><kbd>/</kbd></label>
+          <button class="icon-button" id="refresh-button" title="Atualizar dados" aria-label="Atualizar dados">↻</button>
+          <div class="avatar" title="Execução local">EL</div>
+        </div>
+      </header>
+
+      <div class="content-wrap">
+        <section class="view active" id="view-overview">
+          <div class="welcome-line"><div><div class="eyebrow"><span class="eyebrow-mark"></span> SEU LABORATÓRIO DE JOGOS</div><h1>Todos os seus consoles.<br><span>Um único espaço.</span></h1><p class="lede">Orquestre 20 ambientes separados, preserve os arquivos de cada console e inicialize o sistema real onde o emulador oferece suporte.</p><div class="hero-actions"><button class="button primary" data-goto="emulators">Explorar emuladores <span>→</span></button><button class="button secondary" data-goto="docs">Ler documentação</button></div></div><div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="orbit orbit-three"></div><div class="hero-chip"><span>ES</span><small>PLAY / EXPLORE</small></div><div class="floating-chip chip-a">PS</div><div class="floating-chip chip-b">XB</div><div class="floating-chip chip-c">N</div><div class="floating-chip chip-d">PC</div></div></div>
+          <div class="metric-grid">
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon cyan">⌘</span><span class="metric-note">CATÁLOGO</span></div><div class="metric-value" id="metric-emulators">20</div><div class="metric-label">Projetos registrados</div><div class="metric-foot">PlayStation · Xbox · Nintendo</div></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon green">✓</span><span class="metric-note">DETECÇÃO LOCAL</span></div><div class="metric-value" id="metric-ready">—</div><div class="metric-label">Launchers encontrados</div><div class="metric-foot">Não significa que todos os jogos funcionem</div></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon violet">▤</span><span class="metric-note">ARQUIVOS LOCAIS</span></div><div class="metric-value" id="metric-games">—</div><div class="metric-label">Itens na biblioteca</div><div class="metric-foot" id="metric-storage">Escaneando ambientes isolados…</div></article>
+            <article class="metric-card"><div class="metric-top"><span class="metric-icon amber">◷</span><span class="metric-note">RUNTIME</span></div><div class="metric-value compact" id="metric-runtime">Docker</div><div class="metric-label">Núcleo de orquestração</div><div class="metric-foot" id="metric-report">Relatório de instalação</div></article>
+          </div>
+          <div class="section-heading"><div><div class="eyebrow">CATÁLOGO</div><h2>Comece por aqui</h2><p>Atalhos para projetos conhecidos e prontos para explorar.</p></div><button class="text-button" data-goto="emulators">Ver todos os projetos <span>→</span></button></div>
+          <div class="featured-grid" id="featured-grid"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
+          <div class="lower-grid">
+            <section class="panel"><div class="panel-heading"><div><h3>Biblioteca local</h3><p>Jogos separados por console em <code>data/environments/&lt;id&gt;/games/</code></p></div><button class="subtle-button" data-goto="library">Abrir biblioteca →</button></div><div id="overview-library" class="mini-library"><div class="loading-line">Escaneando arquivos locais…</div></div></section>
+            <section class="panel system-panel"><div class="panel-heading"><div><h3>Estado do sistema</h3><p>Resumo da instância Docker</p></div><span class="panel-live"><i></i> LIVE</span></div><div class="system-lines" id="system-lines"><div class="loading-line">Consultando container…</div></div><div class="panel-bottom"><button class="subtle-button" data-goto="docs">Abrir guia de diagnóstico ↗</button></div></section>
+          </div>
+          <section class="panel sessions-panel"><div class="panel-heading"><div><h3>Sessões de emuladores</h3><p>Estado dos processos iniciados pelo dashboard e saída capturada para diagnóstico.</p></div><button class="subtle-button" id="refresh-sessions">Atualizar sessões ↻</button></div><div id="process-list" class="process-list"><div class="loading-line">Consultando sessões…</div></div><div class="panel-bottom"><span>O encerramento envia SIGTERM ao grupo do processo; use os logs para investigar falhas de inicialização.</span></div></section>
+          <footer class="page-footer"><span>EmuStack <b>0.7.1</b></span><span>20 ambientes separados · um núcleo de orquestração</span><span>Somente acesso local</span></footer>
+        </section>
+
+        <section class="view" id="view-environments">
+          <div class="page-head"><div><div class="eyebrow">ARQUITETURA DE ISOLAMENTO</div><h1>Ambientes de console</h1><p class="lede">Cada perfil roda em um contêiner próprio, com jogos, firmware/BIOS, saves, configurações, logs e binários adicionais separados. O dashboard é o orquestrador; não recebe mounts de dados nem acesso ao socket do Docker.</p></div><div class="page-head-icon">▤</div></div>
+          <div class="console-system-banner"><div class="console-system-banner-mark">ISO</div><div><strong>Isolamento de dados por padrão</strong><p>Os ambientes usam redes bridge distintas e não se comunicam diretamente. GPU, display e áudio são infraestrutura compartilhada quando configurados; isso não compartilha arquivos de jogos, saves ou firmware.</p></div></div>
+          <div class="console-system-stats" id="environment-stats"><div class="summary-chip"><span>Ambientes definidos</span><b>20</b></div><div class="summary-chip"><span>Agentes online</span><b>—</b></div><div class="summary-chip"><span>Sessões ativas permitidas</span><b>2</b></div></div>
+          <div class="console-system-toolbar"><div class="search-field"><span>⌕</span><input id="environment-search" type="search" placeholder="Buscar console ou emulador…"></div><select id="environment-filter" aria-label="Filtrar ambientes"><option value="all">Todos os ambientes</option><option value="online">Agente online</option><option value="offline">Agente offline</option><option value="launchable">Launcher disponível</option><option value="system-boot">Boot de sistema integrado</option></select></div>
+          <div class="environment-grid" id="environment-grid"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
+          <div class="notice-line"><span>ⓘ</span><p><b>Limite técnico explícito:</b> separar contêineres não cria suporte de emulação que o upstream não tem. O botão de sistema original só aparece para perfis com um caminho real detectado; firmware/BIOS e dados de sistema não vêm incluídos.</p></div>
+        </section>
+
+        <section class="view" id="view-consoles">
+          <div class="page-head"><div><div class="eyebrow">BOOT DO SISTEMA ORIGINAL</div><h1>Consoles completos</h1><p class="lede">Quando o emulador consegue inicializar o firmware e o menu real, o EmuStack chama esse caminho. Não desenhamos dashboards falsos nem distribuímos firmware proprietário.</p></div><div class="page-head-icon">▣</div></div>
+          <div class="console-system-banner"><div class="console-system-banner-mark">SYS</div><div><strong>Interface original = firmware real em execução</strong><p>O EmuStack não desenha dashboards falsos: os menus vêm do sistema/BIOS/NAND/HDD fornecido e executado pelo emulador. A aparência e as funções podem diferir do console físico quando o emulador ainda tem limitações.</p></div></div>
+          <div class="console-system-stats" id="console-system-stats"><div class="summary-chip"><span>Boot nativo disponível</span><b>—</b></div><div class="summary-chip"><span>Precisa de firmware</span><b>—</b></div><div class="summary-chip"><span>Sem boot de sistema</span><b>—</b></div></div>
+          <div class="console-system-toolbar"><div class="search-field"><span>⌕</span><input id="console-system-search" type="search" placeholder="Buscar console ou interface…"></div><select id="console-system-filter" aria-label="Filtrar sistemas"><option value="all">Todas as situações</option><option value="ready">Boot configurado</option><option value="needs-setup">Precisa configurar</option><option value="needs-verification">Sistema configurado, dashboard não verificado</option><option value="manual">Ação manual</option><option value="launcher-missing">Emulador ausente</option><option value="unsupported">Boot não suportado</option><option value="no-dashboard">Sem dashboard</option></select></div>
+          <div class="console-system-grid" id="console-system-grid"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
+          <div class="notice-line"><span>ⓘ</span><p><b>Sem promessas falsas:</b> PS3/XMB, PS2/BIOS, Xbox original e menus Nintendo só aparecem como bootáveis quando o caminho real está detectado e existe suporte do emulador. Xbox One/Series, Xbox 360, PS4/PS5 e Switch permanecem indisponíveis para boot completo nesta integração, mesmo que um jogo individual possa ser iniciado por outro caminho.</p></div>
+        </section>
+
+        <section class="view" id="view-emulators">
+          <div class="page-head"><div><div class="eyebrow">CENTRAL DE PROJETOS</div><h1>Emuladores</h1><p class="lede">Um catálogo único para 20 projetos e variantes. O status reflete os binários detectados nesta instalação.</p></div><div class="page-head-icon">⌘</div></div>
+          <div class="filter-toolbar"><div class="search-field"><span>⌕</span><input id="emulator-search" type="search" placeholder="Nome, console ou tecnologia…"></div><select id="platform-filter" aria-label="Filtrar por plataforma"><option value="all">Todas as plataformas</option></select><select id="status-filter" aria-label="Filtrar por status"><option value="all">Todos os status</option><option value="ready">Launcher encontrado</option><option value="missing">Não instalado</option><option value="experimental">Experimental / sem runner</option></select><span class="result-count" id="emulator-results-count">Carregando…</span></div>
+          <div class="platform-strip" id="platform-strip"></div>
+          <div class="emulator-grid" id="emulator-grid"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
+          <div class="notice-line"><span>ⓘ</span><p><b>Sobre compatibilidade:</b> “launcher encontrado” só confirma que um executável foi detectado. Compatibilidade, estabilidade e FPS dependem do jogo, da versão e do hardware.</p></div>
+        </section>
+
+        <section class="view" id="view-library">
+          <div class="page-head"><div><div class="eyebrow">ARQUIVOS LOCAIS</div><h1>Sua biblioteca</h1><p class="lede">Organize jogos autorizados na pasta isolada de cada ambiente, montada como somente leitura. O EmuStack não baixa ROMs nem firmware.</p></div><div class="page-head-icon">▤</div></div>
+          <div class="library-summary" id="library-summary"><div class="summary-chip"><span>Itens detectados</span><b>—</b></div><div class="summary-chip"><span>Espaço catalogado</span><b>—</b></div><div class="summary-chip"><span>Diretório do host</span><b>data/environments/<id>/games/</b></div></div>
+          <div class="library-toolbar"><div class="search-field"><span>⌕</span><input id="library-search" type="search" placeholder="Buscar por nome ou caminho…"></div><select id="extension-filter" aria-label="Filtrar extensão"><option value="all">Todos os formatos</option></select><select id="library-sort" aria-label="Ordenar biblioteca"><option value="name">Nome A–Z</option><option value="size">Maior tamanho</option><option value="recent">Modificados recentemente</option></select></div>
+          <div class="library-table-wrap"><table class="library-table"><thead><tr><th>Arquivo</th><th>Formato</th><th>Tamanho</th><th>Ambiente</th><th>Modificado</th><th></th></tr></thead><tbody id="library-table-body"><tr><td colspan="6" class="empty-state">Escaneando biblioteca…</td></tr></tbody></table></div>
+          <div id="library-empty-hint" class="empty-hint hidden"><div class="empty-illustration">▤</div><h3>Sua biblioteca começa aqui</h3><p>Copie seus jogos homebrew, demos autorizadas ou arquivos que você tem direito de usar para <code>data/environments/<id>/games/</code> e atualize a página.</p><button class="button secondary" id="refresh-library">Atualizar biblioteca</button></div>
+          <div class="notice-line"><span>⌁</span><p>A extensão do arquivo serve para catalogação e não confirma integridade, licença ou compatibilidade. Pastas ocultas e links simbólicos são ignorados.</p></div>
+        </section>
+
+        <section class="view" id="view-sources">
+          <div class="page-head"><div><div class="eyebrow">DESCOBERTA RESPONSÁVEL</div><h1>Fontes de jogos</h1><p class="lede">Lojas oficiais, autores independentes e projetos homebrew. Links úteis — sem catálogos de cópias não autorizadas.</p></div><div class="page-head-icon">↗</div></div>
+          <div class="source-callout"><div class="callout-icon">✦</div><div><b>Conteúdo autorizado em primeiro lugar</b><p>EmuStack não hospeda nem baixa jogos, ROMs, BIOS, chaves ou firmware. A licença e o direito de distribuição devem ser verificados item por item.</p></div></div>
+          <div class="source-tabs" id="source-tabs" aria-label="Filtrar por categoria"></div>
+          <h2 class="source-subheading">Filtrar por console</h2>
+          <div class="source-tabs source-platform-tabs" id="source-platform-tabs" aria-label="Filtrar fontes por console"></div>
+          <p class="source-platform-note" id="source-platform-note">Repositórios de emuladores não costumam distribuir jogos.</p>
+          <div class="source-grid" id="source-grid"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
+          <section class="panel source-note-panel"><div class="panel-heading"><div><h3>O que vai funcionar no emulador?</h3><p>Um arquivo baixado de uma loja para PC não vira automaticamente um dump de console.</p></div></div><div class="source-note-grid"><div><span class="step-number">01</span><b>Confira a plataforma</b><p>Veja se a versão é PC, console ou homebrew compatível.</p></div><div><span class="step-number">02</span><b>Leia licença e requisitos</b><p>Use o canal do autor e respeite as condições de uso.</p></div><div><span class="step-number">03</span><b>Organize localmente</b><p>Adicione apenas arquivos que você está autorizado a usar a <code>data/environments/<id>/games/</code>.</p></div></div></section>
+        </section>
+
+        <section class="view" id="view-docs">
+          <div class="page-head"><div><div class="eyebrow">CENTRAL DE AJUDA</div><h1>Documentação</h1><p class="lede">Instalação, uso, fontes, matriz de compatibilidade, segurança e solução de problemas.</p></div><div class="page-head-icon">☷</div></div>
+          <div class="docs-layout"><aside class="docs-sidebar"><div class="docs-nav-label">GUIAS</div><div id="docs-nav"><div class="loading-line">Carregando documentos…</div></div><div class="docs-help-box"><span>?</span><b>Precisa de ajuda?</b><p>Comece pelo guia de solução de problemas e confira o relatório do build.</p></div></aside><article class="docs-content" id="docs-content"><div class="loading-line">Carregando documentação…</div></article></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <dialog class="launch-dialog" id="launch-dialog"><form method="dialog" class="dialog-close-form"><button class="dialog-close" aria-label="Fechar">×</button></form><div class="dialog-eyebrow">LAUNCHER</div><h2 id="launch-title">Abrir emulador</h2><p id="launch-description">Selecione um arquivo da biblioteca ou abra o emulador sem um jogo.</p><label class="field-label" for="launch-emulator-select">Emulador</label><select id="launch-emulator-select"></select><label class="field-label" for="launch-game-select">Jogo (opcional)</label><select id="launch-game-select"><option value="">Abrir interface do emulador</option></select><div class="dialog-foot"><span id="launch-status-note">O emulador abrirá na sessão gráfica configurada no Docker.</span><button class="button primary" id="confirm-launch">Abrir emulador <span>→</span></button></div></dialog>
+  <dialog class="launch-dialog process-log-dialog" id="process-log-dialog"><form method="dialog" class="dialog-close-form"><button class="dialog-close" aria-label="Fechar logs">×</button></form><div class="dialog-eyebrow">DIAGNÓSTICO DE EXECUÇÃO</div><h2 id="process-log-title">Logs da sessão</h2><pre id="process-log-content" class="process-log-content">Sem logs.</pre><div class="dialog-foot"><span>Os logs ficam no volume persistente de dados do usuário.</span><button class="button secondary" id="close-process-log" type="button">Fechar</button></div></dialog>
+  <dialog class="launch-dialog system-setup-dialog" id="system-setup-dialog"><form method="dialog" class="dialog-close-form"><button class="dialog-close" aria-label="Fechar instruções">×</button></form><div class="dialog-eyebrow">SISTEMA DO CONSOLE</div><h2 id="system-setup-title">Preparar sistema</h2><p id="system-setup-summary"></p><div id="system-setup-checks" class="system-setup-checks"></div><h3>Como preparar</h3><ol id="system-setup-steps" class="system-setup-steps"></ol><div class="system-setup-links" id="system-setup-links"></div><div class="dialog-foot"><span>Arquivos de sistema não são distribuídos pelo EmuStack. Use apenas dumps que você tem direito de usar.</span><button class="button secondary" id="close-system-setup" type="button">Fechar</button></div></dialog>
+</body>
+</html>
