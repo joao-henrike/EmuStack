@@ -60,3 +60,4 @@ Essas páginas/fonte são usadas para conferir a sintaxe dos argumentos integrad
 O EmuStack 0.7.1 inclui uma rota experimental para o VSH/XMB do PSP via `PPSSPP --vsh --fullscreen`. O caminho upstream depende de um dump real de firmware em `assets/flash0/` e é explicitamente exploratório, não uma função estável garantida. No ambiente isolado, o caminho host é `data/environments/ppsspp/bios/flash0/`, montado como `/opt/emustack/assets/flash0/` somente leitura.
 
 A rota só é apresentada como disponível quando os arquivos `vsh/module/vshmain.prx` e `kd/pspbtcnf.bin` foram encontrados sem symlinks. Isso verifica pré-requisitos, não o sucesso visual do boot. A instalação do PPSSPP precisa reconhecer `--vsh`. Referências oficiais: [CLI do PPSSPP](https://www.ppsspp.org/docs/reference/command-line/) e [investigação upstream do VSH](https://github.com/hrydgard/ppsspp/blob/master/docs/VSHBootInvestigation.md).
+
