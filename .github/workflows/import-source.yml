@@ -1,0 +1,66 @@
+name: Import verified EmuStack source bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".bootstrap/READY"
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    if: github.event.head_commit.message == 'chore: mark verified source bundle ready'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+
+      - name: Verify and unpack the exact source bundle
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          expected='c503808f3b833177dc9115c0b8e2c8e68c93726e4c4c4c2a15cb9daf63e3067f'
+          [[ "$(tr -d '\r\n' < .bootstrap/READY)" == "$expected" ]]
+
+          archive="$RUNNER_TEMP/EmuStack-Docker-0.7.0.zip"
+          cat .bootstrap/chunk-*.b64 | base64 --decode > "$archive"
+          printf '%s  %s\n' "$expected" "$archive" | sha256sum --check -
+
+          unzip -tq "$archive"
+          mkdir -p "$RUNNER_TEMP/unpacked"
+          unzip -q "$archive" -d "$RUNNER_TEMP/unpacked"
+          src="$RUNNER_TEMP/unpacked/EmuStack-0.7.0"
+          [[ -f "$src/README.md" && -f "$src/Dockerfile" && -f "$src/compose.yaml" && -f "$src/emustack.py" && -d "$src/scripts" && -d "$src/tests" ]]
+
+          if find "$src" -type f \( -name '.env' -o -name 'id_rsa' -o -name 'id_ed25519' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .; then
+            echo 'Secret or key file found in the source bundle; aborting.' >&2
+            exit 1
+          fi
+          for rel in data/games data/bios data/home data/saves data/config data/environments emulators; do
+            if [[ -d "$src/$rel" ]]; then
+              extra="$(find "$src/$rel" -type f ! -name '.gitkeep' -print -quit)"
+              if [[ -n "$extra" ]]; then
+                echo "User data detected at $rel; aborting." >&2
+                exit 1
+              fi
+            fi
+          done
+
+          cp -a "$src/." "$GITHUB_WORKSPACE/"
+          rm -rf .bootstrap
+          rm -f IMPORT-LOCAL.sh
+          git add -A
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Import EmuStack 0.7.0 source tree'
+          git push origin HEAD:main
+
+      - name: Report import result
+        if: always()
+        run: echo "Source import workflow finished; inspect this run's status and the main branch."
