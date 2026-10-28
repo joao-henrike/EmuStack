@@ -1,0 +1,61 @@
+name: EmuStack CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emustack-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install manifest validation helper
+        run: python -m pip install --disable-pip-version-check pyyaml
+      - name: Validate source, Python tests, JavaScript tests and shell syntax
+        run: bash scripts/validate-project.sh
+      - name: Parse Compose manifests and compare catalog IDs
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import yaml
+          root = Path(".")
+          for name in ("compose.yaml", "compose.nvidia.yaml"):
+              data = yaml.safe_load((root / name).read_text())
+              assert isinstance(data, dict) and isinstance(data.get("services"), dict), name
+              print(f"{name}: {len(data['services'])} services parsed")
+          envs = json.loads((root / "environments.json").read_text())["environments"]
+          catalog = json.loads((root / "catalog.json").read_text())["emulators"]
+          ids = [x["id"] for x in envs]
+          cids = [x["id"] for x in catalog]
+          assert len(ids) == 20 and len(set(ids)) == 20, "environment IDs invalid"
+          assert set(ids) == set(cids), "catalog/environment IDs differ"
+          print(f"catalog/environments: {len(ids)} matching IDs")
+          PY
+      - name: Check browser asset contracts
+        run: |
+          test -s web/index.html
+          test -s web/app.css
+          test -s web/app.js
+          test -s web/launch-utils.js
+          grep -q 'id="view-consoles"' web/index.html
+          grep -q 'id="console-system-grid"' web/index.html
+          grep -q 'renderConsoleSystems' web/app.js
+          grep -q 'recommendEmulatorForGame(gamePath)' web/app.js
+          git diff --check
