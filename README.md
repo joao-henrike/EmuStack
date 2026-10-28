@@ -1,10 +1,12 @@
 # EmuStack
 
-Private repository for the EmuStack console-emulation orchestrator.
+**Status do repositório:** este clone contém apenas o bootstrap e a documentação de fontes neste momento. O código-fonte completo do EmuStack 0.7.1 ainda precisa ser importado a partir do ZIP verificado abaixo. Não trate esta branch como a árvore de código completa até que apareçam `Dockerfile`, `compose.yaml`, `emustack.py`, `scripts/`, `tests/` e `web/`.
 
-## Current source bundle
+## Importar o projeto completo 0.7.1
 
-The latest bundle prepared in this conversation is **EmuStack 0.7.1**. Download `EmuStack-Docker-0.7.1.zip` from the ChatGPT conversation, then clone this private repository and run the guarded importer:
+1. Baixe `EmuStack-Docker-0.7.1.zip` da conversa.
+2. Configure o GitHub CLI e clone este repositório privado.
+3. Execute o importador, que verifica o checksum, a estrutura e arquivos locais antes de criar um commit e enviar para `main`.
 
 ```bash
 gh auth login
@@ -14,18 +16,16 @@ cd EmuStack
 bash IMPORT-LOCAL.sh ~/Downloads/EmuStack-Docker-0.7.1.zip
 ```
 
-The importer validates the SHA-256, ZIP and source layout, refuses an unexpected Git remote or dirty tree, rejects secrets and locally supplied games/firmware, shows a staged diff, and asks for confirmation before committing and pushing the full source tree to `main`.
+O importador exige um repositório limpo, confirma o remote esperado, rejeita segredos, jogos, BIOS/firmware e saves locais, apresenta a lista das mudanças e pede confirmação antes do commit/push.
 
-Expected bundle SHA-256:
+SHA-256 esperado:
 
 ```text
 3753467d99c7ef1e73cce9d1fc0262b60a2a95bc83804994ea35b1b66ce97771
 ```
 
-## Game-content sources
+## Fontes de jogos
 
-See [docs/GAME_SOURCES.md](docs/GAME_SOURCES.md) for the per-console source list. The 0.7.1 source bundle also includes `game-sources.json` and dashboard filters by category and console.
+Consulte [docs/GAME_SOURCES.md](docs/GAME_SOURCES.md) para a lista organizada por console, com homebrew, demos, lojas oficiais e avisos de licença. O ZIP 0.7.1 inclui `game-sources.json` e os filtros do dashboard por categoria e plataforma.
 
-Important distinction: emulator repositories ordinarily distribute emulator code/releases, not commercial games. The sources list contains homebrew/demo discovery, official storefront information and rights guidance; it does not list unauthorized commercial ROM/ISO download sites. EmuStack does not automatically download or install games.
-
-The bundle does not include games, ROMs, BIOS, firmware, NAND, HDD images, encryption keys or private `.env` configuration. Never commit proprietary system files or personal saves.
+Repositórios como RPCS3, PCSX2, Dolphin, PPSSPP e Xenia normalmente distribuem emuladores, não jogos comerciais. O EmuStack não baixa nem redistribui ROMs/ISOs comerciais, BIOS, firmware, NAND, imagens de HDD ou chaves. Nunca faça commit de arquivos proprietários, saves pessoais ou `.env` local.
