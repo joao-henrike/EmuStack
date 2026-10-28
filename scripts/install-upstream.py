@@ -2,7 +2,7 @@
 """Download only official, public emulator release assets during Docker build.
 
 Downloads are source-whitelisted; GitHub assets are checksum-verified when the
-maintainer publishes a SHA256/checksum file. Missing assets are recorded,
+maintainer publishes a SHA256SUMS/checksum file. Missing assets are recorded,
 not replaced with guessed URLs or counterfeit launchers.
 """
 from __future__ import annotations
@@ -287,14 +287,14 @@ def safe_extract(archive_path: Path, destination: Path) -> None:
                     if member.isdir() is False and member.isfile() is False:
                         continue
                     if name.startswith("/") or ".." in PurePosixPath(name).parts:
-                        raise ValueError(f"Chemin perigoso no TAR: {name}")
+                        raise ValueError(f"Chemin dangereux dans TAR: {name}")
                 target = (destination / name).resolve()
                 if root not in target.parents and target != root:
                     raise ValueError(f"Chemin TAR hors destination: {name}")
                 members.append(member)
             tf.extractall(destination, members=members, filter="data")
         return
-    raise ValueError(f"Format d'archive não supporté: {archive_path.name}")
+    raise ValueError(f"Format d'archive non supporté: {archive_path.name}")
 
 
 def executable_files(directory: Path) -> list[Path]:
