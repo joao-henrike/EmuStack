@@ -13,6 +13,12 @@ INSTALLER = PROJECT / "scripts" / "install-upstream.py"
 
 
 class InstallerTests(unittest.TestCase):
+    def test_debian_dependency_filter_rejects_packages_without_an_install_candidate(self):
+        script = (PROJECT / "scripts" / "install-available-apt.sh").read_text(encoding="utf-8")
+        self.assertIn('apt-cache policy "$1"', script)
+        self.assertIn('[ "$candidate" != "(none)" ]', script)
+        self.assertNotIn('apt-cache show "$package"', script)
+
     def test_skip_network_writes_a_complete_20_entry_report(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
