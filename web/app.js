@@ -1,34 +1,672 @@
 'use strict';
-// Static UI contracts: data-system-action maps to dataset.systemAction.
-// xemu's HDD declaration is hash-bound; isso não comprova o dashboard do HDD.
 
-const state={view:'overview',catalog:{emulators:[]},environments:[],systems:[],games:[],sources:{sources:[],categories:[],platform_guidance:[]},docs:[],processes:[],selectedSourceCategory:'all',selectedSourcePlatform:'all',selectedDoc:null};
-const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
-const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const arr=(o,keys)=>{for(const k of keys)if(Array.isArray(o&&o[k]))return o[k];return[]};
-async function api(path,opt={}){const headers=Object.assign({'Accept':'application/json'},opt.headers||{});if(opt.body){headers['Content-Type']='application/json';headers['X-EmuStack-Request']='1'}const r=await fetch(path,Object.assign({},opt,{headers}));let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.error||d.message||('HTTP '+r.status));return d}
-function toast(s,bad){const n=document.createElement('div');n.className='toast'+(bad?' error':'');n.textContent=s;$('#toast-region').append(n);setTimeout(()=>n.remove(),4200)}
-function showView(name){const section=$('#view-'+name);if(!section)return;state.view=name;$$('.view').forEach(x=>x.classList.toggle('active',x===section));$$('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.view===name));$('#crumb-current').textContent=($('[data-view="'+name+'"]')||{}).textContent||name;$('#sidebar').classList.remove('open')}
-function statusInfo(x){const s=String(x.runtime_status||x.status||x.state||'unknown').toLowerCase();if(s.includes('available')||s==='ready'||s.includes('installed'))return['Launcher encontrado','ready'];if(s.includes('unsupported')||s.includes('missing')||s.includes('not_available')||s.includes('no_'))return['Indisponível','error'];return[s.replaceAll('_',' '),'warning']}
-function emuCard(x){const z=statusInfo(x);return '<article class="card"><div class="card-top"><span class="card-icon">'+esc((x.name||x.id||'E').slice(0,2).toUpperCase())+'</span><span class="status '+z[1]+'">'+esc(z[0])+'</span></div><h3>'+esc(x.name||x.id)+'</h3><p>'+esc(x.platform||x.description||x.notes||'Projeto de emulação')+'</p><p>'+esc(x.runtime||'Status conforme instalação local')+'</p><div class="card-actions"><button class="button" data-launch-emulator="'+esc(x.id)+'">Abrir</button>'+(x.url?'<a class="button" href="'+esc(x.url)+'" target="_blank" rel="noreferrer">Projeto ↗</a>':'')+'</div></article>'}
-function renderEmulators(){const q=($('#emulator-search')?.value||'').toLowerCase(),p=$('#platform-filter')?.value||'all',f=$('#status-filter')?.value||'all';const all=state.catalog.emulators||[];const filtered=all.filter(x=>(!q||JSON.stringify(x).toLowerCase().includes(q))&&(p==='all'||x.platform===p)).filter(x=>f==='all'||(f==='ready'&&statusInfo(x)[1]==='ready')||(f==='missing'&&statusInfo(x)[1]==='error')||(f==='experimental'&&statusInfo(x)[1]==='warning'));$('#emulator-grid').innerHTML=filtered.map(emuCard).join('')||'<p class="empty-state">Nenhum resultado.</p>';$('#featured-grid').innerHTML=all.slice(0,3).map(emuCard).join('');$('#metric-emulators').textContent=all.length;$('#metric-ready').textContent=all.filter(x=>statusInfo(x)[1]==='ready').length;const pl=[...new Set(all.map(x=>x.platform).filter(Boolean))].sort(),sel=$('#platform-filter');if(sel&&sel.options.length<=1)sel.innerHTML='<option value="all">Todas as plataformas</option>'+pl.map(x=>'<option>'+esc(x)+'</option>').join('')}
-function renderEnvironments(){const q=($('#environment-search')?.value||'').toLowerCase(),f=$('#environment-filter')?.value||'all';const items=state.environments.filter(x=>(!q||JSON.stringify(x).toLowerCase().includes(q))&&(f==='all'||(f==='online'&&x.online!==false&&x.health!=='offline')||(f==='offline'&&(x.online===false||x.health==='offline'))));$('#environment-grid').innerHTML=items.map(x=>'<article class="card"><div class="card-top"><span class="card-icon">▦</span><span class="status '+(x.online===false?'warning':'ready')+'">'+(x.online===false?'Offline':'Status detectado')+'</span></div><h3>'+esc(x.name||x.display_name||x.id)+'</h3><p>'+esc(x.platform||x.description||x.id)+'</p><p>ID: <code>'+esc(x.id||x.environment_id)+'</code></p><div class="card-actions"><button class="button" data-launch-emulator="'+esc(x.id||x.environment_id)+'">Abrir perfil</button></div></article>').join('')||'<p class="empty-state">Nenhum ambiente encontrado.</p>'}
-function renderConsoleSystems(){const q=($('#console-system-search')?.value||'').toLowerCase(),f=$('#console-system-filter')?.value||'all';const items=state.systems.filter(x=>(!q||JSON.stringify(x).toLowerCase().includes(q))&&(f==='all'||(f==='ready'&&x.can_boot_original)||(f==='unsupported'&&x.state==='unsupported')||(f==='needs-setup'&&String(x.state).includes('setup'))||(f==='needs-verification'&&String(x.state).includes('verification'))||(f==='manual'&&String(x.state).includes('manual'))));$('#console-system-grid').innerHTML=items.map(x=>{const id=x.id||x.system_id,title=x.name||x.title||id,ready=!!x.can_boot_original,bad=x.state==='unsupported';return '<article class="console-system-card"><div class="card-top"><span class="card-icon">🎮</span><span class="status '+(ready?'ready':bad?'error':'warning')+'">'+esc(x.state_label||x.state||'Verificar')+'</span></div><h3>'+esc(title)+'</h3><p>'+esc(x.details||x.description||x.capability_note||'Pré-requisitos dependem do emulador e dos arquivos do usuário.')+'</p><div class="system-checks">'+arr(x,['checks']).map(c=>'<div>• '+esc(typeof c==='string'?c:(c.label||c.message||JSON.stringify(c)))+'</div>').join('')+'</div><div class="card-actions">'+(ready?'<button class="button primary" data-system-action="boot" data-system-id="'+esc(id)+'">Iniciar sistema</button>':'')+'<button class="button" data-system-setup="'+esc(id)+'">Instruções</button></div></article>'}).join('')||'<p class="empty-state">Nenhum sistema encontrado.</p>'}
-function formatBytes(n){n=Number(n||0);if(!n)return'—';const u=['B','KB','MB','GB','TB'];let i=0;while(n>=1024&&i<u.length-1){n/=1024;i++}return n.toFixed(i?1:0)+' '+u[i]}
-function renderLibrary(){const q=($('#library-search')?.value||'').toLowerCase(),ext=$('#extension-filter')?.value||'all',sort=$('#library-sort')?.value||'name';let items=state.games.filter(g=>{const path=g.path||g.name||'';return(!q||JSON.stringify(g).toLowerCase().includes(q))&&(ext==='all'||path.toLowerCase().endsWith(ext))});items.sort((a,b)=>sort==='size'?(b.size_bytes||0)-(a.size_bytes||0):sort==='recent'?String(b.modified||'').localeCompare(String(a.modified||'')):String(a.name||a.path).localeCompare(String(b.name||b.path)));$('#library-table-body').innerHTML=items.map(g=>{const p=g.path||g.relative_path||g.name||'';return '<tr><td><code>'+esc(g.name||p)+'</code></td><td>'+esc((p.includes('.')?p.slice(p.lastIndexOf('.')):'—').toUpperCase())+'</td><td>'+esc(g.size_label||formatBytes(g.size_bytes))+'</td><td>'+esc(g.environment_id||g.environment||'—')+'</td><td><button class="button" data-open-game="'+esc(p)+'">Abrir</button></td></tr>'}).join('')||'<tr><td colspan="5" class="empty-state">Nenhum jogo detectado. Adicione arquivos autorizados à pasta do perfil correto.</td></tr>';const ex=[...new Set(state.games.map(g=>{const p=g.path||g.name||'';return p.includes('.')?p.slice(p.lastIndexOf('.')).toLowerCase():''}).filter(Boolean))].sort(),sel=$('#extension-filter');if(sel&&sel.options.length<=1)sel.innerHTML='<option value="all">Todos os formatos</option>'+ex.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');$('#metric-games').textContent=state.games.length;$('#overview-library').innerHTML=state.games.slice(0,5).map(g=>'<div class="mini-row">'+esc(g.name||g.path)+' <small>'+esc(g.environment_id||g.environment||'')+'</small></div>').join('')||'<p>Nenhum arquivo detectado.</p>'}
-function renderSources(){const sources=arr(state.sources,['sources','items']),cats=arr(state.sources,['categories']),guidance=state.sources.platform_guidance||arr(state.sources,['platform_guidance']);$('#source-tabs').innerHTML=[{id:'all',name:'Todas'},...cats].map(x=>'<button class="source-tab '+(state.selectedSourceCategory===x.id?'active':'')+'" data-source-category="'+esc(x.id)+'">'+esc(x.name||x.title||x.id)+'</button>').join('');const platforms=[{id:'all',name:'Todos os consoles'},...guidance.map(x=>({id:x.environment_id,name:x.platform||x.environment_name||x.environment_id}))];$('#source-platform-tabs').innerHTML=platforms.map(x=>'<button class="source-tab '+(state.selectedSourcePlatform===x.id?'active':'')+'" data-source-platform="'+esc(x.id)+'">'+esc(x.name)+'</button>').join('');const g=guidance.find(x=>x.environment_id===state.selectedSourcePlatform);$('#source-platform-note').textContent=g?.guidance||'Repositórios de emuladores normalmente publicam código e binários do emulador, não jogos.';const ids=g?.source_ids;const filtered=sources.filter(s=>(state.selectedSourceCategory==='all'||s.category===state.selectedSourceCategory)&&(state.selectedSourcePlatform==='all'||!ids||ids.includes(s.id)));$('#source-grid').innerHTML=filtered.map(s=>'<article class="card"><h3>'+esc(s.name||s.title||s.id)+'</h3><p>'+esc(s.description||s.note||'Consulte os termos da publicação.')+'</p><a class="button" href="'+esc(s.url||'#')+'" target="_blank" rel="noreferrer">Abrir fonte ↗</a></article>').join('')||'<p class="empty-state">Nenhuma fonte encontrada.</p>'}
-function renderDocs(){const docs=state.docs;$('#docs-nav').innerHTML=docs.map((d,i)=>'<button class="docs-link '+((state.selectedDoc?.id||docs[0]?.id)===(d.id||d.slug)?'active':'')+'" data-doc-id="'+esc(d.id||d.slug||i)+'">'+esc(d.title||d.name||d.id)+'</button>').join('');const doc=state.selectedDoc||docs[0];$('#docs-content').innerHTML=doc?'<h2>'+esc(doc.title||doc.name||doc.id)+'</h2><pre>'+esc(doc.content||doc.markdown||doc.body||'Abra o arquivo de documentação no repositório para ler seu conteúdo.')+'</pre>':'Nenhum documento retornado pela API.'}
-function renderProcesses(){const items=arr(state.processes,['processes','items','sessions']);$('#process-list').innerHTML=items.map(p=>'<div class="process-row"><span><b>'+esc(p.emulator_name||p.emulator||p.name||'Sessão')+'</b> · PID '+esc(p.pid||'—')+' · '+esc(p.status||'')+'</span><span><button class="button" data-process-log="'+esc(p.pid)+'">Logs</button> <button class="button" data-stop-process="'+esc(p.pid)+'">Encerrar</button></span></div>').join('')||'<p class="muted">Nenhuma sessão gerenciada ativa.</p>';$('#system-lines').innerHTML='<div class="system-line">API do dashboard <b>online</b></div><div class="system-line">Ambientes registrados <b>'+state.environments.length+'</b></div><div class="system-line">Sessões gerenciadas <b>'+items.length+'</b></div>'}
-async function loadAll(){try{const rs=await Promise.allSettled([api('/api/health'),api('/api/catalog'),api('/api/environments'),api('/api/console-systems'),api('/api/games'),api('/api/docs'),api('/api/processes')]);if(rs[0].status!=='fulfilled')throw rs[0].reason;const v=i=>rs[i].status==='fulfilled'?rs[i].value:{};state.catalog=v(1);state.environments=arr(v(2),['environments','items']);state.systems=arr(v(3),['systems','items']);state.games=arr(v(4),['games','items']);state.docs=arr(v(5),['documents','docs','items']);state.processes=v(6);try{state.sources=await api('/api/sources')}catch{try{state.sources=await api('/api/game-sources')}catch{state.sources={sources:[],categories:[],platform_guidance:[]}}}$('#side-health').textContent='API online';renderEmulators();renderEnvironments();renderConsoleSystems();renderLibrary();renderSources();renderDocs();renderProcesses();$('#metric-runtime').textContent='Docker';$('#metric-report').textContent=v(0).status||v(0).state||'Respondendo'}catch(e){$('#side-health').textContent='Runtime indisponível';$('#system-lines').textContent=e.message;toast('Runtime indisponível: '+e.message,true)}}
-function showLaunchDialog(id,game){const sel=$('#launch-emulator-select');sel.innerHTML=(state.catalog.emulators||[]).map(x=>'<option value="'+esc(x.id)+'" '+(x.id===id?'selected':'')+'>'+esc(x.name||x.id)+'</option>').join('');$('#launch-game-select').innerHTML='<option value="">Abrir interface do emulador</option>'+state.games.map(g=>{const p=g.path||g.name;return '<option value="'+esc(p)+'" '+(p===game?'selected':'')+'>'+esc((g.name||p)+' — '+(g.environment_id||g.environment||''))+'</option>'}).join('');$('#launch-title').textContent=id?'Abrir '+(state.catalog.emulators.find(x=>x.id===id)?.name||id):'Abrir emulador';$('#launch-dialog').showModal()}
-function gamePathFromSelection(value){return String(value||'')}
-async function launch(){const emulator=$('#launch-emulator-select').value,game=$('#launch-game-select').value||null,first=state.catalog.emulators.find(x=>x.id===emulator),gamePath=gamePathFromSelection(game);if(first?.game_arg==='blocked'){toast('Este perfil não possui um launcher suportado.',true);return}if(game&&window.EmuStackLaunch&&window.EmuStackLaunch.recommendEmulatorForGame(gamePath)){const recommended=window.EmuStackLaunch.recommendEmulatorForGame(gamePath);if(recommended&&recommended!==emulator){toast('Verifique o perfil sugerido: '+recommended,true);return}}$('#confirm-launch').disabled=true;try{const r=await api('/api/launch',{method:'POST',body:JSON.stringify({emulator:emulator,game:game})});toast(r.started===false?'O processo não iniciou. Confira os logs.':'Solicitação de inicialização enviada.');$('#launch-dialog').close();await refreshProcesses()}catch(e){toast(e.message,true)}finally{$('#confirm-launch').disabled=false}}
-async function launchConsoleSystem(id,action){try{const r=await api('/api/console-systems/launch',{method:'POST',body:JSON.stringify({system:id,action:action})});toast(r.started===false?'O boot não iniciou. Confira pré-requisitos e logs.':'Solicitação de boot enviada.');$('#system-setup-dialog').close();await refreshProcesses()}catch(e){toast(e.message,true)}}
-function showSystemSetup(id){const s=state.systems.find(x=>(x.id||x.system_id)===id);if(!s){toast('Sistema não encontrado.',true);return}$('#system-setup-title').textContent=s.name||s.title||id;$('#system-setup-summary').textContent=s.details||s.description||s.capability_note||'Consulte a documentação oficial do emulador e prepare arquivos de sistema autorizados.';$('#system-setup-checks').innerHTML=arr(s,['checks']).map(x=>'<div class="mini-row">'+esc(typeof x==='string'?x:(x.label||x.message||JSON.stringify(x)))+'</div>').join('')||'<p>Pré-requisitos dependem do emulador e dos arquivos do usuário.</p>';$('#system-setup-steps').innerHTML=arr(s,['setup_steps','steps']).map(x=>'<li>'+esc(typeof x==='string'?x:(x.title||x.description||JSON.stringify(x)))+'</li>').join('')||'<li>Leia a documentação oficial, configure os arquivos autorizados e confira o status novamente.</li>';const links=arr(s,['official_docs','links']);$('#system-setup-links').innerHTML=links.map(x=>'<p><a target="_blank" rel="noreferrer" href="'+esc(typeof x==='string'?x:x.url)+'">'+esc(typeof x==='string'?x:(x.title||x.label||x.url))+' ↗</a></p>').join('');$('#system-setup-checks').innerHTML+='<p class="muted">A detecção de pré-requisitos não comprova um boot visual real.</p>';if(s.can_boot_original)$('#system-setup-links').innerHTML+='<button class="button primary" data-system-action="boot" data-system-id="'+esc(id)+'">Iniciar sistema</button>';$('#system-setup-dialog').showModal()}
-async function refreshProcesses(){try{state.processes=await api('/api/processes');renderProcesses()}catch(e){toast(e.message,true)}}
-async function processLog(pid){try{const x=await api('/api/processes/'+encodeURIComponent(pid)+'/log');$('#process-log-title').textContent='Logs da sessão '+pid;$('#process-log-content').textContent=x.log||x.content||JSON.stringify(x,null,2);$('#process-log-dialog').showModal()}catch(e){toast(e.message,true)}}
-async function stopProcess(pid){try{await api('/api/processes/stop',{method:'POST',body:JSON.stringify({pid:Number(pid)})});toast('Pedido de encerramento enviado.');await refreshProcesses()}catch(e){toast(e.message,true)}}
-function searchAll(q){if(!q)return;const t=q.toLowerCase();if(state.games.some(x=>JSON.stringify(x).toLowerCase().includes(t)))showView('library');else if(state.systems.some(x=>JSON.stringify(x).toLowerCase().includes(t)))showView('consoles');else showView('emulators');const id=state.view==='library'?'library-search':state.view==='consoles'?'console-system-search':'emulator-search';$('#'+id).value=q;$('#'+id).dispatchEvent(new Event('input'))}
-document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.view)showView(b.dataset.view);if(b.dataset.goto)showView(b.dataset.goto);if(b.dataset.launchEmulator)showLaunchDialog(b.dataset.launchEmulator,'');if(b.dataset.openGame)showLaunchDialog('',b.dataset.openGame);if(b.dataset.systemSetup)showSystemSetup(b.dataset.systemSetup);if(b.dataset.systemAction)launchConsoleSystem(b.dataset.systemId,b.dataset.systemAction);if(b.dataset.processLog)processLog(b.dataset.processLog);if(b.dataset.stopProcess)stopProcess(b.dataset.stopProcess);if(b.dataset.sourceCategory){state.selectedSourceCategory=b.dataset.sourceCategory;renderSources()}if(b.dataset.sourcePlatform){state.selectedSourcePlatform=b.dataset.sourcePlatform;renderSources()}if(b.dataset.docId){state.selectedDoc=state.docs.find(x=>(x.id||x.slug)===b.dataset.docId)||null;renderDocs()}});
-['emulator-search','platform-filter','status-filter'].forEach(id=>$('#'+id).addEventListener('input',renderEmulators));['environment-search','environment-filter'].forEach(id=>$('#'+id).addEventListener('input',renderEnvironments));['console-system-search','console-system-filter'].forEach(id=>$('#'+id).addEventListener('input',renderConsoleSystems));['library-search','extension-filter','library-sort'].forEach(id=>$('#'+id).addEventListener('input',renderLibrary));
-$('#refresh-button').addEventListener('click',loadAll);$('#refresh-sessions').addEventListener('click',refreshProcesses);$('#refresh-library').addEventListener('click',loadAll);$('#confirm-launch').addEventListener('click',launch);$('#close-system-setup').addEventListener('click',()=>$('#system-setup-dialog').close());$('#close-process-log').addEventListener('click',()=>$('#process-log-dialog').close());$('#mobile-menu').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));$('#global-search').addEventListener('keydown',e=>{if(e.key==='Enter')searchAll(e.target.value.trim())});loadAll();
+const state = {
+  health: null,
+  emulators: [],
+  environments: [],
+  consoleSystems: [],
+  consoleSystemsError: '',
+  games: [],
+  sessions: [],
+  sources: { categories: [], sources: [] },
+  docs: [],
+  currentView: 'overview',
+  selectedSourceCategory: 'all',
+  selectedSourcePlatform: 'all',
+  selectedDoc: 'readme',
+  launchTarget: null,
+  launchEnvironmentId: null,
+};
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const escapeHtml = (value = '') => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    cache: 'no-store',
+    ...options,
+    headers: { ...(options.headers || {}), ...(options.method === 'POST' ? {'Content-Type':'application/json','X-EmuStack-Request':'1'} : {}) },
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || `Erro HTTP ${response.status}`);
+  return data;
+}
+
+function toast(message, type = '') {
+  const node = document.createElement('div');
+  node.className = `toast ${type}`;
+  node.textContent = message;
+  $('#toast-region').append(node);
+  window.setTimeout(() => node.remove(), 4800);
+}
+
+function platformFamily(platform = '') {
+  if (/playstation/i.test(platform)) return 'ps';
+  if (/xbox/i.test(platform)) return 'xb';
+  if (/nintendo|game boy|super nintendo|nes/i.test(platform)) return 'nin';
+  return 'generic';
+}
+function platformGlyph(platform = '') {
+  const family = platformFamily(platform);
+  return family === 'ps' ? 'PS' : family === 'xb' ? 'XB' : family === 'nin' ? 'N' : 'PC';
+}
+function statusClass(item) {
+  const st = (item.runtime_status || '').toUpperCase();
+  if (st === 'AVAILABLE' || st === 'AVAILABLE VIA WINE') return item.status === 'mature' ? 'mature' : 'ready';
+  if (st.includes('NO LINUX') || st.includes('NO STANDALONE') || st.includes('UNVERIFIED')) return 'blocked';
+  if (item.status === 'experimental' || /experimental|research/i.test(item.runtime || '')) return 'experimental';
+  return 'missing';
+}
+function statusLabel(item) {
+  const st = (item.runtime_status || '').toUpperCase();
+  if (st === 'AVAILABLE') return 'Launcher encontrado';
+  if (st === 'AVAILABLE VIA WINE') return 'Disponível via Wine';
+  if (st === 'NEEDS WINE') return 'Requer Wine';
+  if (st === 'NEEDS BINARY') return 'Binário ausente';
+  if (st === 'NO LINUX EMULATOR BIN') return 'Sem binário Linux';
+  if (st === 'NO STANDALONE RUNNER') return 'Projeto de pesquisa';
+  if (st === 'UNVERIFIED VARIANT') return 'Variante não verificada';
+  return 'Não instalado';
+}
+function shortStatus(item) {
+  if (item.runtime_status === 'AVAILABLE' || item.runtime_status === 'AVAILABLE VIA WINE') return 'Disponível';
+  if (item.runtime_status === 'NO LINUX EMULATOR BIN' || item.runtime_status === 'NO STANDALONE RUNNER' || item.runtime_status === 'UNVERIFIED VARIANT') return 'Sem launcher genérico';
+  return 'Verificar instalação';
+}
+function iconClass(ext = '') {
+  const e = ext.toLowerCase().replace('.', '');
+  if (['gba','gb','gbc','nes','sfc','smc','n64','z64','v64'].includes(e)) return e;
+  return 'disc';
+}
+function formatDate(iso) {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.valueOf())) return '—';
+  return new Intl.DateTimeFormat('pt-BR', {day:'2-digit',month:'short',year:'numeric'}).format(date);
+}
+function formatBytes(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 0) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ['KB','MB','GB','TB'];
+  let value = bytes / 1024, idx = 0;
+  while (value >= 1024 && idx < units.length - 1) { value /= 1024; idx++; }
+  return `${value.toFixed(1)} ${units[idx]}`;
+}
+function setView(view) {
+  const ids = ['overview','environments','consoles','emulators','library','sources','docs'];
+  if (!ids.includes(view)) view = 'overview';
+  state.currentView = view;
+  $$('.view').forEach(el => el.classList.toggle('active', el.id === `view-${view}`));
+  $$('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+  const labels = {overview:'Visão geral',environments:'Ambientes isolados',consoles:'Sistemas originais',emulators:'Emuladores',library:'Biblioteca',sources:'Fontes de jogos',docs:'Documentação'};
+  $('#crumb-current').textContent = labels[view];
+  $('#sidebar').classList.remove('open');
+  if (view === 'environments') renderEnvironments();
+  if (view === 'consoles') renderConsoleSystems();
+  if (view === 'emulators') renderEmulators();
+  if (view === 'library') renderLibrary();
+  if (view === 'sources') renderSources();
+  if (view === 'docs') renderDocs();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function emulatorCard(item, featured = false) {
+  const family = platformFamily(item.platform);
+  const status = statusClass(item);
+  const canLaunch = item.launchable;
+  const notes = item.notes || 'Confira a documentação oficial para requisitos e compatibilidade.';
+  return `<article class="emulator-card ${featured ? 'featured-card' : ''}">
+    <div class="emu-card-top"><div class="console-icon ${family}">${escapeHtml(platformGlyph(item.platform))}</div><div class="emu-card-heading"><h3>${escapeHtml(item.name)}</h3><div class="console-name">${escapeHtml(item.platform)}</div></div></div>
+    <div><span class="status-badge ${status}">${escapeHtml(statusLabel(item))}</span></div>
+    <p class="emu-note">${escapeHtml(notes)}</p>
+    <div class="emu-card-bottom"><a class="source-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">Fonte oficial ↗</a><button class="launch-mini" data-launch="${escapeHtml(item.id)}" ${canLaunch ? '' : 'disabled'} title="${canLaunch ? 'Abrir emulador' : escapeHtml(item.launch_reason || statusLabel(item))}">${canLaunch ? 'Abrir →' : 'Indisponível'}</button></div>
+  </article>`;
+}
+
+function renderOverview() {
+  if (!state.health) return;
+  $('#metric-emulators').textContent = state.health.emulator_count ?? state.emulators.length;
+  $('#metric-ready').textContent = state.health.launchers_ready ?? '—';
+  $('#metric-games').textContent = state.health.game_count ?? state.games.length;
+  $('#metric-storage').textContent = `${state.health.game_bytes_label || '0 B'} catalogados`;
+  $('#metric-runtime').textContent = 'Docker';
+  $('#metric-report').textContent = state.health.install_report_present ? 'Relatório de instalação encontrado' : 'Relatório ainda não detectado';
+  if ($('#nav-environment-count')) $('#nav-environment-count').textContent = state.environments.length || state.health.environment_count || '—';
+  $('#nav-emulator-count').textContent = state.emulators.length;
+  $('#nav-game-count').textContent = state.games.length;
+  $('#side-health').textContent = `${state.health.launchers_ready} launchers encontrados`;
+  const priority = ['rpcs3','pcsx2','dolphin'];
+  let featured = priority.map(id => state.emulators.find(item => item.id === id)).filter(Boolean);
+  if (featured.length < 3) featured = state.emulators.slice(0,3);
+  $('#featured-grid').innerHTML = featured.map(item => emulatorCard(item, true)).join('');
+  if (!state.games.length) {
+    $('#overview-library').innerHTML = `<div class="empty-state">Nenhum arquivo compatível detectado. Adicione jogos autorizados a <code>data/environments/&lt;id&gt;/games/</code> no ambiente correto.</div>`;
+  } else {
+    $('#overview-library').innerHTML = state.games.slice(0,4).map(game => `<div class="mini-game-row"><div class="file-icon ${iconClass(game.extension)}">${escapeHtml(game.extension.replace('.','').slice(0,4) || 'FILE')}</div><div class="mini-game-main"><b>${escapeHtml(game.name)}</b><small>${escapeHtml(game.environment_id ? `${game.environment_id} / ` : '')}${escapeHtml(game.path)}</small></div><span class="file-size">${escapeHtml(game.size_label)}</span></div>`).join('');
+  }
+  const experimentCount = state.emulators.filter(i => ['NO LINUX EMULATOR BIN','NO STANDALONE RUNNER','UNVERIFIED VARIANT'].includes(i.runtime_status)).length;
+  const lines = [
+    ['Núcleo', `${state.environments.length || 20} ambientes isolados`, 'good'],
+    ['Rede', 'Agentes sem comunicação entre si', 'good'],
+    ['Catálogo', `${state.emulators.length} projetos registrados`, 'good'],
+    ['Launchers', `${state.health.launchers_ready} detectados`, state.health.launchers_ready ? 'good' : 'warn'],
+    ['Biblioteca', `${state.games.length} arquivos catalogados`, 'good'],
+    ['Projetos sem runner genérico', `${experimentCount} entradas`, experimentCount ? 'warn' : 'good'],
+    ['Exposição web', 'Somente loopback (127.0.0.1)', 'good'],
+  ];
+  $('#system-lines').innerHTML = lines.map(([label,value,tone]) => `<div class="system-line"><span>${escapeHtml(label)}</span><b class="${tone}">${escapeHtml(value)}</b></div>`).join('');
+}
+
+function renderSessions() {
+  const host = $('#process-list');
+  if (!host) return;
+  const sessions = state.sessions || [];
+  if (!sessions.length) {
+    host.innerHTML = '<div class="empty-state">Nenhuma sessão iniciada. Os processos e logs são mantidos pelo agente do ambiente correspondente.</div>';
+    return;
+  }
+  host.innerHTML = sessions.map(session => {
+    const running = session.status === 'running';
+    const statusTone = running ? 'good' : session.status === 'failed' ? 'bad' : 'muted';
+    const key = session.session_key || String(session.pid);
+    return `<article class="session-row"><div class="session-main"><div class="session-mark ${running ? 'running' : ''}">${running ? '▶' : session.status === 'failed' ? '!' : '✓'}</div><div class="session-copy"><b>${escapeHtml(session.emulator_name || session.emulator)}</b><small>Ambiente ${escapeHtml(session.environment_id || 'local')} · PID ${escapeHtml(session.pid)} · ${escapeHtml(session.game || 'sem arquivo associado')} · ${escapeHtml(formatDate(session.started_at))}</small></div></div><div class="session-actions"><span class="session-status ${statusTone}">${escapeHtml(running ? 'Em execução' : session.status === 'failed' ? `Falhou (${session.exit_code ?? '?'})` : `${session.status === 'stopped' ? 'Encerrado pelo usuário' : `Finalizado (${session.exit_code ?? '?'})`}`)}</span><button class="row-action" data-process-log="${escapeHtml(key)}">Logs</button>${running ? `<button class="row-action danger-action" data-stop-process="${escapeHtml(key)}">Encerrar</button>` : ''}</div></article>`;
+  }).join('');
+}
+
+function findSessionByKey(key) {
+  return (state.sessions || []).find(s => (s.session_key || String(s.pid)) === String(key));
+}
+
+async function stopSession(sessionKey) {
+  const session = findSessionByKey(sessionKey);
+  if (!session) { toast('Sessão não encontrada; atualize a lista.', 'warning'); return; }
+  const button = $(`[data-stop-process="${CSS.escape(String(sessionKey))}"]`);
+  if (button) { button.disabled = true; button.textContent = 'Encerrando…'; }
+  try {
+    const payload = session.local_session_id
+      ? {environment_id: session.environment_id, session_id: session.local_session_id}
+      : {pid:Number(session.pid)};
+    const result = await api('/api/processes/stop', {method:'POST', body:JSON.stringify(payload)});
+    toast(result.stopped ? `Sessão ${sessionKey} encerrada.` : `Pedido de encerramento enviado para ${sessionKey}.`, result.stopped ? '' : 'warning');
+    await refreshAll();
+  } catch (error) {
+    toast(error.message || 'Não foi possível encerrar a sessão.', 'error');
+    if (button) { button.disabled = false; button.textContent = 'Encerrar'; }
+    await refreshSessionsOnly();
+  }
+}
+
+async function showSessionLog(sessionKey) {
+  const session = findSessionByKey(sessionKey);
+  if (!session) { toast('Sessão não encontrada; atualize a lista.', 'warning'); return; }
+  try {
+    const logPath = session.local_session_id
+      ? `/api/processes/${encodeURIComponent(session.environment_id)}/${encodeURIComponent(session.local_session_id)}/log`
+      : `/api/processes/${encodeURIComponent(session.pid)}/log`;
+    const data = await api(logPath);
+    $('#process-log-title').textContent = `Logs: ${session.environment_id || 'local'} · PID ${session.pid} · ${data.status}`;
+    $('#process-log-content').textContent = `${data.truncated ? '[Trecho inicial do log omitido — exibindo o final.]\n' : ''}${data.log || '(sem saída registrada)'}`;
+    $('#process-log-dialog').showModal();
+  } catch (error) {
+    toast(error.message || 'Não foi possível ler o log.', 'error');
+  }
+}
+
+async function refreshSessionsOnly() {
+  try {
+    const data = await api('/api/processes');
+    state.sessions = data.processes || [];
+    renderSessions();
+  } catch (_) { /* Preserve the last known snapshot if an agent is unavailable. */ }
+}
+
+function renderPlatformOptions() {
+  const select = $('#platform-filter');
+  const platforms = [...new Set(state.emulators.map(i => i.platform))].sort((a,b)=>a.localeCompare(b));
+  select.innerHTML = '<option value="all">Todas as plataformas</option>' + platforms.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+  const families = [
+    ['all','Tudo'], ['ps','PlayStation'], ['xb','Xbox'], ['nin','Nintendo']
+  ];
+  $('#platform-strip').innerHTML = families.map(([key,label],i) => `<button class="platform-pill ${i===0?'active':''}" data-family="${key}">${label}</button>`).join('');
+  $$('#platform-strip [data-family]').forEach(button => button.addEventListener('click', () => {
+    $$('#platform-strip .platform-pill').forEach(p => p.classList.toggle('active', p === button));
+    $('#platform-filter').value = 'all';
+    $('#platform-filter').dataset.family = button.dataset.family;
+    renderEmulators();
+  }));
+}
+function renderEmulators() {
+  const query = ($('#emulator-search')?.value || $('#global-search')?.value || '').trim().toLowerCase();
+  const platform = $('#platform-filter')?.value || 'all';
+  const family = $('#platform-filter')?.dataset.family || 'all';
+  const filterStatus = $('#status-filter')?.value || 'all';
+  const filtered = state.emulators.filter(item => {
+    const haystack = `${item.name} ${item.platform} ${item.notes} ${item.runtime}`.toLowerCase();
+    if (query && !haystack.includes(query)) return false;
+    if (platform !== 'all' && item.platform !== platform) return false;
+    if (family !== 'all' && platformFamily(item.platform) !== family) return false;
+    if (filterStatus === 'ready' && !['AVAILABLE','AVAILABLE VIA WINE'].includes(item.runtime_status)) return false;
+    if (filterStatus === 'missing' && !['NOT INSTALLED','NEEDS BINARY','NEEDS WINE'].includes(item.runtime_status)) return false;
+    if (filterStatus === 'experimental' && !['NO LINUX EMULATOR BIN','NO STANDALONE RUNNER','UNVERIFIED VARIANT'].includes(item.runtime_status) && item.status !== 'experimental') return false;
+    return true;
+  });
+  $('#emulator-results-count').textContent = `${filtered.length} de ${state.emulators.length} projetos`;
+  $('#emulator-grid').innerHTML = filtered.length ? filtered.map(item => emulatorCard(item)).join('') : `<div class="empty-state empty-state-wide">Nenhum projeto corresponde a esses filtros.</div>`;
+}
+
+function environmentTone(environment) {
+  if (!environment.online) return 'blocked';
+  if (environment.launch_available) return 'good';
+  return 'warn';
+}
+function environmentCapabilityLabel(environment) {
+  const labels = {
+    SYSTEM_MENU_BOOT: 'Boot do menu do sistema (condicionado a firmware)',
+    FIRMWARE_BOOT: 'Boot da BIOS/firmware',
+    CONDITIONAL_SYSTEM_BOOT: 'Boot do sistema; dashboard depende dos arquivos',
+    CONDITIONAL_MENU_BOOT: 'Menu de sistema condicionado a dados oficiais',
+    MANUAL_SYSTEM_BOOT: 'Menu/sistema exige ação manual',
+    BOOT_SEQUENCE_ONLY: 'Sequência de boot; sem dashboard dedicado',
+    GAME_ONLY_EXPERIMENTAL: 'Jogos / suporte experimental; sem boot completo verificado',
+    GAME_ONLY: 'Executar jogos; boot completo não integrado',
+    UNAVAILABLE: 'Runner não disponível/verificado',
+  };
+  return labels[environment.capability_level] || environment.capability_note || 'Capacidade não classificada';
+}
+function renderEnvironments() {
+  const host = $('#environment-grid');
+  if (!host) return;
+  const environments = state.environments || [];
+  const online = environments.filter(e => e.online).length;
+  const active = new Set((state.sessions || []).filter(s => s.status === 'running').map(s => s.environment_id).filter(Boolean)).size;
+  $('#environment-stats').innerHTML = `<div class="summary-chip"><span>Ambientes definidos</span><b>${environments.length}</b></div><div class="summary-chip"><span>Agentes online</span><b>${online}/${environments.length}</b></div><div class="summary-chip"><span>Ambientes ativos / limite</span><b>${active}/${state.health?.max_active_environments || 2}</b></div>`;
+  const query = ($('#environment-search')?.value || '').trim().toLowerCase();
+  const filter = $('#environment-filter')?.value || 'all';
+  const items = environments.filter(env => {
+    const text = `${env.name} ${env.platform} ${env.emulator_name} ${env.id} ${env.capability_note}`.toLowerCase();
+    if (query && !text.includes(query)) return false;
+    if (filter === 'online' && !env.online) return false;
+    if (filter === 'offline' && env.online) return false;
+    if (filter === 'launchable' && !env.launch_available) return false;
+    if (filter === 'system-boot' && !['SYSTEM_MENU_BOOT','FIRMWARE_BOOT','CONDITIONAL_SYSTEM_BOOT','CONDITIONAL_MENU_BOOT','MANUAL_SYSTEM_BOOT'].includes(env.capability_level)) return false;
+    return true;
+  });
+  host.innerHTML = items.length ? items.map(env => {
+    const tone = environmentTone(env);
+    const dataRoot = env.directories?.root || `data/environments/${env.id}`;
+    const systems = (env.system_profile_ids || []).map(id => {
+      const match = (state.consoleSystems || []).find(system => system.id === id);
+      return match ? `${match.name}: ${systemStateLabel(match)}` : id;
+    }).join(' · ');
+    const launch = env.launch_available
+      ? `<button class="button primary" data-environment-launch="${escapeHtml(env.id)}">Abrir emulador <span>→</span></button>`
+      : `<button class="button secondary" disabled title="${escapeHtml(env.launch_reason || env.capability_note || 'Launcher indisponível')}">Launcher indisponível</button>`;
+    const systemProfile = (env.system_profile_ids || []).map(id => (state.consoleSystems || []).find(system => system.id === id)).find(Boolean);
+    const consoleButton = systemProfile
+      ? `<button class="button secondary" data-environment-system="${escapeHtml(systemProfile.id)}">${escapeHtml(systemProfile.can_boot_original ? 'Ver passos de boot' : systemProfile.can_open_emulator ? 'Ver limites / configuração' : 'Ver indisponibilidade')}</button>`
+      : '';
+    return `<article class="environment-card ${tone}"><div class="environment-card-top"><div><div class="console-family">${escapeHtml(env.platform)}</div><h3>${escapeHtml(env.emulator_name)}</h3><p>${escapeHtml(env.name)}</p></div><span class="system-state-pill ${tone}"><i></i>${escapeHtml(env.online ? 'Agente online' : 'Agente offline')}</span></div><div class="environment-capability"><b>${escapeHtml(environmentCapabilityLabel(env))}</b><p>${escapeHtml(env.capability_note || '')}</p></div><div class="environment-detail-grid"><div><small>Ambiente</small><code>${escapeHtml(env.id)}</code></div><div><small>Runtime</small><b>${escapeHtml(env.runtime_status || '—')}</b></div><div><small>Jogos</small><code>${escapeHtml(dataRoot)}/games</code></div><div><small>BIOS / firmware</small><code>${escapeHtml(dataRoot)}/bios</code></div><div><small>Saves</small><code>${escapeHtml(dataRoot)}/saves</code></div><div><small>Configurações</small><code>${escapeHtml(dataRoot)}/home</code></div></div>${systems ? `<p class="environment-system-profiles"><b>Perfis de sistema:</b> ${escapeHtml(systems)}</p>` : ''}<div class="environment-actions">${launch}${consoleButton}<a class="source-link" href="${escapeHtml(env.url || env.emulator_url || '#')}" target="_blank" rel="noopener noreferrer">Projeto oficial ↗</a></div></article>`;
+  }).join('') : `<div class="empty-state empty-state-wide">Nenhum ambiente corresponde ao filtro atual.</div>`;
+}
+
+function systemStateTone(system) {
+  if (system.state === 'ready') return 'good';
+  if (system.state === 'needs-setup' || system.state === 'manual' || system.state === 'needs-verification') return 'warn';
+  if (system.state === 'unsupported' || system.state === 'no-dashboard' || system.state === 'launcher-missing' || system.state === 'environment-offline') return 'blocked';
+  return 'muted';
+}
+function systemStateLabel(system) {
+  return system.state_label || 'Estado não determinado';
+}
+function systemBootLabel(system) {
+  if (system.id === 'xbox-original-dashboard') return 'Ligar Xbox virtual (dashboard do HDD)';
+  if (system.id === 'ps3-xmb') return 'Iniciar VSH / XMB';
+  if (system.id === 'ps2-bios-menu') return 'Iniciar BIOS / Browser';
+  if (system.id === 'wiiu-menu') return 'Iniciar Wii U Menu';
+  if (system.id === 'wii-menu') return 'Iniciar Wii Menu';
+  return 'Iniciar sistema';
+}
+function consoleSystemCard(system) {
+  const family = platformFamily(system.family || system.name);
+  const tone = systemStateTone(system);
+  const checks = (system.checks || []).map(check => {
+    const checkClass = check.ok === true ? 'check-good' : check.ok === false ? 'check-bad' : 'check-unknown';
+    const symbol = check.ok === true ? '✓' : check.ok === false ? '!' : '·';
+    return `<li class="system-check ${checkClass}"><span>${symbol}</span><div><b>${escapeHtml(check.label || 'Verificação')}</b><small>${escapeHtml(check.detail || '')}</small></div></li>`;
+  }).join('');
+  const bootButton = system.can_boot_original
+    ? `<button class="button primary system-action" data-system-action="boot" data-system-id="${escapeHtml(system.id)}">${escapeHtml(systemBootLabel(system))} <span>→</span></button>`
+    : '';
+  const openButton = system.can_open_emulator
+    ? `<button class="button secondary system-action" data-system-action="open" data-system-id="${escapeHtml(system.id)}">Abrir emulador</button>`
+    : `<button class="button secondary system-action" data-system-action="open" data-system-id="${escapeHtml(system.id)}" disabled>Emulador indisponível</button>`;
+  const requirements = (system.requirements || []).slice(0, 2).map(req => `<li>${escapeHtml(req)}</li>`).join('');
+  return `<article class="console-system-card ${tone}">
+    <div class="console-card-top"><div class="console-system-icon ${family}">${escapeHtml(platformGlyph(system.family || system.name))}</div><div class="console-system-heading"><div class="console-family">${escapeHtml(system.family || 'Console')}</div><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.interface_name || 'Interface do sistema')}</p></div></div>
+    <div class="system-state-row"><span class="system-state-pill ${tone}"><i></i>${escapeHtml(systemStateLabel(system))}</span><span class="system-capability">${escapeHtml(String(system.capability || '').replaceAll('-', ' '))}</span></div><div class="environment-boundary-note">Ambiente isolado: <code>${escapeHtml(system.environment_id || system.emulator_ids?.[0] || 'sem runner')}</code> · ${escapeHtml(system.environment_online === false && system.environment_id ? 'offline ou não associado' : 'sem compartilhamento de dados de console')}</div>
+    <p class="console-system-details">${escapeHtml(system.details || '')}</p>
+    ${requirements ? `<div class="system-requirements"><b>Necessário</b><ul>${requirements}</ul></div>` : ''}
+    ${checks ? `<ul class="system-checks">${checks}</ul>` : ''}
+    <div class="console-system-actions">${bootButton}${openButton}<button class="text-button system-info-action" data-system-setup="${escapeHtml(system.id)}">Passos e fontes ↗</button></div>
+  </article>`;
+}
+function renderConsoleSystems() {
+  const host = $('#console-system-grid');
+  if (!host) return;
+  const systems = state.consoleSystems || [];
+  const ready = systems.filter(s => s.can_boot_original).length;
+  const needs = systems.filter(s => ['needs-setup','needs-verification','manual'].includes(s.state)).length;
+  const unavailable = systems.filter(s => ['unsupported','no-dashboard','launcher-missing','environment-offline'].includes(s.state)).length;
+  $('#console-system-stats').innerHTML = `<div class="summary-chip"><span>Boot nativo disponível</span><b>${ready}</b></div><div class="summary-chip"><span>Precisa configurar</span><b>${needs}</b></div><div class="summary-chip"><span>Sem boot completo</span><b>${unavailable}</b></div>`;
+  $('#nav-console-count').textContent = systems.length || '—';
+  const query = ($('#console-system-search')?.value || '').trim().toLowerCase();
+  const filter = $('#console-system-filter')?.value || 'all';
+  const filtered = systems.filter(system => {
+    const haystack = `${system.name} ${system.interface_name} ${system.family} ${system.details} ${(system.emulator_ids || []).join(' ')}`.toLowerCase();
+    return (!query || haystack.includes(query)) && (filter === 'all' || system.state === filter);
+  });
+  if (state.consoleSystemsError && !systems.length) {
+    host.innerHTML = `<div class="empty-state empty-state-wide">Não foi possível carregar os perfis de sistema: ${escapeHtml(state.consoleSystemsError)}. Confira console-systems.json e os logs do dashboard.</div>`;
+    return;
+  }
+  host.innerHTML = filtered.length ? filtered.map(consoleSystemCard).join('') : '<div class="empty-state empty-state-wide">Nenhum sistema corresponde a esses filtros.</div>';
+}
+function showSystemSetup(systemId) {
+  const system = state.consoleSystems.find(item => item.id === systemId);
+  if (!system) return;
+  $('#system-setup-title').textContent = `${system.name} — ${system.interface_name}`;
+  $('#system-setup-summary').textContent = `${systemStateLabel(system)}. ${system.details || ''}`;
+  const checks = (system.checks || []).map(check => {
+    const status = check.ok === true ? 'Detectado' : check.ok === false ? 'Ausente' : 'Verificação manual';
+    const cls = check.ok === true ? 'check-good' : check.ok === false ? 'check-bad' : 'check-unknown';
+    return `<div class="system-setup-check ${cls}"><b>${escapeHtml(status)} · ${escapeHtml(check.label || '')}</b><p>${escapeHtml(check.detail || '')}</p></div>`;
+  }).join('');
+  $('#system-setup-checks').innerHTML = checks || '<p>Nenhuma verificação automática disponível para este sistema.</p>';
+  const steps = (system.setup_steps || []).length ? system.setup_steps : ['No momento não há inicialização automática do sistema completo neste projeto. Consulte a documentação oficial e não interprete um launcher de jogos como emulação do sistema operacional do console.'];
+  $('#system-setup-steps').innerHTML = steps.map(step => `<li>${escapeHtml(step)}</li>`).join('');
+  const links = (system.official_docs || []).filter(url => /^https:\/\//i.test(url));
+  $('#system-setup-links').innerHTML = links.length ? links.map((url, index) => `<a class="source-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Documentação oficial ${index + 1} ↗</a>`).join('') : '<span>Sem link oficial cadastrado.</span>';
+  $('#system-setup-dialog').showModal();
+}
+async function launchConsoleSystem(systemId, action) {
+  const system = state.consoleSystems.find(item => item.id === systemId);
+  if (!system) return;
+  try {
+    const result = await api('/api/console-systems/launch', {method:'POST', body:JSON.stringify({system:systemId, action})});
+    if (!result.started) throw new Error(result.error || 'O sistema não iniciou.');
+    const actionName = action === 'boot' ? 'Inicialização solicitada' : 'Emulador aberto para configuração';
+    toast(`${actionName}: ${system.name}${result.pid ? ` (PID ${result.pid})` : ''}.`, '');
+    if (action === 'open') showSystemSetup(systemId);
+    await refreshSessionsOnly();
+  } catch (error) {
+    const message = error.message || 'Não foi possível iniciar o sistema.';
+    toast(message, 'error');
+    showSystemSetup(systemId);
+  }
+}
+
+function renderLibrary() {
+  const extSelect = $('#extension-filter');
+  const extensions = [...new Set(state.games.map(g=>g.extension))].sort();
+  const current = extSelect.value;
+  extSelect.innerHTML = '<option value="all">Todos os formatos</option>' + extensions.map(ext=>`<option value="${escapeHtml(ext)}">${escapeHtml(ext.toUpperCase())}</option>`).join('');
+  if (extensions.includes(current)) extSelect.value = current;
+  const totalBytes = state.games.reduce((sum,g)=>sum+g.size_bytes,0);
+  $('#library-summary').innerHTML = `<div class="summary-chip"><span>Itens detectados</span><b>${state.games.length}</b></div><div class="summary-chip"><span>Espaço catalogado</span><b>${escapeHtml(formatBytes(totalBytes))}</b></div><div class="summary-chip"><span>Diretório do host</span><b><code>data/environments/&lt;id&gt;/games/</code></b></div>`;
+  const query = ($('#library-search').value || '').toLowerCase().trim();
+  const ext = extSelect.value;
+  const sort = $('#library-sort').value;
+  const items = state.games.filter(g => (!query || `${g.name} ${g.path}`.toLowerCase().includes(query)) && (ext === 'all' || g.extension === ext));
+  if (sort === 'size') items.sort((a,b)=>b.size_bytes-a.size_bytes);
+  if (sort === 'recent') items.sort((a,b)=>new Date(b.modified)-new Date(a.modified));
+  if (sort === 'name') items.sort((a,b)=>a.path.localeCompare(b.path));
+  $('#library-table-body').innerHTML = items.length ? items.map(game => `<tr><td><div class="library-file-cell"><div class="file-icon ${iconClass(game.extension)}">${escapeHtml(game.extension.replace('.','').slice(0,4)||'FILE')}</div><div><b>${escapeHtml(game.name)}</b><small>${escapeHtml(game.environment_id ? `${game.environment_id} / ` : '')}${escapeHtml(game.path)}</small></div></div></td><td><span class="file-tag">${escapeHtml(game.extension.toUpperCase())}</span></td><td>${escapeHtml(game.size_label)}</td><td>${escapeHtml(game.environment_name || game.environment_id || 'legado')}</td><td>${escapeHtml(formatDate(game.modified))}</td><td><button class="row-action" data-launch-game="${escapeHtml(game.path)}" data-launch-environment="${escapeHtml(game.environment_id || '')}">Abrir…</button></td></tr>`).join('') : `<tr><td colspan="6" class="empty-state">${state.games.length ? 'Nenhum arquivo corresponde à busca.' : 'Nenhum arquivo encontrado nos diretórios de jogos dos ambientes.'}</td></tr>`;
+  $('#library-empty-hint').classList.toggle('hidden', state.games.length !== 0);
+  if (!state.games.length) $('#library-table-body').innerHTML = '';
+  $('#nav-game-count').textContent = state.games.length;
+  if (state.health?.games_limit_reached) toast('O catálogo atingiu o limite de 3.000 arquivos; nem todos podem aparecer.', 'warning');
+}
+
+function renderSources() {
+  const categories = state.sources.categories || [];
+  const platformGuidance = state.sources.platform_guidance || [];
+  const categoryTabs = [{id:'all',title:'Todas as fontes'},...categories.map(c=>({id:c.id,title:c.title}))];
+  $('#source-tabs').innerHTML = categoryTabs.map(t=>`<button class="source-tab ${t.id===state.selectedSourceCategory?'active':''}" data-source-category="${escapeHtml(t.id)}">${escapeHtml(t.title)}</button>`).join('');
+  $$('#source-tabs [data-source-category]').forEach(button=>button.addEventListener('click',()=>{state.selectedSourceCategory=button.dataset.sourceCategory;renderSources();}));
+
+  const platformTabs = [{id:'all',title:'Todos os consoles'},...platformGuidance.map(p=>({id:p.environment_id,title:p.platform}))];
+  $('#source-platform-tabs').innerHTML = platformTabs.map(t=>`<button class="source-tab ${t.id===state.selectedSourcePlatform?'active':''}" data-source-platform="${escapeHtml(t.id)}">${escapeHtml(t.title)}</button>`).join('');
+  $$('#source-platform-tabs [data-source-platform]').forEach(button=>button.addEventListener('click',()=>{state.selectedSourcePlatform=button.dataset.sourcePlatform;renderSources();}));
+
+  const selectedPlatform = platformGuidance.find(p=>p.environment_id===state.selectedSourcePlatform);
+  const platformNote = $('#source-platform-note');
+  platformNote.textContent = selectedPlatform
+    ? selectedPlatform.guidance
+    : 'Importante: repositórios de emuladores normalmente publicam código e binários do emulador, não jogos. As fontes desta página são lojas oficiais, homebrew/demos publicadas por seus autores e documentação. A compatibilidade e a licença devem ser verificadas item por item.';
+  const allowedIds = selectedPlatform ? new Set(selectedPlatform.source_ids || []) : null;
+  let sources = (state.sources.sources||[]).filter(s =>
+    (state.selectedSourceCategory==='all' || s.category===state.selectedSourceCategory) &&
+    (!allowedIds || allowedIds.has(s.id))
+  );
+  let cards = sources.map(source=>sourceCard(source)).join('');
+  if (state.selectedSourceCategory === 'all' || state.selectedSourceCategory === 'personal-library') {
+    if (!selectedPlatform || selectedPlatform.include_personal_library) cards += personalLibraryCard();
+  }
+  if (!cards) cards = `<div class="empty-state empty-state-wide">Nenhuma fonte de download autorizada foi verificada para este filtro. Consulte a documentação do emulador e os canais oficiais dos autores; não trate uma loja digital como se fornecesse um ROM/ISO.</div>`;
+  $('#source-grid').innerHTML = cards;
+}
+function sourceCard(source) {
+  const initials = source.name.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join('').toUpperCase();
+  return `<article class="source-card"><div class="source-top"><div class="source-logo">${escapeHtml(initials)}</div><div class="source-title"><h3>${escapeHtml(source.name)}</h3><small>${escapeHtml(source.type)}</small></div></div><p>${escapeHtml(source.description)}</p><div class="source-caveat">${escapeHtml(source.caveat || 'Confira os termos e a licença do item.')}</div><div class="source-card-foot"><small>${escapeHtml(source.platforms.join(' · '))}</small><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">Visitar ↗</a></div></article>`;
+}
+function personalLibraryCard() {
+ return `<article class="source-card"><div class="source-top"><div class="source-logo">LIB</div><div class="source-title"><h3>Sua própria biblioteca</h3><small>Arquivos locais autorizados</small></div></div><p>Adicione demos, homebrew e arquivos que você está autorizado a usar. O EmuStack organiza o que já está no seu computador sem buscar arquivos na internet.</p><div class="source-caveat">A possibilidade de copiar ou usar firmware/BIOS depende da legislação aplicável e dos termos de cada plataforma.</div><div class="source-card-foot"><small>Local · read-only no container</small><a href="#docs" data-goto="docs">Guia de uso ↗</a></div></article>`;
+}
+
+function mdInline(source) {
+  let text = escapeHtml(source);
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+  text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  return text;
+}
+function markdownToHtml(markdown) {
+  const lines = markdown.replace(/\r/g,'').split('\n');
+  const output = [];
+  let paragraph = [], list = null, code = false, codeLines = [], tableLines = [];
+  const flushParagraph = () => { if (paragraph.length) { output.push(`<p>${paragraph.map(mdInline).join('<br>')}</p>`); paragraph=[]; } };
+  const flushList = () => { if (list) { output.push(`</${list}>`); list=null; } };
+  const flushCode = () => { if (codeLines.length || code) { output.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`); codeLines=[]; } };
+  const flushTable = () => {
+    if (!tableLines.length) return;
+    const rows = tableLines.filter(line => !/^\s*\|?\s*:?-{2,}/.test(line));
+    if (rows.length) {
+      const parsed = rows.map(line => line.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(c=>c.trim()));
+      const head = parsed[0] || [];
+      const body = parsed.slice(1);
+      output.push(`<table><thead><tr>${head.map(c=>`<th>${mdInline(c)}</th>`).join('')}</tr></thead><tbody>${body.map(row=>`<tr>${row.map(c=>`<td>${mdInline(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+    }
+    tableLines=[];
+  };
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (line.startsWith('```')) {
+      flushParagraph(); flushList(); flushTable();
+      if (code) { flushCode(); code=false; } else { code=true; codeLines=[]; }
+      continue;
+    }
+    if (code) { codeLines.push(raw); continue; }
+    if (/^\|.*\|$/.test(line.trim())) { flushParagraph(); flushList(); tableLines.push(line.trim()); continue; }
+    flushTable();
+    if (!line.trim()) { flushParagraph(); flushList(); continue; }
+    if (/^---+$/.test(line.trim())) { flushParagraph(); flushList(); output.push('<hr>'); continue; }
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) { flushParagraph(); flushList(); const level=heading[1].length; output.push(`<h${level}>${mdInline(heading[2])}</h${level}>`); continue; }
+    if (/^>\s?/.test(line)) { flushParagraph(); flushList(); output.push(`<blockquote>${mdInline(line.replace(/^>\s?/,''))}</blockquote>`); continue; }
+    const bullet = line.match(/^[-*]\s+(.+)$/);
+    const ordered = line.match(/^\d+\.\s+(.+)$/);
+    if (bullet || ordered) {
+      flushParagraph();
+      const nextList = bullet ? 'ul' : 'ol';
+      if (list !== nextList) { flushList(); output.push(`<${nextList}>`); list=nextList; }
+      output.push(`<li>${mdInline((bullet || ordered)[1])}</li>`); continue;
+    }
+    flushList(); paragraph.push(line.trim());
+  }
+  flushParagraph(); flushList(); flushTable(); if (code) flushCode();
+  return output.join('\n');
+}
+function renderDocs() {
+  if (!state.docs.length) return;
+  if (!state.docs.some(d=>d.id===state.selectedDoc)) state.selectedDoc=state.docs[0].id;
+  $('#docs-nav').innerHTML = state.docs.map(doc=>`<button class="doc-nav-item ${doc.id===state.selectedDoc?'active':''}" data-doc="${escapeHtml(doc.id)}">${escapeHtml(doc.title)}</button>`).join('');
+  $$('#docs-nav [data-doc]').forEach(button=>button.addEventListener('click',()=>{state.selectedDoc=button.dataset.doc;renderDocs();}));
+  const doc=state.docs.find(d=>d.id===state.selectedDoc);
+  $('#docs-content').innerHTML = doc ? markdownToHtml(doc.content) : '<p>Documento não encontrado.</p>';
+}
+
+function openLaunchDialog(emulatorId = null, gamePath = '') {
+  const launchable = state.emulators.filter(e => e.launchable);
+  if (!launchable.length) { toast('Nenhum launcher está disponível. Confira os ambientes isolados e o relatório de instalação.', 'warning'); return; }
+  const recommendedId = emulatorId || window.EmuStackLaunch.recommendEmulatorForGame(gamePath);
+  const recommendedItem = recommendedId ? state.emulators.find(e => e.id === recommendedId && e.launchable) : null;
+  const first = recommendedItem || (!gamePath ? launchable[0] : null);
+  state.launchTarget = first;
+  state.launchEnvironmentId = first?.id || null;
+  $('#launch-title').textContent = emulatorId && first ? `Abrir ${first.name}` : 'Abrir ambiente de console';
+  $('#launch-description').textContent = gamePath
+    ? `O arquivo será buscado somente em data/environments/${first?.id || '<id>'}/games/. Outro ambiente não terá acesso a esse arquivo.`
+    : 'Escolha um ambiente de execução. Cada ambiente vê apenas sua própria biblioteca, BIOS/firmware, saves e configurações.';
+  const emuSelect = $('#launch-emulator-select');
+  emuSelect.innerHTML = (first ? '' : '<option value="">Selecione um launcher disponível…</option>') + launchable.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} — ${escapeHtml(item.platform)} · ${escapeHtml(shortStatus(item))}</option>`).join('');
+  emuSelect.value = first ? first.id : '';
+  const gameSelect = $('#launch-game-select');
+  const games = state.games.filter(g => first && g.environment_id === first.id);
+  const emptyGameLabel = first?.game_arg === 'ui-only' ? 'Escolher conteúdo na interface do emulador' : (first ? 'Abrir interface do emulador sem jogo' : 'Selecione um emulador primeiro');
+  gameSelect.innerHTML = `<option value="">${emptyGameLabel}</option>` + games.map(g=>`<option value="${escapeHtml(g.path)}">${escapeHtml(g.path)} · ${escapeHtml(g.size_label)}</option>`).join('');
+  if (gamePath && games.some(g=>g.path===gamePath)) gameSelect.value = gamePath;
+  updateLaunchDialogForSelection();
+  $('#confirm-launch').disabled = !state.launchTarget;
+  $('#confirm-launch').innerHTML = 'Abrir ambiente <span>→</span>';
+  $('#launch-dialog').showModal();
+}
+function updateLaunchDialogForSelection() {
+  const item=state.emulators.find(e => e.id === $('#launch-emulator-select').value);
+  state.launchTarget=item || null;
+  $('#confirm-launch').disabled = !item || !item.launchable;
+  const gameSelect=$('#launch-game-select');
+  const previousEnvironment=state.launchEnvironmentId;
+  const previousGame=gameSelect.value;
+  const selectedPath = previousEnvironment === item?.id ? previousGame : '';
+  const availableGames = state.games.filter(g => item && g.environment_id === item.id);
+  const uiOnly=item?.game_arg === 'ui-only';
+  const emptyGameLabel = uiOnly ? 'Escolher conteúdo na interface do emulador' : (item ? 'Abrir interface do emulador sem jogo' : 'Selecione um emulador primeiro');
+  gameSelect.innerHTML = `<option value="">${emptyGameLabel}</option>` + availableGames.map(g=>`<option value="${escapeHtml(g.path)}">${escapeHtml(g.path)} · ${escapeHtml(g.size_label)}</option>`).join('');
+  if (selectedPath && availableGames.some(g=>g.path===selectedPath)) gameSelect.value = selectedPath;
+  gameSelect.disabled=uiOnly || !item;
+  if (uiOnly) gameSelect.value='';
+  state.launchEnvironmentId = item?.id || null;
+  const selectedGame = gameSelect.value;
+  const extension = selectedGame.includes('.') ? selectedGame.slice(selectedGame.lastIndexOf('.')).toLowerCase() : '';
+  const unsupportedLicense = item?.id === 'rpcs3' && ['.rap', '.edat'].includes(extension);
+  $('#confirm-launch').disabled = !item || !item.launchable || unsupportedLicense;
+  const note = $('#launch-status-note');
+  if (!item) note.textContent = 'Selecione um ambiente online com launcher disponível.';
+  else if (!item.environment_online && item.environment_online !== null) note.textContent = 'O agente deste ambiente está offline. Atualize os serviços Docker.';
+  else if (uiOnly) note.textContent = 'Este emulador escolhe o conteúdo pela própria interface; nenhum arquivo será montado de outro ambiente.';
+  else if (item.id === 'rpcs3' && extension === '.pkg') note.textContent = 'O RPCS3 abrirá o fluxo de instalação do pacote PKG dentro do ambiente PS3.';
+  else if (unsupportedLicense) note.textContent = 'RAP/EDAT é dado de licença/suporte, não um jogo inicializável.';
+  else note.textContent = `O processo será iniciado pelo agente ${item.id}; somente ${item.id}/games é visível como biblioteca.`;
+}
+
+async function confirmLaunch() {
+  const item=state.launchTarget;
+  if (!item) return;
+  const game = item.game_arg === 'ui-only' ? '' : $('#launch-game-select').value;
+  const button=$('#confirm-launch'); button.disabled=true; button.textContent='Iniciando…';
+  try {
+    const result=await api('/api/launch',{method:'POST',body:JSON.stringify({emulator:item.id,game})});
+    $('#launch-dialog').close();
+    toast(`${item.name} iniciado no ambiente ${item.id}${result.pid ? ` (PID ${result.pid})` : ''}.`);
+  } catch(error) {
+    toast(error.message || 'Não foi possível iniciar o emulador. Consulte as sessões e seus logs.', 'error');
+    await refreshAll();
+  } finally {
+    button.disabled=false; button.innerHTML='Abrir emulador <span>→</span>';
+  }
+}
+
+async function refreshAll() {
+  $('#refresh-button').classList.add('refreshing');
+  try {
+    const [health, catalog, games, sources, docs, processes, consoleSystems, environments] = await Promise.all([
+      api('/api/health'), api('/api/catalog'), api('/api/games'), api('/api/sources'), api('/api/docs'), api('/api/processes'), api('/api/console-systems').catch(error => ({systems:[], error:error.message})), api('/api/environments').catch(error => ({environments:[], error:error.message}))
+    ]);
+    state.health=health; state.emulators=catalog.emulators||[]; state.games=games.games||[]; state.sources=sources; state.docs=docs.documents||[]; state.sessions=processes.processes||[]; state.consoleSystems=consoleSystems.systems||[]; state.consoleSystemsError=consoleSystems.error||''; state.environments=environments.environments||[];
+    renderOverview(); renderPlatformOptions(); renderEmulators(); renderEnvironments(); renderConsoleSystems(); renderLibrary(); renderSources(); renderDocs(); renderSessions();
+  } catch(error) {
+    $('#side-health').textContent='API indisponível';
+    toast(`Não foi possível ler o container: ${error.message}`, 'error');
+  } finally {
+    $('#refresh-button').classList.remove('refreshing');
+  }
+}
+
+document.addEventListener('click', event => {
+  const nav = event.target.closest('[data-view]');
+  if (nav) { setView(nav.dataset.view); return; }
+  const goto = event.target.closest('[data-goto]');
+  if (goto) { event.preventDefault(); setView(goto.dataset.goto); return; }
+  const environmentLaunch = event.target.closest('[data-environment-launch]');
+  if (environmentLaunch) { openLaunchDialog(environmentLaunch.dataset.environmentLaunch); return; }
+  const environmentSystem = event.target.closest('[data-environment-system]');
+  if (environmentSystem) { setView('consoles'); showSystemSetup(environmentSystem.dataset.environmentSystem); return; }
+  const systemAction = event.target.closest('[data-system-action]');
+  if (systemAction) { launchConsoleSystem(systemAction.dataset.systemId, systemAction.dataset.systemAction); return; }
+  const systemSetup = event.target.closest('[data-system-setup]');
+  if (systemSetup) { showSystemSetup(systemSetup.dataset.systemSetup); return; }
+  const stop = event.target.closest('[data-stop-process]');
+  if (stop) { stopSession(stop.dataset.stopProcess); return; }
+  const log = event.target.closest('[data-process-log]');
+  if (log) { showSessionLog(log.dataset.processLog); return; }
+  const launch = event.target.closest('[data-launch]');
+  if (launch) { openLaunchDialog(launch.dataset.launch); return; }
+  const launchGame = event.target.closest('[data-launch-game]');
+  if (launchGame) {
+    openLaunchDialog(launchGame.dataset.launchEnvironment || null, launchGame.dataset.launchGame); return;
+  }
+});
+$('#confirm-launch').addEventListener('click', confirmLaunch);
+if ($('#console-system-search')) $('#console-system-search').addEventListener('input', renderConsoleSystems);
+if ($('#console-system-filter')) $('#console-system-filter').addEventListener('change', renderConsoleSystems);
+if ($('#environment-search')) $('#environment-search').addEventListener('input', renderEnvironments);
+if ($('#environment-filter')) $('#environment-filter').addEventListener('change', renderEnvironments);
+if ($('#close-system-setup')) $('#close-system-setup').addEventListener('click', () => $('#system-setup-dialog').close());
+$('#launch-emulator-select').addEventListener('change', updateLaunchDialogForSelection);
+$('#launch-game-select').addEventListener('change', updateLaunchDialogForSelection);
+$('#refresh-button').addEventListener('click', refreshAll);
+$('#refresh-library').addEventListener('click', refreshAll);
+if ($('#refresh-sessions')) $('#refresh-sessions').addEventListener('click', refreshSessionsOnly);
+if ($('#close-process-log')) $('#close-process-log').addEventListener('click', () => $('#process-log-dialog').close());
+$('#emulator-search').addEventListener('input', () => { $('#global-search').value=$('#emulator-search').value; renderEmulators(); });
+$('#platform-filter').addEventListener('change', () => { $('#platform-filter').dataset.family='all'; $$('#platform-strip .platform-pill').forEach(p=>p.classList.toggle('active',p.dataset.family==='all')); renderEmulators(); });
+$('#status-filter').addEventListener('change', renderEmulators);
+$('#library-search').addEventListener('input', renderLibrary);
+$('#extension-filter').addEventListener('change', renderLibrary);
+$('#library-sort').addEventListener('change', renderLibrary);
+$('#global-search').addEventListener('input', () => {
+  const query=$('#global-search').value;
+  $('#emulator-search').value=query;
+  if (query) setView('emulators');
+  renderEmulators();
+});
+$('#global-search').addEventListener('keydown', event => {if(event.key==='Enter'){setView('emulators');renderEmulators();}});
+document.addEventListener('keydown', event => {
+  if (event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName) && !event.ctrlKey && !event.metaKey) {event.preventDefault();$('#global-search').focus();}
+  if (event.key === 'Escape') $('#sidebar').classList.remove('open');
+});
+$('#mobile-menu').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
+
+refreshAll();
