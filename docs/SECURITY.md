@@ -3,7 +3,7 @@
 ## Defaults
 
 - Dashboard publicado somente em `127.0.0.1:8765`; não foi projetado para acesso remoto/LAN.
-- Requisições mutáveis validam também o IP TCP de origem: loopback no modo host e gateways `.1` explicitamente allowlisted no Compose. Os agentes usam IP `.2` e o dashboard `.3`; `Host`, `Origin` e cabeçalhos customizados não são tratados como autenticação.
+- Requisições do dashboard (exceto uma resposta mínima de saúde) e todas as mutações validam o IP TCP de origem: loopback no modo host e gateways `.1` explicitamente allowlisted no Compose. Os agentes usam IP `.2` e o dashboard `.3`; `Host`, `Origin` e cabeçalhos customizados não são tratados como autenticação.
 - Os subnets padrão são `172.28.1.0/24` a `172.28.20.0/24`. Se a rede/VPN local já usa essa faixa, ajuste todos os subnets, gateways, IPs e a allowlist em conjunto. Não exponha o dashboard por reverse proxy.
 - Nenhum socket do Docker é montado em dashboard, agentes ou CLI.
 - O dashboard não monta dados persistentes de consoles.
