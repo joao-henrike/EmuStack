@@ -1,6 +1,7 @@
 .env
 compose.override.yaml
 data/host.Xauthority
+data/runtime-acceptance.json
 data/home/*
 !data/home/.gitkeep
 data/saves/*
