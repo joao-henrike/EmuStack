@@ -4,7 +4,7 @@ set -Eeuo pipefail
 die() { printf 'ERRO: %s\n' "$*" >&2; exit 1; }
 info() { printf '\n==> %s\n' "$*"; }
 
-[[ $# -eq 1 ]] || die "Uso: bash IMPORT-LOCAL.sh /caminho/EmuStack-Docker-0.7.0.zip"
+[[ $# -eq 1 ]] || die "Uso: bash IMPORT-LOCAL.sh /caminho/EmuStack-Docker-0.7.1.zip"
 command -v git >/dev/null 2>&1 || die "Git não está instalado."
 command -v sha256sum >/dev/null 2>&1 || die "sha256sum não está disponível."
 command -v unzip >/dev/null 2>&1 || die "Instale o pacote unzip."
@@ -12,7 +12,7 @@ command -v unzip >/dev/null 2>&1 || die "Instale o pacote unzip."
 archive="$(realpath -- "$1")"
 [[ -f "$archive" ]] || die "Arquivo ZIP não encontrado: $archive"
 
-expected_sha="c503808f3b833177dc9115c0b8e2c8e68c93726e4c4c4c2a15cb9daf63e3067f"
+expected_sha="3753467d99c7ef1e73cce9d1fc0262b60a2a95bc83804994ea35b1b66ce97771"
 actual_sha="$(sha256sum -- "$archive" | awk '{print $1}')"
 [[ "$actual_sha" == "$expected_sha" ]] || die "SHA-256 divergente. Esperado: $expected_sha; recebido: $actual_sha"
 
@@ -31,16 +31,16 @@ status="$(git -C "$repo_root" status --porcelain)"
 [[ -z "$status" ]] || die "A árvore de trabalho não está limpa. Não sobrescreverei alterações locais; confira: git status"
 
 tracked="$(git -C "$repo_root" ls-files | LC_ALL=C sort)"
-expected_tracked="$(printf '%s\n' IMPORT-LOCAL.sh README.md | LC_ALL=C sort)"
-[[ "$tracked" == "$expected_tracked" ]] || die "O repositório contém arquivos rastreados além do README e do importador. Revise antes de importar."
+expected_tracked="$(printf '%s\n' IMPORT-LOCAL.sh README.md docs/GAME_SOURCES.md | LC_ALL=C sort)"
+[[ "$tracked" == "$expected_tracked" ]] || die "O repositório contém arquivos rastreados além dos arquivos de bootstrap esperados. Revise antes de importar."
 
 tmp="$(mktemp -d)"
 trap 'rm -rf -- "$tmp"' EXIT
 info "Validando a estrutura do ZIP"
 unzip -tqq "$archive" || die "O ZIP está corrompido."
 unzip -q "$archive" -d "$tmp"
-src="$tmp/EmuStack-0.7.0"
-[[ -d "$src" && -f "$src/README.md" && -f "$src/Dockerfile" && -f "$src/compose.yaml" && -f "$src/emustack.py" && -d "$src/scripts" && -d "$src/tests" ]] || die "A árvore do pacote 0.7.0 não tem a estrutura esperada."
+src="$tmp/EmuStack-0.7.1"
+[[ -d "$src" && -f "$src/README.md" && -f "$src/Dockerfile" && -f "$src/compose.yaml" && -f "$src/emustack.py" && -f "$src/game-sources.json" && -d "$src/scripts" && -d "$src/tests" ]] || die "A árvore do pacote 0.7.1 não tem a estrutura esperada."
 
 # Never publish private user data, games, console firmware, BIOS, or keys.
 if find "$src" -type f \( -name '.env' -o -name 'id_rsa' -o -name 'id_ed25519' -o -name '*.pem' -o -name '*.key' \) -print -quit | grep -q .; then
@@ -53,7 +53,7 @@ for rel in data/games data/bios data/home data/saves data/config data/environmen
   fi
 done
 
-info "Copiando a árvore de código EmuStack 0.7.0"
+info "Copiando a árvore de código EmuStack 0.7.1"
 cp -a "$src/." "$repo_root/"
 rm -f -- "$repo_root/IMPORT-LOCAL.sh"
 find "$repo_root/scripts" -maxdepth 1 -type f -name '*.sh' -exec chmod +x {} +
@@ -65,9 +65,9 @@ git -C "$repo_root" diff --cached --stat
 
 printf '\nDestino: %s (privado)\n' "$remote"
 printf 'SHA-256 verificado: %s\n' "$actual_sha"
-read -r -p "Criar o commit e enviar o código EmuStack 0.7.0 para origin/main? [y/N] " answer
+read -r -p "Criar o commit e enviar o código EmuStack 0.7.1 para origin/main? [y/N] " answer
 case "$answer" in y|Y|yes|YES|s|S|sim|SIM) ;; *) die "Cancelado pelo usuário. O conteúdo foi preparado no clone local, mas não foi enviado." ;; esac
 
-git -C "$repo_root" commit -m "Import EmuStack 0.7.0 source tree"
+git -C "$repo_root" commit -m "Import EmuStack 0.7.1 source tree"
 git -C "$repo_root" push origin HEAD:main
 info "Importação concluída. Confira a branch main no GitHub."
