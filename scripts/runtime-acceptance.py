@@ -16,6 +16,8 @@ from runtime_probes import env_flag, has_readonly_device_mapping, is_allowed_inp
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "http://127.0.0.1:8765"
+DASHBOARD_CONTAINER_ID: str | None = None
+HOST_API_REACHABLE: bool | None = None
 
 
 def run(args: list[str], check: bool = True, timeout: int = 30) -> subprocess.CompletedProcess[str]:
@@ -32,17 +34,47 @@ def run(args: list[str], check: bool = True, timeout: int = 30) -> subprocess.Co
 
 
 def api(path: str, method: str = "GET", payload: dict | None = None):
+    """Probe the published host port; fall back to dashboard loopback if the runner isolates it."""
+    global HOST_API_REACHABLE
     data = json.dumps(payload).encode() if payload is not None else None
     req = urllib.request.Request(BASE + path, data=data, method=method, headers={"Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:
+            HOST_API_REACHABLE = True
             return resp.status, json.loads(resp.read().decode())
     except urllib.error.HTTPError as exc:
         try:
             body = json.loads(exc.read().decode())
         except Exception:
             body = {}
+        HOST_API_REACHABLE = True
         return exc.code, body
+    except urllib.error.URLError:
+        HOST_API_REACHABLE = False
+        if not DASHBOARD_CONTAINER_ID:
+            raise RuntimeError("Dashboard container ID is not available for internal API fallback")
+        script = "\\n".join([
+            "import json,sys,urllib.request,urllib.error",
+            "path,method,payload=sys.argv[1:4]",
+            "obj=json.loads(payload) if payload else None",
+            "data=json.dumps(obj).encode() if obj is not None else None",
+            "req=urllib.request.Request('http://127.0.0.1:8765'+path,data=data,method=method,headers={'Content-Type':'application/json'})",
+            "try:",
+            " with urllib.request.urlopen(req,timeout=5) as resp: result={'status':resp.status,'body':json.loads(resp.read().decode())}",
+            "except urllib.error.HTTPError as exc:",
+            " try: body=json.loads(exc.read().decode())",
+            " except Exception: body={}",
+            " result={'status':exc.code,'body':body}",
+            "print(json.dumps(result))",
+        ])
+        result = run([
+            "docker", "exec", DASHBOARD_CONTAINER_ID, "python3", "-c", script,
+            path, method, json.dumps(payload) if payload is not None else "",
+        ], check=False, timeout=10)
+        if result.returncode != 0:
+            raise RuntimeError(f"Dashboard internal API probe failed for {path}: {result.stderr.strip()[:800]}")
+        response = json.loads(result.stdout)
+        return int(response["status"]), response.get("body", {})
 
 
 def compose(*args: str):
@@ -285,7 +317,13 @@ def main() -> int:
     dashboard_ids = compose("ps", "-q", "dashboard").stdout.split()
     if len(dashboard_ids) != 1:
         raise RuntimeError("Dashboard container is not running")
+    global DASHBOARD_CONTAINER_ID
+    DASHBOARD_CONTAINER_ID = dashboard_ids[0]
     dashboard = json.loads(run(["docker", "inspect", dashboard_ids[0]]).stdout)[0]
+    published = dashboard.get("HostConfig", {}).get("PortBindings", {}).get("8765/tcp") or []
+    if len(published) != 1 or published[0].get("HostIp") != "127.0.0.1" or published[0].get("HostPort") != "8765":
+        raise RuntimeError(f"Dashboard port must be published only on 127.0.0.1:8765; got {published}")
+    checks.append("dashboard port published only on host loopback 127.0.0.1:8765")
     dmounts = dashboard.get("Mounts", [])
     if any("/var/run/docker.sock" in m.get("Destination", "") or "/data/environments" in m.get("Source", "") for m in dmounts):
         raise RuntimeError("Dashboard mounts Docker socket or environment data")
@@ -356,6 +394,8 @@ def main() -> int:
     checks.append("unsupported PS5 system boot correctly blocked")
 
     probes, warnings, errors = runtime_hardware_probes(env_containers, profiles)
+    if HOST_API_REACHABLE is False:
+        warnings.append("Host loopback API was unreachable from this runner; API behavior was checked inside the dashboard container. Verify host UI access on the deployment machine with curl http://127.0.0.1:8765/api/health.")
     report_path = write_report(checks, probes, warnings, errors)
     print("EmuStack runtime acceptance: " + ("PASS" if not errors else "FAIL"))
     for item in checks:
