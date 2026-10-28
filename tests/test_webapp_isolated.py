@@ -23,11 +23,11 @@ class IsolatedDashboardLogicTests(unittest.TestCase):
         trusted = frozenset({webapp.ipaddress.ip_address("172.28.1.1"), webapp.ipaddress.ip_address("172.28.2.1")})
         with patch.object(webapp, "CONTROL_TRUSTED_CLIENT_IPS", trusted):
             self.assertTrue(webapp._is_trusted_dashboard_client("127.0.0.1"))
-            self.assertTrue(webapp._is_trusted_control_client("::1"))
-            self.assertTrue(webapp._is_trusted_control_client("172.28.1.1"))
-            self.assertFalse(webapp._is_trusted_control_client("172.28.1.2"))
-            self.assertFalse(webapp._is_trusted_control_client("172.28.9.2"))
-            self.assertFalse(webapp._is_trusted_control_client("not-an-ip"))
+            self.assertTrue(webapp._is_trusted_dashboard_client("::1"))
+            self.assertTrue(webapp._is_trusted_dashboard_client("172.28.1.1"))
+            self.assertFalse(webapp._is_trusted_dashboard_client("172.28.1.2"))
+            self.assertFalse(webapp._is_trusted_dashboard_client("172.28.9.2"))
+            self.assertFalse(webapp._is_trusted_dashboard_client("not-an-ip"))
 
     def test_active_environment_limit_counts_unique_environments_not_sessions(self):
         sessions = [
