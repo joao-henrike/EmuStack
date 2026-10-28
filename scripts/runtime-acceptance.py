@@ -309,12 +309,34 @@ def main() -> int:
 
     # Emulate a compromised agent forging every HTTP header currently used by the UI.
     # The TCP source address must still be rejected before any state-changing route runs.
-    spoof_probe = "import urllib.error, urllib.request\\nreq=urllib.request.Request('http://dashboard:8765/api/processes/stop',data=b'{}',method='POST',headers={'Host':'127.0.0.1:8765','X-EmuStack-Request':'1','Content-Type':'application/json'})\\ntry:\\n urllib.request.urlopen(req,timeout=3)\\n raise SystemExit('FAIL: spoofed state-changing request was accepted')\\nexcept urllib.error.HTTPError as exc:\\n print('HTTP',exc.code)\\n raise SystemExit(0 if exc.code == 403 else 1)"
+    spoof_probe = "\n".join([
+        "import urllib.error, urllib.request",
+        "req=urllib.request.Request('http://dashboard:8765/api/processes/stop',data=b'{}',method='POST',headers={'Host':'127.0.0.1:8765','X-EmuStack-Request':'1','Content-Type':'application/json'})",
+        "try:",
+        " urllib.request.urlopen(req,timeout=3)",
+        " raise SystemExit('FAIL: spoofed state-changing request was accepted')",
+        "except urllib.error.HTTPError as exc:",
+        " print('HTTP',exc.code)",
+        " raise SystemExit(0 if exc.code == 403 else 1)",
+    ])
+    metadata_probe = "\n".join([
+        "import urllib.error, urllib.request",
+        "req=urllib.request.Request('http://dashboard:8765/api/environments')",
+        "try:",
+        " urllib.request.urlopen(req,timeout=3)",
+        " raise SystemExit('FAIL: agent read dashboard metadata')",
+        "except urllib.error.HTTPError as exc:",
+        " print('HTTP',exc.code)",
+        " raise SystemExit(0 if exc.code == 403 else 1)",
+    ])
+    health_probe = "import json,urllib.request; data=json.load(urllib.request.urlopen('http://dashboard:8765/api/health',timeout=3)); print(data); raise SystemExit(0 if data.get('healthy') is True and 'environments' not in data else 1)
     for env_id, container in env_containers.items():
-        result = run(["docker", "exec", container["Id"], "python3", "-c", spoof_probe], check=False, timeout=8)
-        if result.returncode != 0 or "HTTP 403" not in result.stdout:
-            raise RuntimeError(f"env-{env_id} spoofed POST probe failed: {result.stdout} {result.stderr}")
-    checks.append("20/20 agents denied spoofed state-changing requests to dashboard")
+        for name, probe in (("spoofed POST", spoof_probe), ("metadata GET", metadata_probe), ("minimal health", health_probe)):
+            result = run(["docker", "exec", container["Id"], "python3", "-c", probe], check=False, timeout=8)
+            expected_ok = result.returncode == 0 and (name == "minimal health" or "HTTP 403" in result.stdout)
+            if not expected_ok:
+                raise RuntimeError(f"env-{env_id} {name} boundary probe failed: {result.stdout} {result.stderr}")
+    checks.append("20/20 agents denied spoofed POST and dashboard metadata GET; health response is minimal")
 
     for path in ("/api/health", "/api/environments", "/api/console-systems"):
         status, data = api(path)
