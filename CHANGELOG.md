@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.1 post-release hardening — 2026-10-28
+
+- Restrict dashboard GET/POST access from the 20 isolated agents using a TCP source allowlist and deterministic per-network IPAM.
+- Add live runtime probes that attempt state-changing requests from each agent with spoofed HTTP headers.
+- Fix Debian package selection to require a real APT install candidate; add an image build check in CI without optional upstream downloads.
+- Keep Docker runtime acceptance and game/system boot validation as explicit host-side requirements.
+
 ## 0.7.1 — catalog of authorized game-content sources
 
 - Expanded `game-sources.json` with per-environment guidance for all 20 profiles and source links for creator-published homebrew, demos, official storefronts and rights guidance.
