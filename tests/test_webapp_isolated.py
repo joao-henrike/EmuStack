@@ -19,6 +19,16 @@ class IsolatedDashboardLogicTests(unittest.TestCase):
         )
         return object.__new__(handler_type)
 
+    def test_dashboard_control_source_policy_rejects_agent_source_even_with_spoofable_headers(self):
+        trusted = frozenset({webapp.ipaddress.ip_address("172.28.1.1"), webapp.ipaddress.ip_address("172.28.2.1")})
+        with patch.object(webapp, "CONTROL_TRUSTED_CLIENT_IPS", trusted):
+            self.assertTrue(webapp._is_trusted_control_client("127.0.0.1"))
+            self.assertTrue(webapp._is_trusted_control_client("::1"))
+            self.assertTrue(webapp._is_trusted_control_client("172.28.1.1"))
+            self.assertFalse(webapp._is_trusted_control_client("172.28.1.2"))
+            self.assertFalse(webapp._is_trusted_control_client("172.28.9.2"))
+            self.assertFalse(webapp._is_trusted_control_client("not-an-ip"))
+
     def test_active_environment_limit_counts_unique_environments_not_sessions(self):
         sessions = [
             {"environment_id": "rpcs3", "status": "running"},
