@@ -2,24 +2,30 @@
 
 Private repository for the EmuStack console-emulation orchestrator.
 
-## Import the verified 0.7.0 source bundle
+## Current source bundle
 
-Download `EmuStack-Docker-0.7.0.zip` from the ChatGPT conversation to your computer. Then clone this private repository and run the importer with Bash (do not `chmod` it first, so the working tree remains clean):
+The latest bundle prepared in this conversation is **EmuStack 0.7.1**. Download `EmuStack-Docker-0.7.1.zip` from the ChatGPT conversation, then clone this private repository and run the guarded importer:
 
 ```bash
 gh auth login
 gh auth setup-git
 git clone https://github.com/joao-henrike/EmuStack.git
 cd EmuStack
-bash IMPORT-LOCAL.sh ~/Downloads/EmuStack-Docker-0.7.0.zip
+bash IMPORT-LOCAL.sh ~/Downloads/EmuStack-Docker-0.7.1.zip
 ```
 
-The importer verifies the archive's SHA-256, validates the ZIP and expected source layout, refuses an unexpected Git remote or dirty working tree, and rejects `.env`, key files, BIOS/firmware, games, saves, and other user data before staging. It prints a staged diff summary and asks for confirmation before committing and pushing the project to `main`.
+The importer validates the SHA-256, ZIP and source layout, refuses an unexpected Git remote or dirty tree, rejects secrets and locally supplied games/firmware, shows a staged diff, and asks for confirmation before committing and pushing the full source tree to `main`.
 
-Expected archive SHA-256:
+Expected bundle SHA-256:
 
 ```text
-c503808f3b833177dc9115c0b8e2c8e68c93726e4c4c4c2a15cb9daf63e3067f
+3753467d99c7ef1e73cce9d1fc0262b60a2a95bc83804994ea35b1b66ce97771
 ```
 
-The bundle does not include games, ROMs, console BIOS/firmware, NAND, HDD images or encryption keys. Never commit local `.env`, proprietary system files or personal saves.
+## Game-content sources
+
+See [docs/GAME_SOURCES.md](docs/GAME_SOURCES.md) for the per-console source list. The 0.7.1 source bundle also includes `game-sources.json` and dashboard filters by category and console.
+
+Important distinction: emulator repositories ordinarily distribute emulator code/releases, not commercial games. The sources list contains homebrew/demo discovery, official storefront information and rights guidance; it does not list unauthorized commercial ROM/ISO download sites. EmuStack does not automatically download or install games.
+
+The bundle does not include games, ROMs, BIOS, firmware, NAND, HDD images, encryption keys or private `.env` configuration. Never commit proprietary system files or personal saves.
