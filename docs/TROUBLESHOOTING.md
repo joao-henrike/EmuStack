@@ -51,3 +51,7 @@ A detecção precisa de binário, estratégia suportada, pré-requisitos e DISPL
 ## Migrar uma instalação antiga
 
 A 0.7.1 não monta as pastas compartilhadas `data/games/`, `data/bios/`, `data/saves/` ou `data/home/`. Copie os dados manualmente para o ambiente correto após backup. Não apague os dados originais até confirmar o resultado.
+
+## POST de controle recusado com HTTP 403
+
+No modo Docker, a API de controle aceita apenas loopback e gateways explicitamente allowlisted. Se o navegador local for recusado, confira o port publishing `127.0.0.1:8765` e se o IP de origem aparece entre os gateways configurados. Não resolva removendo a checagem ou liberando as redes dos agentes.
