@@ -53,7 +53,7 @@ Isto não equivale a 20 consoles integralmente emulados. O dashboard é um plano
 
 | Verificação | Resultado |
 |---|---:|
-| Testes unitários/regressão Python | **78/78 passaram** |
+| Testes unitários/regressão Python | **79/79 passaram** |
 | Casos de recomendação de lançamento JavaScript | **13/13 passaram** |
 | Verificações estáticas da UI de sistemas originais | **11 assertions passaram** |
 | Compilação sintática Python | Passou |
