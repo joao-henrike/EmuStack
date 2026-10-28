@@ -37,7 +37,10 @@ jobs:
             shopt -u nullglob
             (( ${#chunks[@]} > 0 ))
             printf '%s\n' "Assembling $target from ${#chunks[@]} chunks"
-            cat "${chunks[@]}" > "$target"
+            : > "$target"
+            for chunk in "${chunks[@]}"; do
+              base64 --decode "$chunk" >> "$target"
+            done
             actual="$(git hash-object "$target")"
             if [[ "$actual" != "$expected" ]]; then
               echo "Blob SHA mismatch for $target: expected $expected got $actual" >&2
