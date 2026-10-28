@@ -28,7 +28,7 @@ status="$(git -C "$repo_root" status --porcelain)"
 [[ -z "$status" ]] || die "A árvore de trabalho não está limpa. Não sobrescreverei alterações locais; confira: git status"
 
 tracked="$(git -C "$repo_root" ls-files | LC_ALL=C sort)"
-expected_tracked="$(printf '%s\n' .github/workflows/import-source.yml IMPORT-LOCAL.sh README.md docs/GAME_SOURCES.md | LC_ALL=C sort)"
+expected_tracked="$(printf '%s\n' IMPORT-LOCAL.sh README.md docs/GAME_SOURCES.md | LC_ALL=C sort)"
 [[ "$tracked" == "$expected_tracked" ]] || die "O repositório contém arquivos rastreados além dos arquivos de bootstrap esperados. Revise antes do import."
 
 tmp="$(mktemp -d)"
@@ -53,8 +53,7 @@ done
 
 info "Copiando a árvore completa de EmuStack 0.7.1"
 cp -a "$src/." "$repo_root/"
-rm -f "$repo_root/IMPORT-LOCAL.sh" "$repo_root/.github/workflows/import-source.yml"
-rmdir --ignore-fail-on-non-empty "$repo_root/.github/workflows" "$repo_root/.github" 2>/dev/null || true
+rm -f "$repo_root/IMPORT-LOCAL.sh"
 find "$repo_root/scripts" -maxdepth 1 -type f -name '*.sh' -exec chmod +x {} +
 
 git -C "$repo_root" add -A
