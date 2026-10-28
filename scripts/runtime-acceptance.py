@@ -268,6 +268,13 @@ def main() -> int:
         actual_network = net.get("Labels", {}).get("com.docker.compose.network")
         if actual_network != expected_network:
             raise RuntimeError(f"env-{env_id} is attached to unexpected network {actual_network!r}")
+        expected_index = env_ids.index(env_id) + 1
+        ipam_config = (net.get("IPAM", {}).get("Config") or [{}])[0]
+        if ipam_config.get("Subnet") != f"172.28.{expected_index}.0/24" or ipam_config.get("Gateway") != f"172.28.{expected_index}.1":
+            raise RuntimeError(f"Network {nname} has unexpected IPAM configuration: {ipam_config}")
+        endpoint = container.get("NetworkSettings", {}).get("Networks", {}).get(nname, {})
+        if endpoint.get("IPAddress") != f"172.28.{expected_index}.2":
+            raise RuntimeError(f"env-{env_id} does not have reserved agent IP .2: {endpoint.get('IPAddress')}")
         network_id = net.get("Id")
         if not network_id or network_id in network_ids:
             raise RuntimeError(f"Network is shared/reused by multiple environments: {nname}")
@@ -289,6 +296,25 @@ def main() -> int:
     if dashboard_network_ids != network_ids:
         raise RuntimeError("Dashboard does not join exactly the set of unique per-agent networks")
     checks.append("dashboard has orchestrator-only mounts and all agent networks")
+    for index, env_id in enumerate(env_ids, 1):
+        endpoint = next((entry for entry in dnetworks.values() if entry.get("IPAddress") == f"172.28.{index}.3"), None)
+        if endpoint is None:
+            raise RuntimeError(f"Dashboard does not have reserved IP 172.28.{index}.3 for {env_id}")
+    trusted_env = next((entry for entry in dashboard.get("Config", {}).get("Env", []) if entry.startswith("EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS=")), None)
+    expected_gateways = {f"172.28.{index}.1" for index in range(1, len(env_ids) + 1)}
+    actual_gateways = set(trusted_env.split("=", 1)[1].split(",")) if trusted_env else set()
+    if actual_gateways != expected_gateways:
+        raise RuntimeError("Dashboard trusted-client IP allowlist does not exactly match isolated-network gateways")
+    checks.append("dashboard uses gateway IP allowlist; agent addresses are not trusted")
+
+    # Emulate a compromised agent forging every HTTP header currently used by the UI.
+    # The TCP source address must still be rejected before any state-changing route runs.
+    spoof_probe = "import urllib.error, urllib.request\\nreq=urllib.request.Request('http://dashboard:8765/api/processes/stop',data=b'{}',method='POST',headers={'Host':'127.0.0.1:8765','X-EmuStack-Request':'1','Content-Type':'application/json'})\\ntry:\\n urllib.request.urlopen(req,timeout=3)\\n raise SystemExit('FAIL: spoofed state-changing request was accepted')\\nexcept urllib.error.HTTPError as exc:\\n print('HTTP',exc.code)\\n raise SystemExit(0 if exc.code == 403 else 1)"
+    for env_id, container in env_containers.items():
+        result = run(["docker", "exec", container["Id"], "python3", "-c", spoof_probe], check=False, timeout=8)
+        if result.returncode != 0 or "HTTP 403" not in result.stdout:
+            raise RuntimeError(f"env-{env_id} spoofed POST probe failed: {result.stdout} {result.stderr}")
+    checks.append("20/20 agents denied spoofed state-changing requests to dashboard")
 
     for path in ("/api/health", "/api/environments", "/api/console-systems"):
         status, data = api(path)
