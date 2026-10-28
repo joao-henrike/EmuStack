@@ -66,10 +66,22 @@ jobs:
           assert trusted == expected_gateways, "control client allowlist must match isolated network gateways"
           print("dashboard/agent source-address boundary: 20 isolated static networks validated")
           PY
+      - name: Prepare isolated runtime secrets and directories
+        run: bash scripts/host-setup.sh
       - name: Validate Docker Compose merged configuration
         run: docker compose -f compose.yaml config --quiet
       - name: Build runtime image without optional upstream downloads
         run: docker compose -f compose.yaml build --build-arg BUILD_KYTYPS5=0 --build-arg INSTALL_UPSTREAM=0 dashboard
+      - name: Start isolated agents and dashboard
+        run: docker compose -f compose.yaml up -d --no-build dashboard
+      - name: Run Docker runtime acceptance and inter-agent boundary probes
+        run: ./scripts/runtime-acceptance.sh
+      - name: Show service logs if a preceding runtime step failed
+        if: failure()
+        run: docker compose -f compose.yaml logs --no-color --tail=200 || true
+      - name: Stop isolated runtime
+        if: always()
+        run: docker compose -f compose.yaml down --volumes --remove-orphans || true
       - name: Check browser asset contracts
         run: |
           test -s web/index.html
