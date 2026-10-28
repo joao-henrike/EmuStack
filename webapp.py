@@ -2,6 +2,7 @@
 """Local-only EmuStack web dashboard. Uses only Python's standard library."""
 from __future__ import annotations
 
+import ipaddress
 import json
 import mimetypes
 import re
@@ -49,6 +50,23 @@ MAX_ACTIVE_PROCESSES = 8
 MAX_TRACKED_PROCESSES = 100
 MAX_RETAINED_LOG_FILES = 100
 MAX_PROCESS_LOG_BYTES = 128 * 1024
+# In Compose mode, only Docker bridge gateway addresses are allowed to originate
+# state-changing dashboard requests. Environment containers use fixed .2 addresses
+# and cannot spoof a trusted TCP source address. Host-native mode remains loopback-only.
+CONTROL_TRUSTED_CLIENT_IPS = frozenset(
+    ipaddress.ip_address(value.strip())
+    for value in os.environ.get("EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS", "").split(",")
+    if value.strip()
+)
+
+
+def _is_trusted_control_client(client_ip: str) -> bool:
+    # Accept local host clients and explicitly configured Docker gateway sources only.
+    try:
+        address = ipaddress.ip_address(client_ip)
+    except ValueError:
+        return False
+    return address.is_loopback or address in CONTROL_TRUSTED_CLIENT_IPS
 LOG_DIR = Path(os.environ.get("EMUSTACK_LOG_DIR", "/home/emu/.local/state/emustack/logs")).resolve()
 PROCESS_LOCK = threading.RLock()
 PROCESS_REGISTRY: dict[int, dict[str, Any]] = {}
@@ -711,6 +729,12 @@ def make_handler(catalog_fn, status_fn, safe_game_path_fn):
 
         def do_POST(self):
             global LAUNCH_RESERVATIONS
+            # Host/Origin/custom headers alone are spoofable by a container on one of
+            # the agent networks. Bind mutations to loopback in host-native mode or to
+            # the explicitly allowlisted Docker bridge gateway IPs in Compose mode.
+            if not _is_trusted_control_client(self.client_address[0]):
+                self._error("Requisição de controle recusada: origem de rede não confiável.", 403)
+                return
             # This server is intended to be reachable only via the loopback-published host port.
             host_header = self.headers.get("Host", "")
             try:
