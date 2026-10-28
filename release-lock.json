@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "strict": false,
+  "project": "EmuStack",
+  "scope": "Default permissive mode. The Debian base image is pinned by multi-architecture manifest digest. Use APT_SNAPSHOT_TIMESTAMP=YYYYMMDDTHHMMSSZ to resolve Debian packages from a dated snapshot (this also freezes security fixes at that point). Use emustack export-lock or FREEZE_RELEASE_LOCK=1 after a successful online build to pin downloadable official release assets. KytyPS5 is separately pinned to a tag and checked against an expected short commit. Full bit-for-bit reproducibility across platforms is not guaranteed.",
+  "items": {}
+}

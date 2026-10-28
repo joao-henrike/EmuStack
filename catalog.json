@@ -1,0 +1,380 @@
+{
+  "project": "EmuStack",
+  "schema_version": 1,
+  "notice": "Build-time installer downloads official Linux/Windows assets where available and installs distro packages where offered. Some historical entries are projects/tools rather than standalone runnable emulator binaries; consult install-report.json. No games, BIOS, firmware, keys, or copyrighted console system software are bundled.",
+  "emulators": [
+    {
+      "id": "kytyps5",
+      "name": "KytyPS5",
+      "platform": "PlayStation 5",
+      "runtime": "linux-native-or-user-supplied",
+      "commands": [
+        "kyty_launcher",
+        "kyty_emulator",
+        "KytyPS5"
+      ],
+      "binary_names": [
+        "kyty_launcher",
+        "kyty_emulator",
+        "kytyps5.AppImage",
+        "KytyPS5.AppImage"
+      ],
+      "game_arg": "ui-only",
+      "status": "experimental",
+      "url": "https://github.com/KytyPS5/KytyPS5",
+      "notes": "The image attempts a best-effort Linux build of the official source; check install-report and build logs."
+    },
+    {
+      "id": "shadps4",
+      "name": "shadPS4",
+      "platform": "PlayStation 4",
+      "runtime": "linux-native",
+      "commands": [
+        "shadps4",
+        "shadPS4"
+      ],
+      "binary_names": [
+        "shadps4.AppImage",
+        "shadPS4.AppImage",
+        "shadPS4",
+        "shadps4"
+      ],
+      "game_arg": "append",
+      "status": "experimental",
+      "url": "https://github.com/shadps4-emu/shadPS4",
+      "notes": "Installer attempts to obtain a matching Linux release asset; availability depends on the upstream release format."
+    },
+    {
+      "id": "rpcs3",
+      "name": "RPCS3",
+      "platform": "PlayStation 3",
+      "runtime": "linux-native",
+      "commands": [
+        "rpcs3"
+      ],
+      "binary_names": [
+        "rpcs3.AppImage",
+        "rpcs3"
+      ],
+      "game_arg": "append",
+      "status": "mature",
+      "url": "https://github.com/RPCS3/rpcs3-binaries-linux/releases",
+      "notes": "Installer attempts the official Linux binary release repository; Debian package is a fallback."
+    },
+    {
+      "id": "duckstation",
+      "name": "DuckStation",
+      "platform": "PlayStation 1",
+      "runtime": "linux-native",
+      "commands": [
+        "duckstation-qt",
+        "DuckStation",
+        "duckstation"
+      ],
+      "binary_names": [
+        "DuckStation-x64.AppImage",
+        "DuckStation.AppImage",
+        "duckstation-qt",
+        "duckstation"
+      ],
+      "game_arg": "append",
+      "status": "mature",
+      "url": "https://github.com/stenzek/duckstation",
+      "notes": "Installer searches the official upstream repository for a Linux x86_64 AppImage matching its strict allowlist; if no matching asset is published, no substitute is guessed and the profile stays unavailable unless a trusted distro package or user-supplied binary is present. The BIOS shell requires a legally obtained PS1 BIOS."
+    },
+    {
+      "id": "pcsx2",
+      "name": "PCSX2",
+      "platform": "PlayStation 2",
+      "runtime": "linux-native",
+      "commands": [
+        "pcsx2-qt",
+        "pcsx2"
+      ],
+      "binary_names": [
+        "pcsx2.AppImage",
+        "PCSX2.AppImage",
+        "pcsx2-qt",
+        "pcsx2"
+      ],
+      "game_arg": "append",
+      "status": "mature",
+      "url": "https://github.com/PCSX2/pcsx2/releases",
+      "notes": "Installer attempts an official Linux AppImage release; Debian package is a fallback. User must provide a legally obtained BIOS dump."
+    },
+    {
+      "id": "ppsspp",
+      "name": "PPSSPP",
+      "platform": "PlayStation Portable (PSP)",
+      "runtime": "linux-native-or-user-supplied",
+      "commands": [
+        "PPSSPPQt",
+        "PPSSPPSDL",
+        "ppsspp"
+      ],
+      "binary_names": [
+        "PPSSPP.AppImage",
+        "PPSSPPQt",
+        "PPSSPPSDL",
+        "ppsspp"
+      ],
+      "game_arg": "append",
+      "status": "mature",
+      "url": "https://www.ppsspp.org/download/",
+      "notes": "Official PPSSPP supports game emulation. Some current builds document experimental --vsh to attempt the authentic PSP XMB when a user-supplied flash0 firmware dump is available; EmuStack exposes that as an experimental system-boot target, not a guarantee of full firmware functionality."
+    },
+    {
+      "id": "vita3k",
+      "name": "Vita3K",
+      "platform": "PlayStation Vita",
+      "runtime": "linux-native",
+      "commands": [
+        "Vita3K",
+        "vita3k"
+      ],
+      "binary_names": [
+        "Vita3K-x86_64.AppImage",
+        "Vita3K.AppImage",
+        "Vita3K",
+        "vita3k"
+      ],
+      "game_arg": "append",
+      "status": "experimental",
+      "url": "https://github.com/Vita3K/Vita3K",
+      "notes": "Installer attempts the official x86_64 Linux AppImage; if no matching release asset is available, the profile stays unavailable unless a trusted package or user-supplied binary is present. Experimental game compatibility; Vita3K UI is not the original LiveArea."
+    },
+    {
+      "id": "xbox-one",
+      "name": "Xbox One — runner indisponível",
+      "platform": "Xbox One / One S / One X",
+      "runtime": "unsupported",
+      "commands": [],
+      "binary_names": [],
+      "game_arg": "blocked",
+      "status": "unsupported",
+      "url": "https://www.xbox.com/",
+      "notes": "Isolated placeholder only. No supported full-system Xbox One emulator/runner is integrated; all game and system launch actions are blocked. No fake executable is created."
+    },
+    {
+      "id": "xenia-canary",
+      "name": "Xenia Canary",
+      "platform": "Xbox 360",
+      "runtime": "windows-or-wine",
+      "commands": [
+        "xenia_canary.exe",
+        "xenia.exe",
+        "xenia-canary"
+      ],
+      "binary_names": [
+        "xenia_canary.exe",
+        "xenia.exe",
+        "xenia_canary.zip"
+      ],
+      "game_arg": "append-wine",
+      "status": "experimental",
+      "url": "https://github.com/xenia-canary/xenia-canary-releases/releases",
+      "notes": "Installer attempts an official Windows Canary archive; Wine execution on Linux is experimental and game-dependent."
+    },
+    {
+      "id": "xbox-series",
+      "name": "Xbox Series S / Series X — runner indisponível",
+      "platform": "Xbox Series S / Series X",
+      "runtime": "unsupported",
+      "commands": [],
+      "binary_names": [],
+      "game_arg": "blocked",
+      "status": "unsupported",
+      "url": "https://www.xbox.com/",
+      "notes": "Isolated placeholder only. No supported full-system Xbox Series emulator/runner is integrated; all launch actions are blocked. No fake executable is created."
+    },
+    {
+      "id": "xemu",
+      "name": "xemu",
+      "platform": "Xbox original",
+      "runtime": "linux-native",
+      "commands": [
+        "xemu"
+      ],
+      "binary_names": [
+        "xemu.AppImage",
+        "xemu"
+      ],
+      "game_arg": "ui-only",
+      "status": "active",
+      "url": "https://xemu.app/",
+      "notes": "Linux package is installed from Debian when available; otherwise this ID remains unavailable in the install report."
+    },
+    {
+      "id": "eden",
+      "name": "Eden",
+      "platform": "Nintendo Switch",
+      "runtime": "linux-native",
+      "commands": [
+        "eden"
+      ],
+      "binary_names": [
+        "eden.AppImage",
+        "Eden.AppImage",
+        "eden"
+      ],
+      "game_arg": "append",
+      "status": "active",
+      "url": "https://eden-emu.dev/",
+      "notes": "Installer fetches the official amd64 AppImage from the official Eden release page; no firmware or games are included."
+    },
+    {
+      "id": "cemu",
+      "name": "Cemu",
+      "platform": "Nintendo Wii U",
+      "runtime": "linux-native",
+      "commands": [
+        "cemu",
+        "Cemu"
+      ],
+      "binary_names": [
+        "cemu.AppImage",
+        "Cemu.AppImage",
+        "Cemu",
+        "cemu"
+      ],
+      "game_arg": "append",
+      "status": "active",
+      "url": "https://github.com/cemu-project/Cemu/releases",
+      "notes": "Installer attempts the official Linux AppImage; Debian package is a fallback."
+    },
+    {
+      "id": "dolphin",
+      "name": "Dolphin",
+      "platform": "Nintendo Wii / GameCube",
+      "runtime": "linux-native",
+      "commands": [
+        "dolphin-emu",
+        "dolphin"
+      ],
+      "binary_names": [
+        "Dolphin.AppImage",
+        "dolphin-emu.AppImage",
+        "dolphin-emu",
+        "dolphin"
+      ],
+      "game_arg": "append",
+      "status": "mature",
+      "url": "https://dolphin-emu.org/download/",
+      "notes": "Installer attempts the official Linux x64 AppImage; Debian package is a fallback."
+    },
+    {
+      "id": "azahar",
+      "name": "Azahar",
+      "platform": "Nintendo 3DS / 2DS",
+      "runtime": "linux-native",
+      "commands": [
+        "azahar"
+      ],
+      "binary_names": [
+        "azahar.AppImage",
+        "azahar-wayland.AppImage",
+        "azahar"
+      ],
+      "game_arg": "append",
+      "status": "active",
+      "url": "https://github.com/azahar-emu/azahar",
+      "notes": "Official Linux AppImage is downloaded during build if available."
+    },
+    {
+      "id": "melonds",
+      "name": "melonDS",
+      "platform": "Nintendo DS",
+      "runtime": "linux-native",
+      "commands": [
+        "melonDS",
+        "melonds"
+      ],
+      "binary_names": [
+        "melonDS.AppImage",
+        "melonds.AppImage",
+        "melonDS",
+        "melonds"
+      ],
+      "game_arg": "append",
+      "status": "active",
+      "url": "https://melonds.kuribo64.net/downloads.php",
+      "notes": "Installer attempts an official Linux AppImage; Debian package is a fallback."
+    },
+    {
+      "id": "mgba",
+      "name": "mGBA",
+      "platform": "Game Boy Advance / Game Boy / Game Boy Color",
+      "runtime": "linux-native",
+      "commands": [
+        "mgba-qt",
+        "mgba"
+      ],
+      "binary_names": [
+        "mgba.AppImage",
+        "mGBA.AppImage",
+        "mgba-qt",
+        "mgba"
+      ],
+      "game_arg": "append",
+      "status": "mature",
+      "url": "https://mgba.io/",
+      "notes": "Official Linux AppImage is downloaded during build if available."
+    },
+    {
+      "id": "mupen64plus",
+      "name": "Mupen64Plus",
+      "platform": "Nintendo 64",
+      "runtime": "linux-native",
+      "commands": [
+        "mupen64plus-ui-console",
+        "mupen64plus"
+      ],
+      "binary_names": [
+        "mupen64plus-ui-console",
+        "mupen64plus"
+      ],
+      "game_arg": "append",
+      "status": "active",
+      "url": "https://mupen64plus.org/",
+      "notes": "Debian packages and plugins are installed when available; console frontend may need additional configuration."
+    },
+    {
+      "id": "bsnes",
+      "name": "bsnes",
+      "platform": "Super Nintendo (SNES)",
+      "runtime": "linux-native",
+      "commands": [
+        "bsnes"
+      ],
+      "binary_names": [
+        "bsnes.AppImage",
+        "bsnes"
+      ],
+      "game_arg": "append",
+      "status": "active",
+      "url": "https://bsnes.github.io/",
+      "notes": "Debian package is installed when available."
+    },
+    {
+      "id": "mesen",
+      "name": "Mesen",
+      "platform": "NES / other classic systems",
+      "runtime": "linux-native-or-user-supplied",
+      "commands": [
+        "Mesen",
+        "mesen"
+      ],
+      "binary_names": [
+        "Mesen.AppImage",
+        "mesen.AppImage",
+        "Mesen",
+        "mesen"
+      ],
+      "game_arg": "append",
+      "status": "active",
+      "url": "https://github.com/SourMesen/Mesen2/releases",
+      "notes": "Installer attempts an official Linux AppImage from upstream releases."
+    }
+  ],
+  "version": "0.7.1"
+}

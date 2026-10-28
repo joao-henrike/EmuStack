@@ -1,0 +1,458 @@
+{
+  "schema_version": 2,
+  "notice": "EmuStack não hospeda, indexa automaticamente, não baixa e não instala jogos. Repositórios de emuladores normalmente distribuem o código ou o binário do emulador, não os jogos. As ligações abaixo são para lojas oficiais, conteúdo homebrew/demos conforme autorização do autor, ou documentação. Verifique a licença, o formato e a autorização de cada item individualmente. A disponibilidade e as regras sobre cópias pessoais variam por jurisdição e plataforma. Não há fontes de ROMs comerciais não autorizadas.",
+  "categories": [
+    {
+      "id": "homebrew",
+      "title": "Homebrew e demos autorizadas",
+      "description": "Projetos independentes e demos distribuídos pelos autores. Cada página precisa confirmar o arquivo, formato e licença."
+    },
+    {
+      "id": "official-stores",
+      "title": "Lojas oficiais (não são dumps de console)",
+      "description": "Lojas vendem versões digitais oficiais; compras para PC/console não fornecem automaticamente arquivos ROM/ISO utilizáveis no EmuStack."
+    },
+    {
+      "id": "personal-library",
+      "title": "Sua própria biblioteca",
+      "description": "Arquivos de sua criação ou mídia que você está autorizado a copiar e usar conforme a legislação e os termos aplicáveis."
+    },
+    {
+      "id": "rights-guidance",
+      "title": "Guias de direitos e preservação",
+      "description": "Documentação informativa; não são fontes de downloads de jogos comerciais."
+    }
+  ],
+  "sources": [
+    {
+      "id": "steam",
+      "name": "Steam",
+      "category": "official-stores",
+      "type": "Loja oficial de jogos para PC",
+      "url": "https://store.steampowered.com/",
+      "platforms": [
+        "PC / Linux / Windows (conforme o jogo)"
+      ],
+      "description": "Compre e baixe jogos de PC; confira cada página para sistemas operacionais e requisitos.",
+      "caveat": "A versão de PC não substitui um arquivo de jogo de console para emulação."
+    },
+    {
+      "id": "gog",
+      "name": "GOG",
+      "category": "official-stores",
+      "type": "Loja oficial para PC",
+      "url": "https://www.gog.com/",
+      "platforms": [
+        "PC"
+      ],
+      "description": "Catálogo de jogos para PC; verifique requisitos, formato e condições de distribuição em cada produto.",
+      "caveat": "Não oferece um dump universal para a versão de console de um jogo."
+    },
+    {
+      "id": "itchio",
+      "name": "itch.io",
+      "category": "official-stores",
+      "type": "Loja oficial de autores independentes (PC/web e alguns homebrew de console)",
+      "url": "https://itch.io/",
+      "platforms": [
+        "PC / Web / Homebrew de console conforme arquivo publicado pelo autor"
+      ],
+      "description": "Página de cada autor para jogos, demos, freeware e homebrew. Alguns autores vendem um binário/ROM de console diretamente; outros oferecem apenas versão PC ou browser.",
+      "caveat": "O filtro/tag não garante que todo item seja grátis, open source ou um ROM compatível. Abra a página individual, confirme o autor, plataforma, formato e licença antes de baixar."
+    },
+    {
+      "id": "xbox-pc",
+      "name": "Xbox para PC",
+      "category": "official-stores",
+      "type": "Loja/serviço oficial de jogos para PC",
+      "url": "https://www.xbox.com/pt-BR/xbox-on-pc",
+      "platforms": [
+        "Windows PC"
+      ],
+      "description": "Jogos Xbox com versão de PC e serviços relacionados, sujeito à disponibilidade regional e aos requisitos do título.",
+      "caveat": "A versão de PC não é o mesmo pacote de jogo do Xbox One/360."
+    },
+    {
+      "id": "playstation-store",
+      "name": "PlayStation Store Brasil",
+      "category": "official-stores",
+      "type": "Loja oficial PlayStation",
+      "url": "https://store.playstation.com/pt-br/",
+      "platforms": [
+        "PlayStation; alguns títulos também têm versão para PC por outros canais"
+      ],
+      "description": "Consulte a disponibilidade oficial de jogos e suas versões.",
+      "caveat": "A compra digital não significa que você possa baixar livremente os arquivos internos do console."
+    },
+    {
+      "id": "nintendo-store",
+      "name": "Nintendo Store",
+      "category": "official-stores",
+      "type": "Loja oficial Nintendo",
+      "url": "https://www.nintendo.com/pt-br/store/games/",
+      "platforms": [
+        "Nintendo Switch e outras plataformas listadas pela loja"
+      ],
+      "description": "Catálogo e compras oficiais de jogos Nintendo conforme região e disponibilidade.",
+      "caveat": "Uma compra não fornece automaticamente um arquivo utilizável diretamente em emulador."
+    },
+    {
+      "id": "gamebrew",
+      "name": "GameBrew",
+      "category": "homebrew",
+      "type": "Índice comunitário de homebrew",
+      "url": "https://www.gamebrew.org/wiki/Main_Page",
+      "platforms": [
+        "Várias plataformas Nintendo e portáteis"
+      ],
+      "description": "Índice comunitário para descobrir homebrew, ferramentas e projetos por plataforma Nintendo e portátil; use-o como ponto de descoberta e siga a página oficial do autor para download.",
+      "caveat": "O índice não é uma licença geral de distribuição. Confirme a licença do item e baixe apenas a release autorizada pelo autor."
+    },
+    {
+      "id": "itch-homebrew",
+      "name": "itch.io — jogos homebrew",
+      "category": "homebrew",
+      "type": "Busca comunitária de jogos homebrew",
+      "url": "https://itch.io/games/tag-homebrew",
+      "platforms": [
+        "Várias; confira os arquivos de cada projeto"
+      ],
+      "description": "Descubra projetos publicados por desenvolvedores independentes e criadores de homebrew.",
+      "caveat": "Confira quem publicou o jogo, a licença e se o download é autorizado pelo titular."
+    },
+    {
+      "id": "github-homebrew",
+      "name": "GitHub — projetos homebrew",
+      "category": "homebrew",
+      "type": "Repositórios de código e releases",
+      "url": "https://github.com/topics/homebrew-game",
+      "platforms": [
+        "Várias"
+      ],
+      "description": "Descoberta de projetos homebrew e open-source. Os arquivos de jogo, quando existirem, ficam na release ou página publicada pelo próprio titular.",
+      "caveat": "A existência de um repositório não comprova direitos de distribuição. Verifique LICENSE, autoria, releases e termos do item; não use repositórios para baixar cópias comerciais não autorizadas."
+    },
+    {
+      "id": "pdroms",
+      "name": "PDRoms — homebrew e freeware",
+      "category": "homebrew",
+      "type": "Coleção/índice de homebrew para várias plataformas",
+      "url": "https://pdroms.de/",
+      "platforms": [
+        "PS1 e consoles/portáteis clássicos conforme a página de cada item"
+      ],
+      "description": "Coleção comunitária voltada a software homebrew; o próprio site descreve seu conteúdo como predominantemente freeware, donationware, open-source, public-domain ou autorizado pelos titulares.",
+      "caveat": "“Predominantemente” não significa que cada item esteja liberado. Confira a página específica, o titular e a licença antes de usar."
+    },
+    {
+      "id": "itch-homebrew-free",
+      "name": "itch.io — homebrew gratuito",
+      "category": "homebrew",
+      "type": "Descoberta de jogos homebrew gratuitos",
+      "url": "https://itch.io/games/free/tag-homebrew",
+      "platforms": [
+        "Várias plataformas retro; formatos dependem de cada autor"
+      ],
+      "description": "Filtro de jogos homebrew marcados como gratuitos. Pode revelar jogos para sistemas retro, demos e projetos de criadores independentes.",
+      "caveat": "Gratuito não significa automaticamente livre para redistribuição ou compatível com emulador. Confirme formato e licença na página individual."
+    },
+    {
+      "id": "itch-nes-roms",
+      "name": "itch.io — homebrew NES ROM",
+      "category": "homebrew",
+      "type": "Filtro de ROMs homebrew NES publicadas por autores",
+      "url": "https://itch.io/games/free/tag-homebrew/tag-nes-rom",
+      "platforms": [
+        "NES / Famicom"
+      ],
+      "description": "Filtro que inclui autores que publicam arquivos homebrew NES em formatos que podem funcionar em hardware real ou emuladores.",
+      "caveat": "Verifique a página de cada jogo: alguns resultados podem ser apenas versões inspiradas no NES, demos ou outros formatos."
+    },
+    {
+      "id": "ppsspp-official-demos",
+      "name": "PPSSPP — demos e homebrew",
+      "category": "homebrew",
+      "type": "Guia oficial do projeto de emulação PSP",
+      "url": "https://www.ppsspp.org/docs/getting-started/how-to-get-demos-and-homebrew/",
+      "platforms": [
+        "PSP"
+      ],
+      "description": "O guia oficial do PPSSPP explica como localizar demos PSP distribuídas gratuitamente e homebrew. É uma das referências mais diretas para conteúdos PSP autorizados.",
+      "caveat": "É documentação e descoberta de conteúdo, não um mirror de jogos comerciais. Siga apenas os links/arquivos que estejam autorizados pelos titulares."
+    },
+    {
+      "id": "personal-media-guide",
+      "name": "Guia de dumps da sua própria mídia",
+      "category": "rights-guidance",
+      "type": "Documentação sobre cópias pessoais e direitos",
+      "url": "https://github.com/Provenance-Emu/wiki/blob/master/installation-and-usage/roms/ripping-roms.md",
+      "platforms": [
+        "Várias plataformas, conforme hardware e legislação"
+      ],
+      "description": "Guia informativo sobre a criação de cópias digitais de mídia física própria. A legislação, as regras anticircunvenção e os termos da plataforma variam por país.",
+      "caveat": "Não é uma fonte de downloads. Não compartilhe dumps protegidos nem presuma que possuir uma mídia permite qualquer forma de cópia ou remoção de proteção."
+    },
+    {
+      "id": "nintendo-free-demos",
+      "name": "Nintendo — demos oficiais",
+      "category": "official-stores",
+      "type": "Demos oficiais para consoles Nintendo",
+      "url": "https://www.nintendo.com/pt-br/store/games/games-with-free-demos/",
+      "platforms": [
+        "Nintendo Switch / Switch 2 conforme catálogo regional"
+      ],
+      "description": "Catálogo oficial de demonstrações gratuitas para experimentar jogos no hardware e nos canais oficialmente suportados.",
+      "caveat": "Essas demos são distribuídas para o console/conta oficial e não equivalem a um arquivo ROM/ISO para o EmuStack. Não há conversão automática para um dump de emulador."
+    },
+    {
+      "id": "mame-rom-rights-guide",
+      "name": "MAME — orientação sobre ROMs",
+      "category": "rights-guidance",
+      "type": "Documentação oficial sobre direitos e ROMs de arcade",
+      "url": "https://www.mamedev.org/about.html",
+      "platforms": [
+        "Arcade/arcade boards (orientação geral; MAME não é um dos 20 perfis atuais)"
+      ],
+      "description": "O projeto explica seu foco de preservação e que as imagens ROM necessárias precisam ser fornecidas pelo usuário ou obtidas por canais autorizados.",
+      "caveat": "Não é um catálogo de ROMs nem fonte para baixar jogos comerciais; a orientação é incluída para deixar clara a separação entre emulador e conteúdo."
+    }
+  ],
+  "project": "EmuStack",
+  "platform_guidance": [
+    {
+      "environment_id": "kytyps5",
+      "platform": "PlayStation 5",
+      "source_ids": [
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "O perfil é experimental e não inicializa o sistema PS5 completo. Não existe uma fonte geral autorizada de imagens comerciais PS5 para o EmuStack; use apenas homebrew/demos publicados explicitamente para distribuição e compatíveis com o runner."
+    },
+    {
+      "environment_id": "shadps4",
+      "platform": "PlayStation 4",
+      "source_ids": [
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "O perfil suporta apenas emulação de jogos compatíveis de forma experimental; não é um boot do sistema PS4. Uma compra na PlayStation Store não se converte automaticamente num pacote para emulador."
+    },
+    {
+      "environment_id": "rpcs3",
+      "platform": "PlayStation 3",
+      "source_ids": [
+        "pdroms",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Para conteúdo PS3, priorize homebrew explicitamente distribuído pelos autores ou arquivos próprios cujo uso/cópia seja permitido. O catálogo não fornece jogos comerciais nem licença."
+    },
+    {
+      "environment_id": "duckstation",
+      "platform": "PlayStation 1",
+      "source_ids": [
+        "pdroms",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Há homebrew e demos PS1 em fontes de criadores; confirme que o download é realmente uma imagem PS1 compatível. O BIOS é um componente separado e não está incluído."
+    },
+    {
+      "environment_id": "pcsx2",
+      "platform": "PlayStation 2",
+      "source_ids": [
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Não foi verificado um catálogo geral de ISOs comerciais PS2 com distribuição autorizada. Para jogos comerciais, use mídia própria somente dentro do que a lei e os termos aplicáveis permitem; o BIOS continua separado."
+    },
+    {
+      "environment_id": "ppsspp",
+      "platform": "PSP",
+      "source_ids": [
+        "ppsspp-official-demos",
+        "pdroms",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "O guia oficial do PPSSPP é a melhor primeira parada para demos e homebrew PSP. Ele não distribui jogos comerciais completos nem inclui firmware."
+    },
+    {
+      "environment_id": "vita3k",
+      "platform": "PlayStation Vita",
+      "source_ids": [
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Não há nesta lista um catálogo amplo verificado de jogos Vita comerciais autorizados para download. A interface do Vita3K não é o LiveArea original."
+    },
+    {
+      "environment_id": "xbox-one",
+      "platform": "Xbox One",
+      "source_ids": [],
+      "include_personal_library": false,
+      "guidance": "Runner completo não integrado; o lançamento está bloqueado. A Microsoft Store oferece versões oficiais para plataformas suportadas, mas não arquivos Xbox One para EmuStack."
+    },
+    {
+      "environment_id": "xenia-canary",
+      "platform": "Xbox 360",
+      "source_ids": [
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Xenia é focado em jogos e não oferece boot completo do dashboard retail no EmuStack. Não há fonte oficial geral de dumps comerciais compatíveis; não baixe cópias não autorizadas."
+    },
+    {
+      "environment_id": "xbox-series",
+      "platform": "Xbox Series S/X",
+      "source_ids": [],
+      "include_personal_library": false,
+      "guidance": "Não existe runner completo integrado; o perfil está bloqueado. Lojas oficiais vendem jogos para as plataformas suportadas, não dumps de console para esse ambiente."
+    },
+    {
+      "environment_id": "xemu",
+      "platform": "Xbox original",
+      "source_ids": [
+        "pdroms",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Use homebrew específico para Xbox original quando o autor autorizar a distribuição e o formato for compatível. BIOS, MCPX e HDD do sistema são arquivos separados e não são fornecidos pelo EmuStack."
+    },
+    {
+      "environment_id": "eden",
+      "platform": "Nintendo Switch",
+      "source_ids": [
+        "gamebrew",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Priorize homebrew publicado pelo autor para Switch. As demos da Nintendo são para os canais oficiais e não são ROMs para importar no emulador."
+    },
+    {
+      "environment_id": "cemu",
+      "platform": "Nintendo Wii U",
+      "source_ids": [
+        "gamebrew",
+        "pdroms",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Homebrew pode ser publicado pelos próprios projetos; confirme formato e licença. Os jogos e arquivos de sistema Wii U não são obtidos nem instalados automaticamente."
+    },
+    {
+      "environment_id": "dolphin",
+      "platform": "Nintendo Wii / GameCube",
+      "source_ids": [
+        "gamebrew",
+        "pdroms",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Verifique se o homebrew é realmente construído para Wii/GameCube e se os arquivos publicados são autorizados. O NAND/BIOS necessário pode ser separado."
+    },
+    {
+      "environment_id": "azahar",
+      "platform": "Nintendo 3DS / 2DS",
+      "source_ids": [
+        "gamebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "GameBrew serve principalmente como índice de descoberta; siga o link do autor e confirme licença e compatibilidade. Nenhum jogo ou firmware 3DS é hospedado pelo EmuStack."
+    },
+    {
+      "environment_id": "melonds",
+      "platform": "Nintendo DS",
+      "source_ids": [
+        "gamebrew",
+        "pdroms",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Demos e homebrew DS podem aparecer em coleções e releases dos autores. Verifique se o arquivo é um ROM distribuído com autorização, não uma cópia comercial sem licença."
+    },
+    {
+      "environment_id": "mgba",
+      "platform": "Game Boy / Game Boy Color / Game Boy Advance",
+      "source_ids": [
+        "pdroms",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "PDRoms e itch.io têm conteúdo homebrew para plataformas portáteis clássicas; confirme a plataforma-alvo, formato e licença na página de cada criador."
+    },
+    {
+      "environment_id": "mupen64plus",
+      "platform": "Nintendo 64",
+      "source_ids": [
+        "pdroms",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Use projetos homebrew N64 distribuídos pelos autores ou arquivos que você tenha autorização para usar. A página tagueada de uma loja nem sempre é um ROM N64."
+    },
+    {
+      "environment_id": "bsnes",
+      "platform": "Super Nintendo / SNES",
+      "source_ids": [
+        "pdroms",
+        "itch-homebrew",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "Procure por conteúdo explicitamente produzido para SNES e distribuído pelo titular; verifique se há um arquivo de ROM incluído e a licença."
+    },
+    {
+      "environment_id": "mesen",
+      "platform": "NES / sistemas clássicos",
+      "source_ids": [
+        "itch-nes-roms",
+        "itch-homebrew-free",
+        "pdroms",
+        "github-homebrew",
+        "personal-media-guide"
+      ],
+      "include_personal_library": true,
+      "guidance": "O filtro itch.io NES ROM é específico para homebrew, mas cada item ainda pode ser pago ou ter limitações de licença. Confira a autorização do autor e o formato antes de usar."
+    }
+  ],
+  "automation_policy": {
+    "automatic_game_downloads": false,
+    "automatic_game_installation": false,
+    "downloads_emulator_binaries_only_from_allowlisted_upstream_sources": true,
+    "commercial_game_images": "not catalogued or downloaded; user-supplied content must be lawfully usable",
+    "storefront_caveat": "Purchasing a PC or console version does not automatically yield a ROM/ISO or permission to use it in an emulator.",
+    "per_item_rights_check_required": true
+  }
+}

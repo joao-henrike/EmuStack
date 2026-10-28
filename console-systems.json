@@ -1,0 +1,439 @@
+{
+  "schema_version": 1,
+  "project": "EmuStack",
+  "purpose": "Boot authentic console system interfaces only through the real emulated firmware/system files and where the underlying emulator supports it. No proprietary firmware, keys, BIOS dumps, or dashboard files are bundled.",
+  "systems": [
+    {
+      "id": "ps1-bios-menu",
+      "name": "PlayStation 1",
+      "interface_name": "BIOS shell / tela original de boot",
+      "family": "PlayStation",
+      "emulator_ids": [
+        "duckstation"
+      ],
+      "boot_strategy": "duckstation-bios",
+      "capability": "bios-menu",
+      "details": "DuckStation oferece o argumento oficial -bios para iniciar o BIOS shell. Exige BIOS do usuário detectado no ambiente persistente; o EmuStack não inclui o BIOS.",
+      "requirements": [
+        "Dump de BIOS do PS1 obtido do console do usuário e detectado no diretório BIOS do DuckStation."
+      ],
+      "setup_steps": [
+        "Copie seu dump autorizado para data/environments/duckstation/bios/.",
+        "Abra DuckStation pelo EmuStack uma vez e configure o diretório BIOS se necessário.",
+        "Quando o BIOS for detectado, use Iniciar interface original para abrir o shell de BIOS em tela cheia."
+      ],
+      "official_docs": [
+        "https://github.com/stenzek/duckstation",
+        "https://github.com/stenzek/duckstation/wiki/Command-Line-Arguments"
+      ]
+    },
+    {
+      "id": "ps2-bios-menu",
+      "name": "PlayStation 2",
+      "interface_name": "Browser / System Configuration do BIOS",
+      "family": "PlayStation",
+      "emulator_ids": [
+        "pcsx2"
+      ],
+      "boot_strategy": "pcsx2-bios",
+      "capability": "bios-menu",
+      "details": "O PCSX2 pode iniciar o menu do BIOS do PS2 sem um disco. Isso é a interface original do BIOS, não um sistema operacional de console com dashboard moderno.",
+      "requirements": [
+        "BIOS obtido do console do usuário e configurado no PCSX2."
+      ],
+      "setup_steps": [
+        "Coloque o dump autorizado do BIOS em data/environments/pcsx2/bios/pcsx2/.",
+        "Abra o PCSX2, selecione esse diretório em Settings → BIOS e conclua a configuração inicial.",
+        "Depois, use Iniciar interface original nesta página."
+      ],
+      "official_docs": [
+        "https://pcsx2.net/docs/setup/bios/"
+      ]
+    },
+    {
+      "id": "ps3-xmb",
+      "name": "PlayStation 3",
+      "interface_name": "XMB / VSH original",
+      "family": "PlayStation",
+      "emulator_ids": [
+        "rpcs3"
+      ],
+      "boot_strategy": "rpcs3-vsh",
+      "capability": "native-system-ui-partial",
+      "details": "O RPCS3 inclui inicialização do VSH/XMB, mas nem todos os serviços ou funções do console real são implementados. Requer firmware instalado na configuração persistente do RPCS3.",
+      "requirements": [
+        "Instalar o firmware oficial do PS3 fornecido pelo usuário no RPCS3.",
+        "O arquivo dev_flash/vsh/module/vsh.self precisa existir na pasta de dados do RPCS3."
+      ],
+      "setup_steps": [
+        "Abra o RPCS3 pelo EmuStack.",
+        "No RPCS3, use File → Install Firmware e selecione o arquivo de atualização do sistema obtido legalmente.",
+        "Quando a instalação terminar, use File → Boot VSH/XMB. O EmuStack tentará inicializar esse VSH diretamente quando o arquivo estiver presente."
+      ],
+      "official_docs": [
+        "https://rpcs3.net/",
+        "https://www.playstation.com/pt-br/support/hardware/ps3/system-software/"
+      ]
+    },
+    {
+      "id": "ps4-system",
+      "name": "PlayStation 4",
+      "interface_name": "PS4 system UI",
+      "family": "PlayStation",
+      "emulator_ids": [
+        "shadps4"
+      ],
+      "boot_strategy": "unsupported",
+      "capability": "no-full-system-ui",
+      "details": "O shadPS4 é experimental e não oferece um fluxo genérico e confiável para inicializar o sistema operacional/dashboard de varejo do PS4.",
+      "requirements": [],
+      "official_docs": [
+        "https://github.com/shadps4-emu/shadPS4"
+      ]
+    },
+    {
+      "id": "ps5-system",
+      "name": "PlayStation 5",
+      "interface_name": "PS5 system UI",
+      "family": "PlayStation",
+      "emulator_ids": [
+        "kytyps5"
+      ],
+      "boot_strategy": "unsupported",
+      "capability": "no-full-system-ui",
+      "details": "Os projetos PS5 do catálogo são experimentais e não oferecem inicialização confiável do sistema de produção/dashboard do PS5. O EmuStack não vai simular uma tela e apresentá-la como o sistema real.",
+      "requirements": [],
+      "official_docs": [
+        "https://github.com/KytyPS5/KytyPS5",
+        "https://github.com/shadps4-emu/shadPS4"
+      ]
+    },
+    {
+      "id": "psp-system",
+      "name": "PlayStation Portable (PSP)",
+      "interface_name": "PSP XMB",
+      "family": "PlayStation",
+      "emulator_ids": [
+        "ppsspp"
+      ],
+      "boot_strategy": "ppsspp-vsh",
+      "capability": "experimental-native-system-ui",
+      "details": "PPSSPP upstream documents --vsh to boot the PSP Visual Shell using a real firmware dump in assets/flash0 (optional flash1). The upstream research document explicitly calls this exploratory/unsupported; EmuStack offers the route as experimental, not as a guaranteed full PSP operating system.",
+      "requirements": [
+        "Dump autorizado de firmware de um PSP, estruturado em data/environments/ppsspp/bios/flash0/.",
+        "Arquivos flash0/vsh/module/vshmain.prx e flash0/kd/pspbtcnf.bin presentes sem symlinks.",
+        "Versão de PPSSPP que reconheça a opção --vsh; o resultado depende da build e do firmware."
+      ],
+      "official_docs": [
+        "https://www.ppsspp.org/docs/reference/command-line/",
+        "https://github.com/hrydgard/ppsspp/blob/master/docs/VSHBootInvestigation.md"
+      ],
+      "setup_steps": [
+        "Extraia somente um dump de firmware que você esteja autorizado a usar para data/environments/ppsspp/bios/flash0/; mantenha a estrutura de diretórios do dump.",
+        "Verifique que flash0/vsh/module/vshmain.prx e flash0/kd/pspbtcnf.bin existem e que os caminhos não são symlinks.",
+        "Abra a seção Sistemas Originais e use Iniciar PSP XMB (experimental). Se a build instalada não aceitar --vsh, consulte o log desse ambiente e instale uma versão oficial recente do PPSSPP.",
+        "O firmware é uma exigência do próprio caminho VSH; nenhum arquivo de sistema é incluído neste projeto."
+      ]
+    },
+    {
+      "id": "psvita-system",
+      "name": "PlayStation Vita",
+      "interface_name": "LiveArea / shell original do PS Vita",
+      "family": "PlayStation",
+      "emulator_ids": [
+        "vita3k"
+      ],
+      "boot_strategy": "unsupported",
+      "capability": "game-focused-emulation",
+      "details": "Vita3K é experimental e pode executar alguns jogos/homebrew; sua própria interface não é o LiveArea autêntico do PS Vita. Este perfil não anuncia boot completo do sistema.",
+      "requirements": [],
+      "official_docs": [
+        "https://github.com/Vita3K/Vita3K"
+      ]
+    },
+    {
+      "id": "xbox-one-system",
+      "name": "Xbox One / One S / One X",
+      "interface_name": "Xbox One Home / Dashboard",
+      "family": "Xbox",
+      "emulator_ids": [
+        "xbox-one"
+      ],
+      "boot_strategy": "unsupported",
+      "capability": "no-full-system-ui",
+      "details": "Os projetos listados não fornecem um emulador de sistema completo pronto para iniciar o dashboard de varejo. Uma interface do EmuStack não seria o dashboard autêntico.",
+      "requirements": [],
+      "official_docs": [
+        "https://www.xbox.com/"
+      ]
+    },
+    {
+      "id": "xbox-original-dashboard",
+      "name": "Xbox original",
+      "interface_name": "Xbox Dashboard original",
+      "family": "Xbox",
+      "emulator_ids": [
+        "xemu"
+      ],
+      "boot_strategy": "xemu-dashboard",
+      "capability": "full-system-emulation",
+      "details": "xemu emula o hardware completo do Xbox original. O dashboard original exige BIOS/boot ROM e conteúdo de disco rígido dumpeados do console; o HDD de demonstração do xemu usa um dashboard aberto alternativo, não o dashboard Microsoft original. EmuStack 0.7.1 valida MCPX/BIOS/HDD, mas exige uma confirmação explícita do usuário ligada ao SHA-256 do HDD antes de autorizar o boot com promessa de dashboard original.",
+      "requirements": [
+        "Dump compatível do MCPX boot ROM e BIOS/flash ROM.",
+        "Imagem persistente de HDD Xbox configurada no xemu.",
+        "Para a interface exatamente original, dashboard extraído do próprio console e instalado na imagem do HDD.",
+        "Arquivo xemu.toml configurado para apontar para esses arquivos."
+      ],
+      "setup_steps": [
+        "Mantenha os dumps autorizados em data/environments/xemu/bios/ e a imagem de HDD persistente em data/environments/xemu/saves/.",
+        "Abra o xemu e configure os caminhos dos arquivos de sistema e do HDD no arquivo xemu.toml desse ambiente.",
+        "Confirme primeiro que a imagem é um dump autorizado e que você verificou os dados do dashboard desejado.",
+        "Execute scripts/attest-xemu-dashboard.py com o HDD correto para registrar a confirmação do usuário vinculada ao SHA-256.",
+        "Use Iniciar interface original somente após o estado do sistema permitir o boot. O EmuStack vincula a declaração ao hash, mas não inspeciona o conteúdo interno do HDD."
+      ],
+      "official_docs": [
+        "https://xemu.app/docs/required-files/",
+        "https://xemu.app/docs/dashboard/",
+        "https://xemu.app/docs/cli/"
+      ]
+    },
+    {
+      "id": "xbox-series-system",
+      "name": "Xbox Series S / Series X",
+      "interface_name": "Xbox Series Home",
+      "family": "Xbox",
+      "emulator_ids": [
+        "xbox-series"
+      ],
+      "boot_strategy": "unsupported",
+      "capability": "no-emulator",
+      "details": "O catálogo atual não contém um emulador de sistema completo capaz de executar o software de console Xbox Series.",
+      "requirements": [],
+      "official_docs": [
+        "https://www.xbox.com/"
+      ]
+    },
+    {
+      "id": "xbox360-system",
+      "name": "Xbox 360",
+      "interface_name": "Xbox 360 Dashboard / NXE / Blades",
+      "family": "Xbox",
+      "emulator_ids": [
+        "xenia-canary"
+      ],
+      "boot_strategy": "unsupported",
+      "capability": "game-focused-emulation",
+      "details": "Xenia é focado em executar jogos e não oferece um modo suportado de boot de sistema completo que reproduza o dashboard retail do Xbox 360. O EmuStack não deve rotular uma tela de launcher como o dashboard real.",
+      "requirements": [],
+      "official_docs": [
+        "https://github.com/xenia-project/xenia/wiki/Quickstart"
+      ]
+    },
+    {
+      "id": "3ds-home-menu",
+      "name": "Nintendo 3DS / 2DS",
+      "interface_name": "HOME Menu original do 3DS",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "azahar"
+      ],
+      "boot_strategy": "manual",
+      "capability": "native-menu-manual",
+      "details": "O Azahar inclui a ação File → Boot Home Menu por região. A inicialização exige system archives/fontes instalados a partir de um 3DS do usuário; o comando de menu é atualmente acionado pela interface do próprio emulador.",
+      "requirements": [
+        "Arquivos de sistema do 3DS instalados no Azahar.",
+        "Região correspondente ao sistema dumpado."
+      ],
+      "setup_steps": [
+        "Abra o Azahar pelo EmuStack.",
+        "Use File → Set Up System Files para configurar arquivos obtidos do seu 3DS.",
+        "Use File → Boot Home Menu e selecione a região."
+      ],
+      "official_docs": [
+        "https://github.com/azahar-emu/azahar"
+      ]
+    },
+    {
+      "id": "ds-firmware-menu",
+      "name": "Nintendo DS",
+      "interface_name": "Menu de firmware do DS",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "melonds"
+      ],
+      "boot_strategy": "manual",
+      "capability": "firmware-menu-manual",
+      "details": "O melonDS pode iniciar pelo firmware original se BIOS e firmware bootáveis estiverem configurados e a opção de iniciar jogos diretamente estiver desativada.",
+      "requirements": [
+        "bios7.bin, bios9.bin e firmware bootável dumpeados do console."
+      ],
+      "setup_steps": [
+        "Coloque seus dumps autorizados em data/environments/melonds/bios/.",
+        "Abra o melonDS → Emu Settings → DS-mode e configure BIOS e Firmware.",
+        "Desative Boot game directly e reinicie o emulador sem selecionar ROM."
+      ],
+      "official_docs": [
+        "https://melonds.kuribo64.net/faq.php"
+      ]
+    },
+    {
+      "id": "gamecube-ipl",
+      "name": "Nintendo GameCube",
+      "interface_name": "Tela de boot / IPL do GameCube",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "dolphin"
+      ],
+      "boot_strategy": "manual",
+      "capability": "boot-rom-sequence",
+      "details": "O GameCube não tem um dashboard equivalente ao XMB. O IPL original pode exibir a sequência de boot e o menu quando um IPL/BIOS compatível está configurado e Skip Main Menu está desativado; normalmente a sequência aparece ao iniciar um jogo ou disco.",
+      "requirements": [
+        "IPL/BIOS regional obtido do console e configurado no Dolphin.",
+        "Skip Main Menu desativado."
+      ],
+      "setup_steps": [
+        "Abra o Dolphin e configure seu IPL/BIOS regional autorizado.",
+        "Em Settings → GameCube, desative Skip Main Menu.",
+        "Ao iniciar um disco/jogo compatível, a sequência original do IPL será exibida."
+      ],
+      "official_docs": [
+        "https://dolphin-emu.org/"
+      ]
+    },
+    {
+      "id": "gba-startup",
+      "name": "Game Boy Advance / Game Boy / Game Boy Color",
+      "interface_name": "Sequência de boot portátil",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "mgba"
+      ],
+      "boot_strategy": "no-dashboard",
+      "capability": "boot-screen-only",
+      "details": "Esses consoles não possuem dashboard de aplicações como o Xbox 360 ou PS3. A experiência autêntica é a sequência de boot do hardware/BIOS, quando disponível, e depois o jogo.",
+      "requirements": [
+        "BIOS legítimo opcional, se exigido para a sequência original."
+      ],
+      "official_docs": [
+        "https://mgba.io/"
+      ]
+    },
+    {
+      "id": "n64-startup",
+      "name": "Nintendo 64",
+      "interface_name": "Sequência de boot do N64",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "mupen64plus"
+      ],
+      "boot_strategy": "no-dashboard",
+      "capability": "boot-screen-only",
+      "details": "O N64 é um console baseado em cartucho e não apresenta um dashboard de aplicações. A interface original disponível é a sequência de boot do jogo/hardware.",
+      "requirements": [],
+      "official_docs": [
+        "https://mupen64plus.org/"
+      ]
+    },
+    {
+      "id": "nes-startup",
+      "name": "Nintendo Entertainment System (NES)",
+      "interface_name": "Sequência de boot do NES",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "mesen"
+      ],
+      "boot_strategy": "no-dashboard",
+      "capability": "boot-screen-only",
+      "details": "O NES não tem um dashboard de sistema; o jogo/cartucho inicia diretamente depois da sequência de inicialização apropriada.",
+      "requirements": [],
+      "official_docs": [
+        "https://www.mesen.ca/"
+      ]
+    },
+    {
+      "id": "snes-startup",
+      "name": "Super Nintendo (SNES)",
+      "interface_name": "Sequência de boot do SNES",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "bsnes"
+      ],
+      "boot_strategy": "no-dashboard",
+      "capability": "boot-screen-only",
+      "details": "O SNES não tem um dashboard de sistema separado; a experiência original é a sequência de inicialização do cartucho/jogo.",
+      "requirements": [],
+      "official_docs": [
+        "https://bsnes.github.io/"
+      ]
+    },
+    {
+      "id": "switch-system",
+      "name": "Nintendo Switch",
+      "interface_name": "Nintendo Switch HOME Menu",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "eden"
+      ],
+      "boot_strategy": "unsupported",
+      "capability": "not-verified",
+      "details": "A integração atual não verificou um comando oficial e estável no Eden que inicialize a HOME Menu de varejo como o fluxo padrão. O suporte à execução de jogos não prova suporte à inicialização do sistema completo.",
+      "requirements": [
+        "Firmware e chaves não são fornecidos pelo EmuStack."
+      ],
+      "official_docs": [
+        "https://eden-emu.dev/"
+      ]
+    },
+    {
+      "id": "wii-menu",
+      "name": "Nintendo Wii",
+      "interface_name": "Wii Menu original",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "dolphin"
+      ],
+      "boot_strategy": "dolphin-wii-menu",
+      "capability": "native-system-menu",
+      "details": "O Dolphin consegue inicializar o Wii System Menu quando o título do sistema está instalado no NAND emulado. O menu e seus canais provêm dos arquivos de sistema instalados pelo usuário.",
+      "requirements": [
+        "Wii System Menu instalado no NAND do Dolphin.",
+        "NAND e configurações persistentes graváveis."
+      ],
+      "setup_steps": [
+        "Abra o Dolphin e instale/configure o Wii System Menu usando os recursos documentados pelo projeto e arquivos a que você tem direito.",
+        "Ative tela cheia nas configurações do Dolphin se quiser a experiência de TV.",
+        "O EmuStack tentará iniciar o título de sistema do Wii diretamente."
+      ],
+      "official_docs": [
+        "https://dolphin-emu.org/",
+        "https://github.com/dolphin-emu/dolphin"
+      ]
+    },
+    {
+      "id": "wiiu-menu",
+      "name": "Nintendo Wii U",
+      "interface_name": "Wii U Menu / HOME Menu",
+      "family": "Nintendo",
+      "emulator_ids": [
+        "cemu"
+      ],
+      "boot_strategy": "cemu-wiiu-menu",
+      "capability": "partial-native-menu",
+      "details": "O Cemu possui suporte ao Wii U Menu, mas várias funções do sistema e applets permanecem incompletas. Requer sistema MLC obtido do console e configurado no Cemu.",
+      "requirements": [
+        "MLC com os arquivos de sistema autorizados do Wii U.",
+        "Arquivo men.rpx em sys/title/00050010/<região>/code/.",
+        "Bibliotecas de sistema compatíveis."
+      ],
+      "setup_steps": [
+        "Configure o caminho MLC do Cemu como data/environments/cemu/home/.local/share/Cemu/mlc01 ou defina EMUSTACK_CEMU_MLC_PATH.",
+        "Restaure os arquivos de sistema obtidos do seu Wii U nessa MLC.",
+        "O EmuStack tentará localizar men.rpx e iniciá-lo em tela cheia."
+      ],
+      "official_docs": [
+        "https://wiki.cemu.info/wiki/Wii_U_Menu",
+        "https://github.com/cemu-project/Cemu"
+      ]
+    }
+  ]
+}

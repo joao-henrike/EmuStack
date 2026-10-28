@@ -1,0 +1,9 @@
+.git
+.env
+emulators/**
+!emulators/.gitkeep
+data/**
+!data/.gitkeep
+__pycache__
+*.pyc
+*.zip

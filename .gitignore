@@ -1,0 +1,21 @@
+.env
+compose.override.yaml
+data/host.Xauthority
+data/home/*
+!data/home/.gitkeep
+data/saves/*
+!data/saves/.gitkeep
+data/config/*
+!data/config/.gitkeep
+data/games/*
+!data/games/.gitkeep
+data/bios/*
+!data/bios/.gitkeep
+emulators/*
+!emulators/.gitkeep
+__pycache__/
+*.pyc
+
+# Per-console isolated environment data (games/firmware/saves/config are user-owned).
+data/environments/*
+!data/environments/.gitkeep

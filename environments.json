@@ -1,0 +1,730 @@
+{
+  "schema_version": 1,
+  "project": "EmuStack",
+  "version": "0.7.1",
+  "purpose": "One isolated runtime agent per catalog entry; unsupported consoles are explicit blocked placeholders rather than fabricated emulators.",
+  "default_policy": "DENY_CROSS_ENVIRONMENT_STORAGE",
+  "environments": [
+    {
+      "id": "kytyps5",
+      "service_name": "env-kytyps5",
+      "name": "KytyPS5 · PlayStation 5",
+      "emulator_id": "kytyps5",
+      "platform": "PlayStation 5",
+      "emulator_name": "KytyPS5",
+      "url": "https://github.com/KytyPS5/KytyPS5",
+      "game_arg": "ui-only",
+      "capability_level": "GAME_ONLY_EXPERIMENTAL",
+      "capability_note": "Emulação focada em jogos/experimental; boot do sistema/dashboard não verificado.",
+      "system_profile_ids": [
+        "ps5-system"
+      ],
+      "directories": {
+        "root": "data/environments/kytyps5",
+        "games": "data/environments/kytyps5/games",
+        "bios": "data/environments/kytyps5/bios",
+        "saves": "data/environments/kytyps5/saves",
+        "config_home": "data/environments/kytyps5/home",
+        "custom_emulators": "data/environments/kytyps5/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "shadps4",
+      "service_name": "env-shadps4",
+      "name": "shadPS4 · PlayStation 4",
+      "emulator_id": "shadps4",
+      "platform": "PlayStation 4",
+      "emulator_name": "shadPS4",
+      "url": "https://github.com/shadps4-emu/shadPS4",
+      "game_arg": "append",
+      "capability_level": "GAME_ONLY_EXPERIMENTAL",
+      "capability_note": "Emulação focada em jogos/experimental; boot do sistema/dashboard não verificado.",
+      "system_profile_ids": [
+        "ps4-system"
+      ],
+      "directories": {
+        "root": "data/environments/shadps4",
+        "games": "data/environments/shadps4/games",
+        "bios": "data/environments/shadps4/bios",
+        "saves": "data/environments/shadps4/saves",
+        "config_home": "data/environments/shadps4/home",
+        "custom_emulators": "data/environments/shadps4/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "rpcs3",
+      "service_name": "env-rpcs3",
+      "name": "RPCS3 · PlayStation 3",
+      "emulator_id": "rpcs3",
+      "platform": "PlayStation 3",
+      "emulator_name": "RPCS3",
+      "url": "https://github.com/RPCS3/rpcs3-binaries-linux/releases",
+      "game_arg": "append",
+      "capability_level": "SYSTEM_MENU_BOOT",
+      "capability_note": "Caminho integrado para VSH/XMB; exige firmware do usuário e teste runtime.",
+      "system_profile_ids": [
+        "ps3-xmb"
+      ],
+      "directories": {
+        "root": "data/environments/rpcs3",
+        "games": "data/environments/rpcs3/games",
+        "bios": "data/environments/rpcs3/bios",
+        "saves": "data/environments/rpcs3/saves",
+        "config_home": "data/environments/rpcs3/home",
+        "custom_emulators": "data/environments/rpcs3/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "duckstation",
+      "service_name": "env-duckstation",
+      "name": "DuckStation",
+      "emulator_id": "duckstation",
+      "platform": "PlayStation 1",
+      "emulator_name": "DuckStation",
+      "url": "https://github.com/stenzek/duckstation",
+      "game_arg": "append",
+      "capability_level": "FIRMWARE_BOOT",
+      "capability_note": "PS1 BIOS shell can be booted when an authorized BIOS is detected and configured; there is no modern system dashboard.",
+      "system_profile_ids": [
+        "ps1-bios-menu"
+      ],
+      "directories": {
+        "root": "data/environments/duckstation",
+        "games": "data/environments/duckstation/games",
+        "bios": "data/environments/duckstation/bios",
+        "saves": "data/environments/duckstation/saves",
+        "config_home": "data/environments/duckstation/home",
+        "custom_emulators": "data/environments/duckstation/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "pcsx2",
+      "service_name": "env-pcsx2",
+      "name": "PCSX2 · PlayStation 2",
+      "emulator_id": "pcsx2",
+      "platform": "PlayStation 2",
+      "emulator_name": "PCSX2",
+      "url": "https://github.com/PCSX2/pcsx2/releases",
+      "game_arg": "append",
+      "capability_level": "FIRMWARE_BOOT",
+      "capability_note": "Caminho integrado para BIOS/Browser; depende de BIOS válida e seleção no PCSX2.",
+      "system_profile_ids": [
+        "ps2-bios-menu"
+      ],
+      "directories": {
+        "root": "data/environments/pcsx2",
+        "games": "data/environments/pcsx2/games",
+        "bios": "data/environments/pcsx2/bios",
+        "saves": "data/environments/pcsx2/saves",
+        "config_home": "data/environments/pcsx2/home",
+        "custom_emulators": "data/environments/pcsx2/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "ppsspp",
+      "service_name": "env-ppsspp",
+      "name": "PPSSPP",
+      "emulator_id": "ppsspp",
+      "platform": "PlayStation Portable (PSP)",
+      "emulator_name": "PPSSPP",
+      "url": "https://www.ppsspp.org/download/",
+      "game_arg": "append",
+      "capability_level": "EXPERIMENTAL_SYSTEM_BOOT",
+      "capability_note": "PPSSPP --vsh can attempt the PSP XMB with user-supplied flash0 firmware; upstream calls this exploratory, so boot and feature support are unverified.",
+      "system_profile_ids": [
+        "psp-system"
+      ],
+      "directories": {
+        "root": "data/environments/ppsspp",
+        "games": "data/environments/ppsspp/games",
+        "bios": "data/environments/ppsspp/bios",
+        "saves": "data/environments/ppsspp/saves",
+        "config_home": "data/environments/ppsspp/home",
+        "custom_emulators": "data/environments/ppsspp/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "vita3k",
+      "service_name": "env-vita3k",
+      "name": "Vita3K",
+      "emulator_id": "vita3k",
+      "platform": "PlayStation Vita",
+      "emulator_name": "Vita3K",
+      "url": "https://github.com/Vita3K/Vita3K",
+      "game_arg": "append",
+      "capability_level": "GAME_ONLY_EXPERIMENTAL",
+      "capability_note": "Experimental PlayStation Vita game emulation; launcher UI is not the original LiveArea system.",
+      "system_profile_ids": [
+        "psvita-system"
+      ],
+      "directories": {
+        "root": "data/environments/vita3k",
+        "games": "data/environments/vita3k/games",
+        "bios": "data/environments/vita3k/bios",
+        "saves": "data/environments/vita3k/saves",
+        "config_home": "data/environments/vita3k/home",
+        "custom_emulators": "data/environments/vita3k/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "xbox-one",
+      "service_name": "env-xbox-one",
+      "name": "Xbox One — runner indisponível",
+      "emulator_id": "xbox-one",
+      "platform": "Xbox One / One S / One X",
+      "emulator_name": "Xbox One — runner indisponível",
+      "url": "https://www.xbox.com/",
+      "game_arg": "blocked",
+      "capability_level": "UNAVAILABLE",
+      "capability_note": "No supported Xbox One emulator is integrated; this isolated agent blocks launches rather than faking the console.",
+      "system_profile_ids": [
+        "xbox-one-system"
+      ],
+      "directories": {
+        "root": "data/environments/xbox-one",
+        "games": "data/environments/xbox-one/games",
+        "bios": "data/environments/xbox-one/bios",
+        "saves": "data/environments/xbox-one/saves",
+        "config_home": "data/environments/xbox-one/home",
+        "custom_emulators": "data/environments/xbox-one/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "xenia-canary",
+      "service_name": "env-xenia-canary",
+      "name": "Xenia Canary · Xbox 360",
+      "emulator_id": "xenia-canary",
+      "platform": "Xbox 360",
+      "emulator_name": "Xenia Canary",
+      "url": "https://github.com/xenia-canary/xenia-canary-releases/releases",
+      "game_arg": "append-wine",
+      "capability_level": "GAME_ONLY_EXPERIMENTAL",
+      "capability_note": "Emulação focada em jogos/experimental; boot do sistema/dashboard não verificado.",
+      "system_profile_ids": [
+        "xbox360-system"
+      ],
+      "directories": {
+        "root": "data/environments/xenia-canary",
+        "games": "data/environments/xenia-canary/games",
+        "bios": "data/environments/xenia-canary/bios",
+        "saves": "data/environments/xenia-canary/saves",
+        "config_home": "data/environments/xenia-canary/home",
+        "custom_emulators": "data/environments/xenia-canary/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "xbox-series",
+      "service_name": "env-xbox-series",
+      "name": "Xbox Series S / Series X — runner indisponível",
+      "emulator_id": "xbox-series",
+      "platform": "Xbox Series S / Series X",
+      "emulator_name": "Xbox Series S / Series X — runner indisponível",
+      "url": "https://www.xbox.com/",
+      "game_arg": "blocked",
+      "capability_level": "UNAVAILABLE",
+      "capability_note": "No supported Xbox Series emulator is integrated; this isolated agent blocks launches rather than faking the console.",
+      "system_profile_ids": [
+        "xbox-series-system"
+      ],
+      "directories": {
+        "root": "data/environments/xbox-series",
+        "games": "data/environments/xbox-series/games",
+        "bios": "data/environments/xbox-series/bios",
+        "saves": "data/environments/xbox-series/saves",
+        "config_home": "data/environments/xbox-series/home",
+        "custom_emulators": "data/environments/xbox-series/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "xemu",
+      "service_name": "env-xemu",
+      "name": "xemu · Xbox original",
+      "emulator_id": "xemu",
+      "platform": "Xbox original",
+      "emulator_name": "xemu",
+      "url": "https://xemu.app/",
+      "game_arg": "ui-only",
+      "capability_level": "MANUAL_SYSTEM_BOOT",
+      "capability_note": "xemu pode abrir o sistema configurado, mas o HDD/dashboard original não é autenticado automaticamente; o boot original fica desabilitado até verificação manual.",
+      "system_profile_ids": [
+        "xbox-original-dashboard"
+      ],
+      "directories": {
+        "root": "data/environments/xemu",
+        "games": "data/environments/xemu/games",
+        "bios": "data/environments/xemu/bios",
+        "saves": "data/environments/xemu/saves",
+        "config_home": "data/environments/xemu/home",
+        "custom_emulators": "data/environments/xemu/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "eden",
+      "service_name": "env-eden",
+      "name": "Eden · Nintendo Switch",
+      "emulator_id": "eden",
+      "platform": "Nintendo Switch",
+      "emulator_name": "Eden",
+      "url": "https://eden-emu.dev/",
+      "game_arg": "append",
+      "capability_level": "GAME_ONLY_EXPERIMENTAL",
+      "capability_note": "Emulação focada em jogos/experimental; boot do sistema/dashboard não verificado.",
+      "system_profile_ids": [
+        "switch-system"
+      ],
+      "directories": {
+        "root": "data/environments/eden",
+        "games": "data/environments/eden/games",
+        "bios": "data/environments/eden/bios",
+        "saves": "data/environments/eden/saves",
+        "config_home": "data/environments/eden/home",
+        "custom_emulators": "data/environments/eden/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "cemu",
+      "service_name": "env-cemu",
+      "name": "Cemu · Nintendo Wii U",
+      "emulator_id": "cemu",
+      "platform": "Nintendo Wii U",
+      "emulator_name": "Cemu",
+      "url": "https://github.com/cemu-project/Cemu/releases",
+      "game_arg": "append",
+      "capability_level": "CONDITIONAL_MENU_BOOT",
+      "capability_note": "Caminho para Wii U Menu; exige MLC de sistema e as limitações próprias do Cemu.",
+      "system_profile_ids": [
+        "wiiu-menu"
+      ],
+      "directories": {
+        "root": "data/environments/cemu",
+        "games": "data/environments/cemu/games",
+        "bios": "data/environments/cemu/bios",
+        "saves": "data/environments/cemu/saves",
+        "config_home": "data/environments/cemu/home",
+        "custom_emulators": "data/environments/cemu/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "dolphin",
+      "service_name": "env-dolphin",
+      "name": "Dolphin · Wii / GameCube",
+      "emulator_id": "dolphin",
+      "platform": "Nintendo Wii / GameCube",
+      "emulator_name": "Dolphin",
+      "url": "https://dolphin-emu.org/download/",
+      "game_arg": "append",
+      "capability_level": "CONDITIONAL_MENU_BOOT",
+      "capability_note": "Caminho para Wii Menu no NAND emulado; exige System Menu instalado.",
+      "system_profile_ids": [
+        "wii-menu",
+        "gamecube-ipl"
+      ],
+      "directories": {
+        "root": "data/environments/dolphin",
+        "games": "data/environments/dolphin/games",
+        "bios": "data/environments/dolphin/bios",
+        "saves": "data/environments/dolphin/saves",
+        "config_home": "data/environments/dolphin/home",
+        "custom_emulators": "data/environments/dolphin/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "azahar",
+      "service_name": "env-azahar",
+      "name": "Azahar · Nintendo 3DS / 2DS",
+      "emulator_id": "azahar",
+      "platform": "Nintendo 3DS / 2DS",
+      "emulator_name": "Azahar",
+      "url": "https://github.com/azahar-emu/azahar",
+      "game_arg": "append",
+      "capability_level": "MANUAL_SYSTEM_BOOT",
+      "capability_note": "Sistema/menu requer ação manual na interface do emulador.",
+      "system_profile_ids": [
+        "3ds-home-menu"
+      ],
+      "directories": {
+        "root": "data/environments/azahar",
+        "games": "data/environments/azahar/games",
+        "bios": "data/environments/azahar/bios",
+        "saves": "data/environments/azahar/saves",
+        "config_home": "data/environments/azahar/home",
+        "custom_emulators": "data/environments/azahar/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "melonds",
+      "service_name": "env-melonds",
+      "name": "melonDS · Nintendo DS",
+      "emulator_id": "melonds",
+      "platform": "Nintendo DS",
+      "emulator_name": "melonDS",
+      "url": "https://melonds.kuribo64.net/downloads.php",
+      "game_arg": "append",
+      "capability_level": "MANUAL_SYSTEM_BOOT",
+      "capability_note": "Sistema/menu requer ação manual na interface do emulador.",
+      "system_profile_ids": [
+        "ds-firmware-menu"
+      ],
+      "directories": {
+        "root": "data/environments/melonds",
+        "games": "data/environments/melonds/games",
+        "bios": "data/environments/melonds/bios",
+        "saves": "data/environments/melonds/saves",
+        "config_home": "data/environments/melonds/home",
+        "custom_emulators": "data/environments/melonds/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "mgba",
+      "service_name": "env-mgba",
+      "name": "mGBA · Game Boy family",
+      "emulator_id": "mgba",
+      "platform": "Game Boy Advance / Game Boy / Game Boy Color",
+      "emulator_name": "mGBA",
+      "url": "https://mgba.io/",
+      "game_arg": "append",
+      "capability_level": "BOOT_SEQUENCE_ONLY",
+      "capability_note": "Console sem dashboard de aplicações; experiência original é sequência de boot/BIOS/jogo.",
+      "system_profile_ids": [
+        "gba-startup"
+      ],
+      "directories": {
+        "root": "data/environments/mgba",
+        "games": "data/environments/mgba/games",
+        "bios": "data/environments/mgba/bios",
+        "saves": "data/environments/mgba/saves",
+        "config_home": "data/environments/mgba/home",
+        "custom_emulators": "data/environments/mgba/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "mupen64plus",
+      "service_name": "env-mupen64plus",
+      "name": "Mupen64Plus · Nintendo 64",
+      "emulator_id": "mupen64plus",
+      "platform": "Nintendo 64",
+      "emulator_name": "Mupen64Plus",
+      "url": "https://mupen64plus.org/",
+      "game_arg": "append",
+      "capability_level": "BOOT_SEQUENCE_ONLY",
+      "capability_note": "Console sem dashboard de aplicações; experiência original é sequência de boot/BIOS/jogo.",
+      "system_profile_ids": [
+        "n64-startup"
+      ],
+      "directories": {
+        "root": "data/environments/mupen64plus",
+        "games": "data/environments/mupen64plus/games",
+        "bios": "data/environments/mupen64plus/bios",
+        "saves": "data/environments/mupen64plus/saves",
+        "config_home": "data/environments/mupen64plus/home",
+        "custom_emulators": "data/environments/mupen64plus/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "bsnes",
+      "service_name": "env-bsnes",
+      "name": "bsnes · Super Nintendo",
+      "emulator_id": "bsnes",
+      "platform": "Super Nintendo (SNES)",
+      "emulator_name": "bsnes",
+      "url": "https://bsnes.github.io/",
+      "game_arg": "append",
+      "capability_level": "BOOT_SEQUENCE_ONLY",
+      "capability_note": "Console sem dashboard de aplicações; experiência original é sequência de boot/BIOS/jogo.",
+      "system_profile_ids": [
+        "snes-startup"
+      ],
+      "directories": {
+        "root": "data/environments/bsnes",
+        "games": "data/environments/bsnes/games",
+        "bios": "data/environments/bsnes/bios",
+        "saves": "data/environments/bsnes/saves",
+        "config_home": "data/environments/bsnes/home",
+        "custom_emulators": "data/environments/bsnes/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    },
+    {
+      "id": "mesen",
+      "service_name": "env-mesen",
+      "name": "Mesen · NES / clássicos",
+      "emulator_id": "mesen",
+      "platform": "NES / other classic systems",
+      "emulator_name": "Mesen",
+      "url": "https://github.com/SourMesen/Mesen2/releases",
+      "game_arg": "append",
+      "capability_level": "BOOT_SEQUENCE_ONLY",
+      "capability_note": "Console sem dashboard de aplicações; experiência original é sequência de boot/BIOS/jogo.",
+      "system_profile_ids": [
+        "nes-startup"
+      ],
+      "directories": {
+        "root": "data/environments/mesen",
+        "games": "data/environments/mesen/games",
+        "bios": "data/environments/mesen/bios",
+        "saves": "data/environments/mesen/saves",
+        "config_home": "data/environments/mesen/home",
+        "custom_emulators": "data/environments/mesen/emulators"
+      },
+      "isolation": {
+        "games": "read-only inside runtime; unique bind mount",
+        "bios": "read-only inside runtime; unique bind mount",
+        "saves": "writable; unique bind mount",
+        "config_home": "writable; unique bind mount",
+        "custom_emulators": "read-only; unique bind mount",
+        "cross_environment_storage": "denied by default",
+        "shared_resources": [
+          "read-only container image / installed emulator program files",
+          "X11/XWayland display when explicitly configured",
+          "GPU and audio infrastructure when explicitly configured"
+        ]
+      }
+    }
+  ]
+}

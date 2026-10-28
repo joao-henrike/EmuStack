@@ -1,0 +1,581 @@
+name: emustack-0.7.1
+
+x-build: &emustack-build
+  context: .
+  args:
+    DEBIAN_BASE_IMAGE: "${DEBIAN_BASE_IMAGE:-debian:trixie-slim@sha256:89c1ea91e897f0fe0a3731595330bc45b8bdef4047464a07116f891a94054b31}"
+    APT_SNAPSHOT_TIMESTAMP: ${APT_SNAPSHOT_TIMESTAMP:-}
+    PUID: ${PUID:-1000}
+    PGID: ${PGID:-1000}
+    BUILD_KYTYPS5: ${BUILD_KYTYPS5:-1}
+    KYTYPS5_REF: ${KYTYPS5_REF:-KytyPS5-2026-10-26-f90a8b1}
+    KYTYPS5_EXPECTED_SHORT: ${KYTYPS5_EXPECTED_SHORT:-f90a8b1}
+    INSTALL_UPSTREAM: ${INSTALL_UPSTREAM:-1}
+
+x-agent-environment: &agent-environment
+  HOME: /home/emu
+  XDG_CONFIG_HOME: /home/emu/.config
+  XDG_CACHE_HOME: /home/emu/.cache
+  EMUSTACK_BIN_DIR: /opt/emustack/installed
+  EMUSTACK_USER_BIN_DIR: /custom-emulators
+  EMUSTACK_INSTALL_REPORT: /opt/emustack/install-report.json
+  EMUSTACK_SYSTEMS_PATH: /opt/emustack/console-systems.json
+  EMUSTACK_ENVIRONMENTS_PATH: /opt/emustack/environments.json
+  EMUSTACK_GAMES_DIR: /games
+  EMUSTACK_BIOS_DIR: /bios
+  EMUSTACK_SAVES_DIR: /saves
+  EMUSTACK_LOG_DIR: /home/emu/.local/state/emustack/logs
+  EMUSTACK_CEMU_MLC_PATH: /home/emu/.local/share/Cemu/mlc01
+  EMUSTACK_XEMU_CONFIG: /home/emu/.config/xemu/xemu.toml
+  EMUSTACK_AGENT_PORT: "8877"
+  EMUSTACK_MAX_ACTIVE_PER_ENV: ${EMUSTACK_MAX_ACTIVE_PER_ENV:-2}
+  WINEDLLOVERRIDES: "mscoree,mshtml="
+
+x-agent-common: &agent-common
+  image: local/emustack:0.7.1
+  build: *emustack-build
+  init: true
+  restart: unless-stopped
+  cpus: ${EMUSTACK_ENV_CPU_LIMIT:-6}
+  mem_limit: ${EMUSTACK_ENV_MEMORY_LIMIT:-5g}
+  pids_limit: ${EMUSTACK_ENV_PIDS_LIMIT:-512}
+  read_only: true
+  tmpfs:
+    - /tmp:rw,nosuid,nodev,size=2g
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  healthcheck:
+    test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8877/health', timeout=2).read()"]
+    interval: 15s
+    timeout: 3s
+    retries: 3
+    start_period: 10s
+
+services:
+  # CLI is intentionally data-blind; it inventories the common read-only image only.
+  emustack:
+    image: local/emustack:0.7.1
+    build: *emustack-build
+    init: true
+    cpus: ${EMUSTACK_CLI_CPU_LIMIT:-2}
+    mem_limit: ${EMUSTACK_CLI_MEMORY_LIMIT:-2g}
+    pids_limit: ${EMUSTACK_CLI_PIDS_LIMIT:-128}
+    environment:
+      HOME: /home/emu
+      EMUSTACK_GAMES_DIR: /games
+      EMUSTACK_BIN_DIR: /opt/emustack/installed
+      EMUSTACK_USER_BIN_DIR: /custom-emulators
+      EMUSTACK_INSTALL_REPORT: /opt/emustack/install-report.json
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=512m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    networks: [management]
+    command: ["list"]
+
+  env-kytyps5:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: kytyps5
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_KYTYPS5:-}
+    volumes:
+      - ./data/environments/kytyps5/games:/games:ro
+      - ./data/environments/kytyps5/bios:/bios:ro
+      - ./data/environments/kytyps5/saves:/saves:rw
+      - ./data/environments/kytyps5/home:/home/emu:rw
+      - ./data/environments/kytyps5/emulators:/custom-emulators:ro
+    networks: [env-kytyps5-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-duckstation:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: duckstation
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_DUCKSTATION:-}
+    volumes:
+      - ./data/environments/duckstation/games:/games:ro
+      - ./data/environments/duckstation/bios:/bios:ro
+      - ./data/environments/duckstation/saves:/saves:rw
+      - ./data/environments/duckstation/home:/home/emu:rw
+      - ./data/environments/duckstation/bios:/home/emu/.local/share/duckstation/bios:ro
+      - ./data/environments/duckstation/emulators:/custom-emulators:ro
+    networks: [env-duckstation-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-ppsspp:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: ppsspp
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_PPSSPP:-}
+    volumes:
+      - ./data/environments/ppsspp/games:/games:ro
+      - ./data/environments/ppsspp/bios:/bios:ro
+      - ./data/environments/ppsspp/bios:/opt/emustack/assets:ro
+      - ./data/environments/ppsspp/saves:/saves:rw
+      - ./data/environments/ppsspp/home:/home/emu:rw
+      - ./data/environments/ppsspp/emulators:/custom-emulators:ro
+    networks: [env-ppsspp-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-shadps4:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: shadps4
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_SHADPS4:-}
+    volumes:
+      - ./data/environments/shadps4/games:/games:ro
+      - ./data/environments/shadps4/bios:/bios:ro
+      - ./data/environments/shadps4/saves:/saves:rw
+      - ./data/environments/shadps4/home:/home/emu:rw
+      - ./data/environments/shadps4/emulators:/custom-emulators:ro
+    networks: [env-shadps4-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-rpcs3:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: rpcs3
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_RPCS3:-}
+    volumes:
+      - ./data/environments/rpcs3/games:/games:ro
+      - ./data/environments/rpcs3/bios:/bios:ro
+      - ./data/environments/rpcs3/saves:/saves:rw
+      - ./data/environments/rpcs3/home:/home/emu:rw
+      - ./data/environments/rpcs3/emulators:/custom-emulators:ro
+    networks: [env-rpcs3-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-pcsx2:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: pcsx2
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_PCSX2:-}
+    volumes:
+      - ./data/environments/pcsx2/games:/games:ro
+      - ./data/environments/pcsx2/bios:/bios:ro
+      - ./data/environments/pcsx2/saves:/saves:rw
+      - ./data/environments/pcsx2/home:/home/emu:rw
+      - ./data/environments/pcsx2/emulators:/custom-emulators:ro
+    networks: [env-pcsx2-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-vita3k:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: vita3k
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_VITA3K:-}
+    volumes:
+      - ./data/environments/vita3k/games:/games:ro
+      - ./data/environments/vita3k/bios:/bios:ro
+      - ./data/environments/vita3k/saves:/saves:rw
+      - ./data/environments/vita3k/home:/home/emu:rw
+      - ./data/environments/vita3k/emulators:/custom-emulators:ro
+    networks: [env-vita3k-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-xbox-one:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: xbox-one
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_XBOX_ONE:-}
+    volumes:
+      - ./data/environments/xbox-one/games:/games:ro
+      - ./data/environments/xbox-one/bios:/bios:ro
+      - ./data/environments/xbox-one/saves:/saves:rw
+      - ./data/environments/xbox-one/home:/home/emu:rw
+      - ./data/environments/xbox-one/emulators:/custom-emulators:ro
+    networks: [env-xbox-one-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-xenia-canary:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: xenia-canary
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_XENIA_CANARY:-}
+    volumes:
+      - ./data/environments/xenia-canary/games:/games:ro
+      - ./data/environments/xenia-canary/bios:/bios:ro
+      - ./data/environments/xenia-canary/saves:/saves:rw
+      - ./data/environments/xenia-canary/home:/home/emu:rw
+      - ./data/environments/xenia-canary/emulators:/custom-emulators:ro
+    networks: [env-xenia-canary-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-xbox-series:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: xbox-series
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_XBOX_SERIES:-}
+    volumes:
+      - ./data/environments/xbox-series/games:/games:ro
+      - ./data/environments/xbox-series/bios:/bios:ro
+      - ./data/environments/xbox-series/saves:/saves:rw
+      - ./data/environments/xbox-series/home:/home/emu:rw
+      - ./data/environments/xbox-series/emulators:/custom-emulators:ro
+    networks: [env-xbox-series-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-xemu:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: xemu
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_XEMU:-}
+    volumes:
+      - ./data/environments/xemu/games:/games:ro
+      - ./data/environments/xemu/bios:/bios:ro
+      - ./data/environments/xemu/saves:/saves:rw
+      - ./data/environments/xemu/home:/home/emu:rw
+      - ./data/environments/xemu/emulators:/custom-emulators:ro
+    networks: [env-xemu-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-eden:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: eden
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_EDEN:-}
+    volumes:
+      - ./data/environments/eden/games:/games:ro
+      - ./data/environments/eden/bios:/bios:ro
+      - ./data/environments/eden/saves:/saves:rw
+      - ./data/environments/eden/home:/home/emu:rw
+      - ./data/environments/eden/emulators:/custom-emulators:ro
+    networks: [env-eden-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-cemu:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: cemu
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_CEMU:-}
+    volumes:
+      - ./data/environments/cemu/games:/games:ro
+      - ./data/environments/cemu/bios:/bios:ro
+      - ./data/environments/cemu/saves:/saves:rw
+      - ./data/environments/cemu/home:/home/emu:rw
+      - ./data/environments/cemu/emulators:/custom-emulators:ro
+    networks: [env-cemu-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-dolphin:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: dolphin
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_DOLPHIN:-}
+    volumes:
+      - ./data/environments/dolphin/games:/games:ro
+      - ./data/environments/dolphin/bios:/bios:ro
+      - ./data/environments/dolphin/saves:/saves:rw
+      - ./data/environments/dolphin/home:/home/emu:rw
+      - ./data/environments/dolphin/emulators:/custom-emulators:ro
+    networks: [env-dolphin-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-azahar:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: azahar
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_AZAHAR:-}
+    volumes:
+      - ./data/environments/azahar/games:/games:ro
+      - ./data/environments/azahar/bios:/bios:ro
+      - ./data/environments/azahar/saves:/saves:rw
+      - ./data/environments/azahar/home:/home/emu:rw
+      - ./data/environments/azahar/emulators:/custom-emulators:ro
+    networks: [env-azahar-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-melonds:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: melonds
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_MELONDS:-}
+    volumes:
+      - ./data/environments/melonds/games:/games:ro
+      - ./data/environments/melonds/bios:/bios:ro
+      - ./data/environments/melonds/saves:/saves:rw
+      - ./data/environments/melonds/home:/home/emu:rw
+      - ./data/environments/melonds/emulators:/custom-emulators:ro
+    networks: [env-melonds-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-mgba:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: mgba
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_MGBA:-}
+    volumes:
+      - ./data/environments/mgba/games:/games:ro
+      - ./data/environments/mgba/bios:/bios:ro
+      - ./data/environments/mgba/saves:/saves:rw
+      - ./data/environments/mgba/home:/home/emu:rw
+      - ./data/environments/mgba/emulators:/custom-emulators:ro
+    networks: [env-mgba-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-mupen64plus:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: mupen64plus
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_MUPEN64PLUS:-}
+    volumes:
+      - ./data/environments/mupen64plus/games:/games:ro
+      - ./data/environments/mupen64plus/bios:/bios:ro
+      - ./data/environments/mupen64plus/saves:/saves:rw
+      - ./data/environments/mupen64plus/home:/home/emu:rw
+      - ./data/environments/mupen64plus/emulators:/custom-emulators:ro
+    networks: [env-mupen64plus-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-bsnes:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: bsnes
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_BSNES:-}
+    volumes:
+      - ./data/environments/bsnes/games:/games:ro
+      - ./data/environments/bsnes/bios:/bios:ro
+      - ./data/environments/bsnes/saves:/saves:rw
+      - ./data/environments/bsnes/home:/home/emu:rw
+      - ./data/environments/bsnes/emulators:/custom-emulators:ro
+    networks: [env-bsnes-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  env-mesen:
+    <<: *agent-common
+    environment:
+      <<: *agent-environment
+      EMUSTACK_ENV_ID: mesen
+      EMUSTACK_AGENT_TOKEN: ${EMUSTACK_AGENT_TOKEN_MESEN:-}
+    volumes:
+      - ./data/environments/mesen/games:/games:ro
+      - ./data/environments/mesen/bios:/bios:ro
+      - ./data/environments/mesen/saves:/saves:rw
+      - ./data/environments/mesen/home:/home/emu:rw
+      - ./data/environments/mesen/emulators:/custom-emulators:ro
+    networks: [env-mesen-net]
+    entrypoint: ["python3", "/opt/emustack/console_agent.py"]
+    command: []
+
+  dashboard:
+    image: local/emustack:0.7.1
+    build: *emustack-build
+    init: true
+    restart: unless-stopped
+    cpus: ${EMUSTACK_CPU_LIMIT:-2}
+    mem_limit: ${EMUSTACK_MEMORY_LIMIT:-1g}
+    pids_limit: ${EMUSTACK_PIDS_LIMIT:-256}
+    environment:
+      HOME: /tmp/emustack-dashboard
+      EMUSTACK_BIN_DIR: /opt/emustack/installed
+      EMUSTACK_INSTALL_REPORT: /opt/emustack/install-report.json
+      EMUSTACK_ENVIRONMENTS_PATH: /opt/emustack/environments.json
+      EMUSTACK_SYSTEMS_PATH: /opt/emustack/console-systems.json
+      EMUSTACK_ISOLATED_MODE: "1"
+      EMUSTACK_AGENT_TOKEN_KYTYPS5: ${EMUSTACK_AGENT_TOKEN_KYTYPS5:-}
+      EMUSTACK_AGENT_TOKEN_DUCKSTATION: ${EMUSTACK_AGENT_TOKEN_DUCKSTATION:-}
+      EMUSTACK_AGENT_TOKEN_PPSSPP: ${EMUSTACK_AGENT_TOKEN_PPSSPP:-}
+      EMUSTACK_AGENT_TOKEN_SHADPS4: ${EMUSTACK_AGENT_TOKEN_SHADPS4:-}
+      EMUSTACK_AGENT_TOKEN_RPCS3: ${EMUSTACK_AGENT_TOKEN_RPCS3:-}
+      EMUSTACK_AGENT_TOKEN_PCSX2: ${EMUSTACK_AGENT_TOKEN_PCSX2:-}
+      EMUSTACK_AGENT_TOKEN_VITA3K: ${EMUSTACK_AGENT_TOKEN_VITA3K:-}
+      EMUSTACK_AGENT_TOKEN_XBOX_ONE: ${EMUSTACK_AGENT_TOKEN_XBOX_ONE:-}
+      EMUSTACK_AGENT_TOKEN_XENIA_CANARY: ${EMUSTACK_AGENT_TOKEN_XENIA_CANARY:-}
+      EMUSTACK_AGENT_TOKEN_XBOX_SERIES: ${EMUSTACK_AGENT_TOKEN_XBOX_SERIES:-}
+      EMUSTACK_AGENT_TOKEN_XEMU: ${EMUSTACK_AGENT_TOKEN_XEMU:-}
+      EMUSTACK_AGENT_TOKEN_EDEN: ${EMUSTACK_AGENT_TOKEN_EDEN:-}
+      EMUSTACK_AGENT_TOKEN_CEMU: ${EMUSTACK_AGENT_TOKEN_CEMU:-}
+      EMUSTACK_AGENT_TOKEN_DOLPHIN: ${EMUSTACK_AGENT_TOKEN_DOLPHIN:-}
+      EMUSTACK_AGENT_TOKEN_AZAHAR: ${EMUSTACK_AGENT_TOKEN_AZAHAR:-}
+      EMUSTACK_AGENT_TOKEN_MELONDS: ${EMUSTACK_AGENT_TOKEN_MELONDS:-}
+      EMUSTACK_AGENT_TOKEN_MGBA: ${EMUSTACK_AGENT_TOKEN_MGBA:-}
+      EMUSTACK_AGENT_TOKEN_MUPEN64PLUS: ${EMUSTACK_AGENT_TOKEN_MUPEN64PLUS:-}
+      EMUSTACK_AGENT_TOKEN_BSNES: ${EMUSTACK_AGENT_TOKEN_BSNES:-}
+      EMUSTACK_AGENT_TOKEN_MESEN: ${EMUSTACK_AGENT_TOKEN_MESEN:-}
+      EMUSTACK_MAX_ACTIVE_ENVIRONMENTS: ${EMUSTACK_MAX_ACTIVE_ENVIRONMENTS:-2}
+      EMUSTACK_AGENT_PORT: "8877"
+      EMUSTACK_WEB_DOCS_DIR: /opt/emustack/docs
+      EMUSTACK_SOURCES_PATH: /opt/emustack/game-sources.json
+    ports:
+      - "127.0.0.1:8765:8765"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=256m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    networks:
+      - env-kytyps5-net
+      - env-duckstation-net
+      - env-ppsspp-net
+      - env-shadps4-net
+      - env-rpcs3-net
+      - env-pcsx2-net
+      - env-vita3k-net
+      - env-xbox-one-net
+      - env-xenia-canary-net
+      - env-xbox-series-net
+      - env-xemu-net
+      - env-eden-net
+      - env-cemu-net
+      - env-dolphin-net
+      - env-azahar-net
+      - env-melonds-net
+      - env-mgba-net
+      - env-mupen64plus-net
+      - env-bsnes-net
+      - env-mesen-net
+    depends_on:
+      env-kytyps5:
+        condition: service_healthy
+      env-duckstation:
+        condition: service_healthy
+      env-ppsspp:
+        condition: service_healthy
+      env-shadps4:
+        condition: service_healthy
+      env-rpcs3:
+        condition: service_healthy
+      env-pcsx2:
+        condition: service_healthy
+      env-vita3k:
+        condition: service_healthy
+      env-xbox-one:
+        condition: service_healthy
+      env-xenia-canary:
+        condition: service_healthy
+      env-xbox-series:
+        condition: service_healthy
+      env-xemu:
+        condition: service_healthy
+      env-eden:
+        condition: service_healthy
+      env-cemu:
+        condition: service_healthy
+      env-dolphin:
+        condition: service_healthy
+      env-azahar:
+        condition: service_healthy
+      env-melonds:
+        condition: service_healthy
+      env-mgba:
+        condition: service_healthy
+      env-mupen64plus:
+        condition: service_healthy
+      env-bsnes:
+        condition: service_healthy
+      env-mesen:
+        condition: service_healthy
+    command: ["web", "--host", "0.0.0.0", "--port", "8765"]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/api/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  management:
+    internal: true
+  env-kytyps5-net:
+    driver: bridge
+    internal: true
+  env-duckstation-net:
+    driver: bridge
+    internal: true
+  env-ppsspp-net:
+    driver: bridge
+    internal: true
+  env-shadps4-net:
+    driver: bridge
+    internal: true
+  env-rpcs3-net:
+    driver: bridge
+    internal: true
+  env-pcsx2-net:
+    driver: bridge
+    internal: true
+  env-vita3k-net:
+    driver: bridge
+    internal: true
+  env-xbox-one-net:
+    driver: bridge
+    internal: true
+  env-xenia-canary-net:
+    driver: bridge
+    internal: true
+  env-xbox-series-net:
+    driver: bridge
+    internal: true
+  env-xemu-net:
+    driver: bridge
+    internal: true
+  env-eden-net:
+    driver: bridge
+    internal: true
+  env-cemu-net:
+    driver: bridge
+    internal: true
+  env-dolphin-net:
+    driver: bridge
+    internal: true
+  env-azahar-net:
+    driver: bridge
+    internal: true
+  env-melonds-net:
+    driver: bridge
+    internal: true
+  env-mgba-net:
+    driver: bridge
+    internal: true
+  env-mupen64plus-net:
+    driver: bridge
+    internal: true
+  env-bsnes-net:
+    driver: bridge
+    internal: true
+  env-mesen-net:
+    driver: bridge
+    internal: true
