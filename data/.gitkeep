@@ -1,0 +1,1 @@
+# Preserve the runtime data root in Git. User ROMs, BIOS dumps, saves, and runtime state stay local.
