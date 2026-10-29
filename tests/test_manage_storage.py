@@ -212,4 +212,15 @@ class ManageStorageTests(unittest.TestCase):
             self.assertEqual(list(self.staging_root.glob("restore-*")), [])
 
 
+    def test_backup_refuses_existing_destination_without_overwriting(self):
+        destination = self.base / "already-exists.tar.gz"
+        original = b"keep this pre-existing backup"
+        destination.write_bytes(original)
+
+        with self.assertRaises(FileExistsError):
+            manage_storage.backup_env("rpcs3", destination, allow_running=True)
+
+        self.assertEqual(destination.read_bytes(), original)
+
+
 if __name__ == "__main__": unittest.main(verbosity=2)
