@@ -171,7 +171,7 @@ raise SystemExit(0 if report["requests"] == REQUESTS and report["failures"] == 0
 
 
 def agent_restart_recovery_smoke(env_containers: dict[str, dict], env_id: str = "mgba") -> str:
-    """Destructively restart one isolated agent and verify automatic recovery."""
+    """Crash one idle agent process and verify Docker's automatic restart policy."""
     if not DASHBOARD_CONTAINER_ID:
         raise RuntimeError("Dashboard container ID is not available for restart recovery probe")
     container = env_containers.get(env_id)
@@ -181,7 +181,33 @@ def agent_restart_recovery_smoke(env_containers: dict[str, dict], env_id: str = 
     before_count = before.get("RestartCount", 0)
     if type(before_count) is not int:
         raise RuntimeError("env-" + env_id + " RestartCount is not numeric")
-    run(["docker", "kill", "--signal", "SIGKILL", container["Id"]])
+
+    # docker kill/stop targets the container itself and can suppress automatic
+    # restart semantics. Instead, SIGKILL the agent's Python process; PID 1 (tini)
+    # then exits unexpectedly and Docker should apply restart: unless-stopped.
+    kill_script = "\n".join([
+        "import os, signal",
+        "matches = []",
+        "for entry in os.listdir('/proc'):",
+        "    if not entry.isdigit(): continue",
+        "    pid = int(entry)",
+        "    if pid in (1, os.getpid()): continue",
+        "    try:",
+        "        args = [part for part in open('/proc/' + entry + '/cmdline', 'rb').read().split(b'\\0') if part]",
+        "    except OSError:",
+        "        continue",
+        "    if len(args) > 1 and args[1] == b'/opt/emustack/console_agent.py':",
+        "        matches.append(pid)",
+        "if len(matches) != 1:",
+        "    raise SystemExit('Expected one console_agent.py process; found ' + repr(matches))",
+        "os.kill(matches[0], signal.SIGKILL)",
+        "print('SIGKILL sent to agent process ' + str(matches[0]), flush=True)",
+    ])
+    kill_result = run(
+        ["docker", "exec", container["Id"], "python3", "-c", kill_script],
+        check=False,
+        timeout=10,
+    )
     deadline = time.monotonic() + 90
     recovered = None
     last_state, last_health, last_count = "unknown", "unknown", before_count
@@ -203,10 +229,13 @@ def agent_restart_recovery_smoke(env_containers: dict[str, dict], env_id: str = 
                 break
         time.sleep(2)
     if recovered is None:
+        trigger = (kill_result.stderr or kill_result.stdout).strip()[:300]
+        suffix = f"; trigger output: {trigger}" if trigger else ""
         raise RuntimeError(
-            "env-" + env_id + " did not auto-recover within 90 seconds after SIGKILL "
+            "env-" + env_id + " did not recover after an unexpected agent-process exit "
             + "(state=" + last_state + ", health=" + last_health
             + ", restart_count=" + str(last_count) + ", before=" + str(before_count) + ")"
+            + suffix
         )
     url = "http://env-" + env_id + ":8877/health"
     probe_code = "import urllib.request; urllib.request.urlopen(" + repr(url) + ", timeout=5).read(); print('reachable')"
@@ -216,7 +245,7 @@ def agent_restart_recovery_smoke(env_containers: dict[str, dict], env_id: str = 
     status_code, payload = api("/api/health")
     if not is_dashboard_summary_response(status_code, payload, expected_profiles=len(env_containers)):
         raise RuntimeError("Dashboard summary failed after env-" + env_id + " recovery (HTTP " + str(status_code) + ")")
-    return "opt-in recovery passed: env-" + env_id + " restarted automatically (RestartCount " + str(before_count) + "->" + str(last_count) + ") and health route recovered"
+    return "opt-in recovery passed: env-" + env_id + " recovered after an unexpected agent-process exit (RestartCount " + str(before_count) + "->" + str(last_count) + ") and health route recovered"
 
 
 def probe_record(probes: list[dict], warnings: list[str], errors: list[str], name: str,
