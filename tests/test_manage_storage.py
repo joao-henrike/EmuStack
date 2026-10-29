@@ -183,4 +183,33 @@ class ManageStorageTests(unittest.TestCase):
         self.assertEqual(list(self.staging_root.glob("restore-*")), [])
 
 
+    def test_snapshot_manifest_rejects_boolean_file_count_and_total_bytes(self):
+        root = manage_storage.env_root("rpcs3")
+        (root / "home").mkdir(parents=True)
+        (root / "home" / "state.bin").write_bytes(b"x")
+        archive = manage_storage.backup_env("rpcs3", self.base / "valid-snapshot.tar.gz", allow_running=True)
+
+        for field in ("file_count", "total_bytes"):
+            tampered = self.base / f"boolean-{field}.tar.gz"
+            with manage_storage.tarfile.open(archive, "r:gz") as source, manage_storage.tarfile.open(tampered, "w:gz") as destination:
+                for member in source.getmembers():
+                    if member.name == "manifest.json":
+                        extracted = source.extractfile(member)
+                        self.assertIsNotNone(extracted)
+                        manifest = json.loads(extracted.read().decode("utf-8"))
+                        self.assertEqual(len(manifest["files"]), 1)
+                        self.assertEqual(manifest["total_bytes"], 1)
+                        manifest[field] = True
+                        payload = json.dumps(manifest).encode("utf-8")
+                        destination.addfile(manage_storage._tar_info("manifest.json", len(payload)), io.BytesIO(payload))
+                    else:
+                        fileobj = source.extractfile(member) if member.isfile() else None
+                        destination.addfile(member, fileobj)
+
+            with self.assertRaisesRegex(ValueError, field):
+                manage_storage.restore_env("rpcs3", tampered, allow_running=True)
+            self.assertEqual((root / "home" / "state.bin").read_bytes(), b"x")
+            self.assertEqual(list(self.staging_root.glob("restore-*")), [])
+
+
 if __name__ == "__main__": unittest.main(verbosity=2)
