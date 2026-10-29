@@ -24,6 +24,21 @@ The committed `release-lock.json` is strict and covers all 20 catalog IDs. The c
 
 The successful lock-generation run disabled the optional KytyPS5 source build (`BUILD_KYTYPS5=0`), so KytyPS5 is correctly marked `skip-upstream` in this lock. When explicitly enabled, the Dockerfile checks a declared KytyPS5 tag/short commit before attempting compilation; that separate source-build path is not covered by the downloadable-asset lock and is not claimed as built by the current acceptance run.
 
+### SBOM e scanner lock
+
+A CI usa duas ferramentas oficiais com versões e hashes fixos no arquivo `supply-chain-tools.json`:
+
+| Ferramenta | Versão fixada | Ativo verificado por SHA-256 | Fonte oficial |
+|---|---:|---|---|
+| Syft | 1.55.0 | `bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d` | [Release v1.55.0](https://github.com/anchore/syft/releases/tag/v1.55.0) |
+| Trivy | 0.74.0 | `2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a` | [Release v0.74.0](https://github.com/aquasecurity/trivy/releases/tag/v0.74.0) |
+
+`scripts/supply-chain-scan.sh` baixa somente os URLs fixados, valida o SHA-256 antes da extração e confirma a versão da CLI. Em seguida, o Syft gera SPDX JSON a partir da imagem local `local/emustack:0.7.1`; o Trivy varre pacotes OS e bibliotecas para HIGH/CRITICAL. A imagem é identificada também pelo ID local imutável, incluído no resumo.
+
+O scanner publica o resultado integral em JSON. O gate inicial é **report-only para achados de segurança**: resultados HIGH/CRITICAL precisam de triagem antes de serem convertidos em bloqueios. Isso evita esconder o estado real de uma primeira baseline ou aceitar silenciosamente achados sem correção, e permite distinguir uma vulnerabilidade reportada de uma falha operacional do scanner. Erros de download, checksum, versão, geração do SBOM, execução ou JSON inválido continuam falhando a CI.
+
+O banco de vulnerabilidades do Trivy é obtido durante a execução e evolui independentemente dos binários fixados. Portanto, o scan é reprodutível quanto às ferramentas e alvo, mas o resultado não é um snapshot eterno da inteligência de CVEs. Cada execução publica o SBOM, JSON completo de findings, resumo Markdown, cópia do lock e versões das CLIs em seu artefato do GitHub Actions. Faça triagem com o resumo e preserve o JSON original do run.
+
 ### Schema do relatório e instalação transacional
 
 O `install-report.json` gerado pelo instalador usa atualmente `schema_version: 2`. Cada ID do catálogo recebe um estado individual e campos estruturados de evidência: repositório/URL, ativo, versão quando conhecida, hash esperado/calculado quando disponível, tamanho e caminho do launcher/payload. O instalador também declara `execution_test.status: not-run` e `runtime_test.status: not-run` até que etapas separadas tenham realmente executado esses testes.
