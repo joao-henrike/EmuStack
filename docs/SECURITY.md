@@ -19,7 +19,7 @@
 
 Docker compartilha o kernel do host. Não é uma sandbox de alta garantia para executar código deliberadamente malicioso. A camada de programas dos emuladores está presente na imagem comum e somente leitura; o isolamento principal é de dados, mounts, rede e agente/controlador, não uma VM por console. O dashboard é o único componente nas redes dos agentes e tem credenciais de todos eles. O filtro de origem reduz o risco de um agente comprometido usar endpoints mutáveis do dashboard; a aceitação tenta reproduzir esse caminho a partir dos 20 agentes. Isso não transforma Docker em fronteira de VM e não protege contra invasor com privilégios no host ou vulnerabilidades do kernel.
 
-Se o host habilitar GPU, X11/XWayland, áudio ou um controle, o contêiner recebe acesso ao recurso correspondente. X11 em particular pode expor a sessão gráfica ao cliente. Não habilite essas passagens para binários nos quais não confia.
+Se o host habilitar GPU, X11/XWayland, áudio ou um controle, o contêiner recebe acesso ao recurso correspondente. X11 em particular pode expor a sessão gráfica ao cliente. Não habilite essas passagens para binários nos quais não confia. O overlay opcional `compose.nvidia.yaml` não inclui `env-xbox-one` nem `env-xbox-series`, pois esses perfis estão declarados sem runner suportado; a configuração base não injeta a GPU NVIDIA por padrão. Antes de adicionar novos serviços ao overlay, confirme que o perfil possui um runner e que a aceleração precisa ser exposta.
 
 ## Dados privados e firmware
 
