@@ -340,7 +340,7 @@ def _start_system(system_id: str, action: str) -> tuple[int, dict[str, Any]]:
         return 403, {"started": False, "error": "Este ambiente não é autorizado para iniciar esse perfil de sistema."}
     state = _resolve_system_for_this_environment(profile)
     if action == "boot":
-        if not state or not state.get("can_boot_original"):
+        if not state or not state.get("can_attempt_boot", state.get("can_boot_original", False)):
             checks = (state or {}).get("checks", [])
             detail = "\n".join(f"- {x.get('label')}: {x.get('detail')}" for x in checks)
             return 409, {
