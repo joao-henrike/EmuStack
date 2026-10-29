@@ -65,6 +65,12 @@ O caminho precisa existir como dispositivo de caracteres e ser `/dev/input/event
 
 A versão 0.7.1 deixa de montar os diretórios compartilhados `data/games`, `data/bios`, `data/saves` e `data/home`. Faça cópias de backup e migre manualmente cada item para a raiz apropriada em `data/environments/<id>/`. Não apague o diretório antigo até confirmar jogos, saves, configurações e firmware no perfil certo.
 
+## Relatório individual por perfil
+
+Depois de construir a imagem e iniciar o dashboard, a visão geral exibe **Relatório de instalação**. Expanda cada perfil para inspecionar status, origem/artefato, versão quando conhecida, hash esperado e calculado, caminho do binário e os estados separados de teste de execução e runtime.
+
+Os estados `not-run` / **Não executado** são deliberados: o build não abre todos os GUIs nem comprova que cada sistema original ou jogo inicia. A arquitetura apresentada é a que o processo de instalação observou dentro do seu contexto; ela não certifica o hardware físico nem a GPU do computador final. Para investigar a máquina real, use `scripts/host-doctor.py` e `scripts/runtime-acceptance.sh`, e documente boots/jogos separadamente.
+
 ## Verificação
 
 ```bash
