@@ -727,6 +727,7 @@ $('#launch-emulator-select').addEventListener('change', updateLaunchDialogForSel
 $('#launch-game-select').addEventListener('change', updateLaunchDialogForSelection);
 $('#refresh-button').addEventListener('click', refreshAll);
 $('#refresh-library').addEventListener('click', refreshAll);
+if ($('#refresh-install-report')) $('#refresh-install-report').addEventListener('click', refreshAll);
 if ($('#refresh-sessions')) $('#refresh-sessions').addEventListener('click', refreshSessionsOnly);
 if ($('#close-process-log')) $('#close-process-log').addEventListener('click', () => $('#process-log-dialog').close());
 $('#emulator-search').addEventListener('input', () => { $('#global-search').value=$('#emulator-search').value; renderEmulators(); });
