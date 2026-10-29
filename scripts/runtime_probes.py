@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 import re
 from pathlib import Path
 from typing import Mapping, Any
@@ -41,6 +42,33 @@ def parse_env_file(path: str | Path) -> dict[str, str]:
 
 def is_software_vulkan_renderer(output: str) -> bool:
     return bool(_SOFTWARE_VULKAN.search(output or ""))
+
+
+def is_dashboard_summary_response(
+    status_code: int, payload: object, expected_profiles: int = 20
+) -> bool:
+    """Validate the trusted dashboard summary used by the bounded API smoke."""
+    if status_code != 200 or not isinstance(payload, Mapping):
+        return False
+    if payload.get("project") != "EmuStack":
+        return False
+    count = payload.get("emulator_count")
+    if type(count) is not int or count != expected_profiles:
+        return False
+    for field in ("launchers_ready", "needs_attention", "game_count", "game_bytes",
+                  "active_process_count", "process_count", "install_report_count"):
+        value = payload.get(field)
+        if type(value) is not int or value < 0:
+            return False
+    if not isinstance(payload.get("generated_at"), str):
+        return False
+    try:
+        datetime.fromisoformat(payload["generated_at"].replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if not isinstance(payload.get("security"), Mapping):
+        return False
+    return True
 
 
 def is_allowed_input_device(path: str) -> bool:
