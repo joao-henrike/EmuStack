@@ -383,8 +383,13 @@ def record(report: dict, identifier: str, status: str, **extra) -> None:
     # Keep the historic flat fields for existing dashboard consumers and add a
     # stable evidence schema for diagnostics and future UI work. "not-run" is
     # intentional: installation alone must never imply execution or boot.
+    installer_architecture = platform.machine() or "unknown"
     evidence = {
-        "host_architecture": platform.machine() or "unknown",
+        # host_architecture is retained for older consumers; it is not proof of
+        # physical host architecture because this script commonly runs in a build container.
+        "host_architecture": installer_architecture,
+        "installer_architecture": installer_architecture,
+        "architecture_basis": "platform.machine() of the installer process; physical host/GPU is not attested",
         "source_repository": extra.get("repo"),
         "source_url": extra.get("url"),
         "artifact": extra.get("asset"),
