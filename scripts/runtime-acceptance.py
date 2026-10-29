@@ -182,6 +182,21 @@ def agent_restart_recovery_smoke(env_containers: dict[str, dict], env_id: str = 
     if type(before_count) is not int:
         raise RuntimeError("env-" + env_id + " RestartCount is not numeric")
 
+    status_code, session_payload = api("/api/processes")
+    if status_code != 200 or not isinstance(session_payload, dict):
+        raise RuntimeError("Could not confirm active sessions before the recovery probe")
+    active_sessions = [
+        item for item in session_payload.get("processes", [])
+        if isinstance(item, dict)
+        and item.get("environment_id") == env_id
+        and item.get("status") == "running"
+    ]
+    if active_sessions:
+        raise RuntimeError(
+            "Refusing recovery probe: env-" + env_id + " has "
+            + str(len(active_sessions)) + " active session(s); close the game first"
+        )
+
     # docker kill/stop targets the container itself and can suppress automatic
     # restart semantics. Instead, SIGKILL the agent's Python process; PID 1 (tini)
     # then exits unexpectedly and Docker should apply restart: unless-stopped.
