@@ -37,7 +37,7 @@ def api(path: str, method: str = "GET", payload: dict | None = None):
     """Probe the published host port; fall back to dashboard loopback if the runner isolates it."""
     global HOST_API_REACHABLE
     data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(BASE + path, data=data, method=method, headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(BASE + path, data=data, method=method, headers={"Content-Type": "application/json", "Origin": "http://127.0.0.1:8765", "X-EmuStack-Request": "1"})
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:
             HOST_API_REACHABLE = True
@@ -58,7 +58,7 @@ def api(path: str, method: str = "GET", payload: dict | None = None):
             "path,method,payload=sys.argv[1:4]",
             "obj=json.loads(payload) if payload else None",
             "data=json.dumps(obj).encode() if obj is not None else None",
-            "req=urllib.request.Request('http://127.0.0.1:8765'+path,data=data,method=method,headers={'Content-Type':'application/json'})",
+            "req=urllib.request.Request('http://127.0.0.1:8765'+path,data=data,method=method,headers={'Content-Type':'application/json','Host':'127.0.0.1:8765','Origin':'http://127.0.0.1:8765','X-EmuStack-Request':'1'})",
             "try:",
             " with urllib.request.urlopen(req,timeout=5) as resp: result={'status':resp.status,'body':json.loads(resp.read().decode())}",
             "except urllib.error.HTTPError as exc:",
