@@ -7,7 +7,7 @@ python3 -m unittest discover -s tests -v
 printf '\n== Python syntax ==\n'
 python3 -m compileall -q emustack.py webapp.py console_modes.py console_agent.py scripts tests
 python3 scripts/check-release-lock.py release-lock.json
-printf '\\n== Cross-manifest and Compose contract validation ==\\n'
+printf '\n== Cross-manifest and Compose contract validation ==\n'
 python3 scripts/validate-manifests.py
 printf 'Python syntax OK.\n'
 if command -v node >/dev/null 2>&1; then
