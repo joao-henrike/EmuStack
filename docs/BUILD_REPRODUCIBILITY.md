@@ -32,6 +32,18 @@ A arquitetura registrada como `installer_architecture` é o valor de `platform.m
 
 Assets em formato de arquivo compacto são extraídos primeiro para uma área temporária no mesmo diretório de instalação. Só depois de validar o arquivo e selecionar um executável candidato o instalador promove o payload e o link de launcher; se a promoção falhar, tenta restaurar a versão anterior. Isso reduz o risco de uma atualização incompleta destruir um payload válido, mas não substitui os testes de runtime/boot do alvo.
 
+### Save-path contract and audit
+
+`save-paths.json` records candidate user-data/save directories relative to each isolated `/home/emu`, the upstream reference, and the confidence level. Paths labelled `needs-runtime-validation` are not promoted to supported defaults. This prevents a directory guessed from a package layout from becoming an implicit write target.
+
+Run the read-only audit:
+
+```bash
+python3 scripts/audit-save-layout.py --strict
+```
+
+The report emits aggregate counts only and never lists save filenames. It does not create storage directories and does not test emulator save/load behavior. The separate `home` and `saves` mounts are both included in snapshots; do not create links or migrate existing files until a real save/load cycle has established the exact path for the installed emulator build.
+
 ### Explicitly skipped upstream entries
 
 Every `skip-upstream` entry is intentional and must remain explicit until there is verifiable provenance. The skip is not a statement that the emulator can never be installed; a separately trusted distro package may be detected, but this lock does not certify that path.
