@@ -44,11 +44,37 @@ class IsolatedArchitectureTests(unittest.TestCase):
             self.assertIn(f"./data/environments/{env_id}/saves:/saves:rw", block)
             self.assertIn(f"./data/environments/{env_id}/home:/home/emu:rw", block)
             self.assertIn(f"./data/environments/{env_id}/emulators:/custom-emulators:ro", block)
-            self.assertIn(f"networks: [env-{env_id}-net]", block)
+            self.assertRegex(block, rf"(?m)^    networks:\n      env-{re.escape(env_id)}-net:\n        ipv4_address: 172\.28\.\d+\.2$")
             token_suffix = env_id.upper().replace("-", "_")
             self.assertIn(f"EMUSTACK_AGENT_TOKEN: ${{EMUSTACK_AGENT_TOKEN_{token_suffix}:-}}", block)
             self.assertIn('entrypoint: ["python3", "/opt/emustack/console_agent.py"]', block)
-            self.assertIn("internal: true", compose.split(f"  env-{env_id}-net:", 1)[1].split("\n  env-", 1)[0])
+            network_match = re.search(rf"(?ms)^  env-{re.escape(env_id)}-net:\n(.*?)(?=^  [^\s].*:\n|\Z)", compose)
+            self.assertIsNotNone(network_match, env_id)
+            self.assertIn("internal: true", network_match.group(1))
+
+    def test_dashboard_mutation_boundary_uses_gateway_allowlist_and_unique_static_ips(self):
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        dashboard_block = compose.split("  dashboard:", 1)[1].split("    depends_on:", 1)[0]
+        self.assertIn("EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS:", dashboard_block)
+        self.assertNotIn("./data/environments", dashboard_block)
+        manifest = json.loads((ROOT / "environments.json").read_text(encoding="utf-8"))
+        ids = [record["id"] for record in manifest["environments"]]
+        self.assertEqual(len(ids), 20)
+        for index, env_id in enumerate(ids, 1):
+            subnet = f"172.28.{index}.0/24"
+            gateway = f"172.28.{index}.1"
+            agent_ip = f"172.28.{index}.2"
+            dashboard_ip = f"172.28.{index}.3"
+            network_block = re.search(rf"(?ms)^  env-{re.escape(env_id)}-net:\n(.*?)(?=^  [^\s].*:\n|\Z)", compose).group(1)
+            self.assertIn(f"subnet: {subnet}", network_block, env_id)
+            self.assertIn(f"gateway: {gateway}", network_block, env_id)
+            service_block = re.search(rf"(?ms)^  env-{re.escape(env_id)}:\n(.*?)(?=^  [^\s].*:\n|\Z)", compose).group(1)
+            self.assertIn(f"ipv4_address: {agent_ip}", service_block, env_id)
+            self.assertIn(f"ipv4_address: {dashboard_ip}", dashboard_block, env_id)
+            self.assertIn(gateway, dashboard_block, env_id)
+        webapp = (ROOT / "webapp.py").read_text(encoding="utf-8")
+        self.assertIn("_is_trusted_dashboard_client(self.client_address[0])", webapp)
+        self.assertIn("ipaddress.ip_address", webapp)
 
     def test_xemu_dashboard_is_not_advertised_as_verified_original_boot(self):
         payload = json.loads((ROOT / "environments.json").read_text(encoding="utf-8"))

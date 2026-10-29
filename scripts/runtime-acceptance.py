@@ -16,6 +16,8 @@ from runtime_probes import env_flag, has_readonly_device_mapping, is_allowed_inp
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "http://127.0.0.1:8765"
+DASHBOARD_CONTAINER_ID: str | None = None
+HOST_API_REACHABLE: bool | None = None
 
 
 def run(args: list[str], check: bool = True, timeout: int = 30) -> subprocess.CompletedProcess[str]:
@@ -32,17 +34,47 @@ def run(args: list[str], check: bool = True, timeout: int = 30) -> subprocess.Co
 
 
 def api(path: str, method: str = "GET", payload: dict | None = None):
+    """Probe the published host port; fall back to dashboard loopback if the runner isolates it."""
+    global HOST_API_REACHABLE
     data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(BASE + path, data=data, method=method, headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(BASE + path, data=data, method=method, headers={"Content-Type": "application/json", "Origin": "http://127.0.0.1:8765", "X-EmuStack-Request": "1"})
     try:
         with urllib.request.urlopen(req, timeout=5) as resp:
+            HOST_API_REACHABLE = True
             return resp.status, json.loads(resp.read().decode())
     except urllib.error.HTTPError as exc:
         try:
             body = json.loads(exc.read().decode())
         except Exception:
             body = {}
+        HOST_API_REACHABLE = True
         return exc.code, body
+    except urllib.error.URLError:
+        HOST_API_REACHABLE = False
+        if not DASHBOARD_CONTAINER_ID:
+            raise RuntimeError("Dashboard container ID is not available for internal API fallback")
+        script = "\n".join([
+            "import json,sys,urllib.request,urllib.error",
+            "path,method,payload=sys.argv[1:4]",
+            "obj=json.loads(payload) if payload else None",
+            "data=json.dumps(obj).encode() if obj is not None else None",
+            "req=urllib.request.Request('http://127.0.0.1:8765'+path,data=data,method=method,headers={'Content-Type':'application/json','Host':'127.0.0.1:8765','Origin':'http://127.0.0.1:8765','X-EmuStack-Request':'1'})",
+            "try:",
+            " with urllib.request.urlopen(req,timeout=5) as resp: result={'status':resp.status,'body':json.loads(resp.read().decode())}",
+            "except urllib.error.HTTPError as exc:",
+            " try: body=json.loads(exc.read().decode())",
+            " except Exception: body={}",
+            " result={'status':exc.code,'body':body}",
+            "print(json.dumps(result))",
+        ])
+        result = run([
+            "docker", "exec", DASHBOARD_CONTAINER_ID, "python3", "-c", script,
+            path, method, json.dumps(payload) if payload is not None else "",
+        ], check=False, timeout=10)
+        if result.returncode != 0:
+            raise RuntimeError(f"Dashboard internal API probe failed for {path}: {result.stderr.strip()[:800]}")
+        response = json.loads(result.stdout)
+        return int(response["status"]), response.get("body", {})
 
 
 def compose(*args: str):
@@ -268,6 +300,13 @@ def main() -> int:
         actual_network = net.get("Labels", {}).get("com.docker.compose.network")
         if actual_network != expected_network:
             raise RuntimeError(f"env-{env_id} is attached to unexpected network {actual_network!r}")
+        expected_index = env_ids.index(env_id) + 1
+        ipam_config = (net.get("IPAM", {}).get("Config") or [{}])[0]
+        if ipam_config.get("Subnet") != f"172.28.{expected_index}.0/24" or ipam_config.get("Gateway") != f"172.28.{expected_index}.1":
+            raise RuntimeError(f"Network {nname} has unexpected IPAM configuration: {ipam_config}")
+        endpoint = container.get("NetworkSettings", {}).get("Networks", {}).get(nname, {})
+        if endpoint.get("IPAddress") != f"172.28.{expected_index}.2":
+            raise RuntimeError(f"env-{env_id} does not have reserved agent IP .2: {endpoint.get('IPAddress')}")
         network_id = net.get("Id")
         if not network_id or network_id in network_ids:
             raise RuntimeError(f"Network is shared/reused by multiple environments: {nname}")
@@ -278,7 +317,13 @@ def main() -> int:
     dashboard_ids = compose("ps", "-q", "dashboard").stdout.split()
     if len(dashboard_ids) != 1:
         raise RuntimeError("Dashboard container is not running")
+    global DASHBOARD_CONTAINER_ID
+    DASHBOARD_CONTAINER_ID = dashboard_ids[0]
     dashboard = json.loads(run(["docker", "inspect", dashboard_ids[0]]).stdout)[0]
+    published = dashboard.get("HostConfig", {}).get("PortBindings", {}).get("8765/tcp") or []
+    if len(published) != 1 or published[0].get("HostIp") != "127.0.0.1" or published[0].get("HostPort") != "8765":
+        raise RuntimeError(f"Dashboard port must be published only on 127.0.0.1:8765; got {published}")
+    checks.append("dashboard port published only on host loopback 127.0.0.1:8765")
     dmounts = dashboard.get("Mounts", [])
     if any("/var/run/docker.sock" in m.get("Destination", "") or "/data/environments" in m.get("Source", "") for m in dmounts):
         raise RuntimeError("Dashboard mounts Docker socket or environment data")
@@ -289,6 +334,47 @@ def main() -> int:
     if dashboard_network_ids != network_ids:
         raise RuntimeError("Dashboard does not join exactly the set of unique per-agent networks")
     checks.append("dashboard has orchestrator-only mounts and all agent networks")
+    for index, env_id in enumerate(env_ids, 1):
+        endpoint = next((entry for entry in dnetworks.values() if entry.get("IPAddress") == f"172.28.{index}.3"), None)
+        if endpoint is None:
+            raise RuntimeError(f"Dashboard does not have reserved IP 172.28.{index}.3 for {env_id}")
+    trusted_env = next((entry for entry in dashboard.get("Config", {}).get("Env", []) if entry.startswith("EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS=")), None)
+    expected_gateways = {f"172.28.{index}.1" for index in range(1, len(env_ids) + 1)}
+    actual_gateways = set(trusted_env.split("=", 1)[1].split(",")) if trusted_env else set()
+    if actual_gateways != expected_gateways:
+        raise RuntimeError("Dashboard trusted-client IP allowlist does not exactly match isolated-network gateways")
+    checks.append("dashboard uses gateway IP allowlist; agent addresses are not trusted")
+
+    # Emulate a compromised agent forging every HTTP header currently used by the UI.
+    # The TCP source address must still be rejected before any state-changing route runs.
+    spoof_probe = "\n".join([
+        "import urllib.error, urllib.request",
+        "req=urllib.request.Request('http://dashboard:8765/api/processes/stop',data=b'{}',method='POST',headers={'Host':'127.0.0.1:8765','X-EmuStack-Request':'1','Content-Type':'application/json'})",
+        "try:",
+        " urllib.request.urlopen(req,timeout=3)",
+        " raise SystemExit('FAIL: spoofed state-changing request was accepted')",
+        "except urllib.error.HTTPError as exc:",
+        " print('HTTP',exc.code)",
+        " raise SystemExit(0 if exc.code == 403 else 1)",
+    ])
+    metadata_probe = "\n".join([
+        "import urllib.error, urllib.request",
+        "req=urllib.request.Request('http://dashboard:8765/api/environments')",
+        "try:",
+        " urllib.request.urlopen(req,timeout=3)",
+        " raise SystemExit('FAIL: agent read dashboard metadata')",
+        "except urllib.error.HTTPError as exc:",
+        " print('HTTP',exc.code)",
+        " raise SystemExit(0 if exc.code == 403 else 1)",
+    ])
+    health_probe = "import json,urllib.request; data=json.load(urllib.request.urlopen('http://dashboard:8765/api/health',timeout=3)); print(data); raise SystemExit(0 if data.get('healthy') is True and 'environments' not in data else 1)"
+    for env_id, container in env_containers.items():
+        for name, probe in (("spoofed POST", spoof_probe), ("metadata GET", metadata_probe), ("minimal health", health_probe)):
+            result = run(["docker", "exec", container["Id"], "python3", "-c", probe], check=False, timeout=8)
+            expected_ok = result.returncode == 0 and (name == "minimal health" or "HTTP 403" in result.stdout)
+            if not expected_ok:
+                raise RuntimeError(f"env-{env_id} {name} boundary probe failed: {result.stdout} {result.stderr}")
+    checks.append("20/20 agents denied spoofed POST and dashboard metadata GET; health response is minimal")
 
     for path in ("/api/health", "/api/environments", "/api/console-systems"):
         status, data = api(path)
@@ -308,6 +394,8 @@ def main() -> int:
     checks.append("unsupported PS5 system boot correctly blocked")
 
     probes, warnings, errors = runtime_hardware_probes(env_containers, profiles)
+    if HOST_API_REACHABLE is False:
+        warnings.append("Host loopback API was unreachable from this runner; API behavior was checked inside the dashboard container. Verify host UI access on the deployment machine with curl http://127.0.0.1:8765/api/health.")
     report_path = write_report(checks, probes, warnings, errors)
     print("EmuStack runtime acceptance: " + ("PASS" if not errors else "FAIL"))
     for item in checks:

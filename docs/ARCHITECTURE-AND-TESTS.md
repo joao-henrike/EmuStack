@@ -13,6 +13,9 @@ Isto não equivale a 20 consoles integralmente emulados. O dashboard é um plano
 
 ### Ambientes e isolamento
 
+- O dashboard aplica uma allowlist de IPs TCP de origem para POSTs mutáveis. Cada rede usa IPAM estático (`gateway .1`, agente `.2`, dashboard `.3`) para impedir que cabeçalhos HTTP forjados por um agente autorizem uma chamada ao dashboard.
+- O runtime acceptance tenta agora a requisição forjada a partir de cada um dos 20 agentes. Este teste de rede exige execução Docker real e não foi executado neste ambiente.
+
 - 20 IDs correspondem exatamente entre `catalog.json` e `environments.json`.
 - Cada agente tem diretórios próprios `games/`, `bios/`, `saves/`, `home/` e `emulators/`.
 - Cada agente recebe uma bridge interna exclusiva; o dashboard se conecta aos agentes para orquestrá-los.
@@ -50,7 +53,7 @@ Isto não equivale a 20 consoles integralmente emulados. O dashboard é um plano
 
 | Verificação | Resultado |
 |---|---:|
-| Testes unitários/regressão Python | **75/75 passaram** |
+| Testes unitários/regressão Python | **79/79 passaram** |
 | Casos de recomendação de lançamento JavaScript | **13/13 passaram** |
 | Verificações estáticas da UI de sistemas originais | **11 assertions passaram** |
 | Compilação sintática Python | Passou |

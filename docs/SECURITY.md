@@ -3,6 +3,8 @@
 ## Defaults
 
 - Dashboard publicado somente em `127.0.0.1:8765`; não foi projetado para acesso remoto/LAN.
+- Requisições do dashboard (exceto uma resposta mínima de saúde) e todas as mutações validam o IP TCP de origem: loopback no modo host e gateways `.1` explicitamente allowlisted no Compose. Os agentes usam IP `.2` e o dashboard `.3`; `Host`, `Origin` e cabeçalhos customizados não são tratados como autenticação.
+- Os subnets padrão são `172.28.1.0/24` a `172.28.20.0/24`. Se a rede/VPN local já usa essa faixa, ajuste todos os subnets, gateways, IPs e a allowlist em conjunto. Não exponha o dashboard por reverse proxy.
 - Nenhum socket do Docker é montado em dashboard, agentes ou CLI.
 - O dashboard não monta dados persistentes de consoles.
 - Cada agente tem mounts exclusivos para `games` (ro), `bios` (ro), `saves` (rw), `home` (rw) e `emulators` (ro).
@@ -15,7 +17,7 @@
 
 ## Limites do modelo
 
-Docker compartilha o kernel do host. Não é uma sandbox de alta garantia para executar código deliberadamente malicioso. A camada de programas dos emuladores está presente na imagem comum e somente leitura; o isolamento principal é de dados, mounts, rede e agente/controlador, não uma VM por console. Um bug no dashboard poderia alcançar os endpoints permitidos dos agentes; mantenha o dashboard local e o segredo privado.
+Docker compartilha o kernel do host. Não é uma sandbox de alta garantia para executar código deliberadamente malicioso. A camada de programas dos emuladores está presente na imagem comum e somente leitura; o isolamento principal é de dados, mounts, rede e agente/controlador, não uma VM por console. O dashboard é o único componente nas redes dos agentes e tem credenciais de todos eles. O filtro de origem reduz o risco de um agente comprometido usar endpoints mutáveis do dashboard; a aceitação tenta reproduzir esse caminho a partir dos 20 agentes. Isso não transforma Docker em fronteira de VM e não protege contra invasor com privilégios no host ou vulnerabilidades do kernel.
 
 Se o host habilitar GPU, X11/XWayland, áudio ou um controle, o contêiner recebe acesso ao recurso correspondente. X11 em particular pode expor a sessão gráfica ao cliente. Não habilite essas passagens para binários nos quais não confia.
 
@@ -25,4 +27,4 @@ Não versione nem publique BIOS, firmware, chaves, NAND, HDDs ou saves sensívei
 
 ## Verificação
 
-A suite estática testa allowlists, validação de caminhos, composição das redes e separação de mounts. Isso não substitui inspeção real de `docker inspect`, testes de conectividade entre contêineres, build de imagem, teste de GPU ou execução de sistema/jogo na máquina-alvo.
+A suite estática testa allowlists, caminhos, IPAM e separação de mounts. A aceitação de runtime verifica IPs/mounts reais e tenta POSTs com cabeçalhos forjados a partir de cada agente; isso precisa passar em execução Docker real. Não substitui revisão independente, testes de GPU ou execução de jogos na máquina-alvo.

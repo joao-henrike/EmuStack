@@ -51,7 +51,13 @@ Troque o caminho por um dispositivo que realmente exista no host e o ambiente pe
 
 Após uma execução estruturalmente bem-sucedida, o script grava `data/runtime-acceptance.json` com timestamp, verificações, probes, warnings e falhas. Ele não inclui tokens nem captura eventos do controle. O relatório é local e deve ser revisado antes de compartilhar.
 
-## 5. Boot real de sistemas originais
+## 5. Teste de bloqueio de requisições de agente ao dashboard
+
+O `runtime-acceptance.sh` tenta enviar uma requisição POST a partir de cada ambiente, forjando `Host` e `X-EmuStack-Request`. Cada tentativa precisa ser recusada com HTTP 403 devido ao IP TCP de origem `.2`. O script também confere gateways, IPs estáticos e a allowlist do dashboard.
+
+Se um probe falhar, não declare o isolamento aceito. Recolha `docker compose logs --tail=200 dashboard` e revise a faixa IPAM e a allowlist; não remova a checagem de origem para fazer o teste passar.
+
+## 6. Boot real de sistemas originais
 
 O runtime acceptance não inicia automaticamente todo jogo, BIOS ou dashboard. Faça os testes de boot um por vez pela seção **Sistemas originais** e verifique a janela real e os logs do agente apropriado. As rotas de PS1/DuckStation, PS2/PCSX2, PS3/RPCS3, PSP/PPSSPP, Xbox original/xemu, Wii/Dolphin e Wii U/Cemu são condicionais ou experimentais; não confunda a presença de firmware ou uma rota CLI com boot comprovado.
 

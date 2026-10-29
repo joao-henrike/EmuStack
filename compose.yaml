@@ -89,7 +89,9 @@ services:
       - ./data/environments/kytyps5/saves:/saves:rw
       - ./data/environments/kytyps5/home:/home/emu:rw
       - ./data/environments/kytyps5/emulators:/custom-emulators:ro
-    networks: [env-kytyps5-net]
+    networks:
+      env-kytyps5-net:
+        ipv4_address: 172.28.1.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -106,7 +108,9 @@ services:
       - ./data/environments/duckstation/home:/home/emu:rw
       - ./data/environments/duckstation/bios:/home/emu/.local/share/duckstation/bios:ro
       - ./data/environments/duckstation/emulators:/custom-emulators:ro
-    networks: [env-duckstation-net]
+    networks:
+      env-duckstation-net:
+        ipv4_address: 172.28.4.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -123,7 +127,9 @@ services:
       - ./data/environments/ppsspp/saves:/saves:rw
       - ./data/environments/ppsspp/home:/home/emu:rw
       - ./data/environments/ppsspp/emulators:/custom-emulators:ro
-    networks: [env-ppsspp-net]
+    networks:
+      env-ppsspp-net:
+        ipv4_address: 172.28.6.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -139,7 +145,9 @@ services:
       - ./data/environments/shadps4/saves:/saves:rw
       - ./data/environments/shadps4/home:/home/emu:rw
       - ./data/environments/shadps4/emulators:/custom-emulators:ro
-    networks: [env-shadps4-net]
+    networks:
+      env-shadps4-net:
+        ipv4_address: 172.28.2.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -155,7 +163,9 @@ services:
       - ./data/environments/rpcs3/saves:/saves:rw
       - ./data/environments/rpcs3/home:/home/emu:rw
       - ./data/environments/rpcs3/emulators:/custom-emulators:ro
-    networks: [env-rpcs3-net]
+    networks:
+      env-rpcs3-net:
+        ipv4_address: 172.28.3.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -171,7 +181,9 @@ services:
       - ./data/environments/pcsx2/saves:/saves:rw
       - ./data/environments/pcsx2/home:/home/emu:rw
       - ./data/environments/pcsx2/emulators:/custom-emulators:ro
-    networks: [env-pcsx2-net]
+    networks:
+      env-pcsx2-net:
+        ipv4_address: 172.28.5.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -187,7 +199,9 @@ services:
       - ./data/environments/vita3k/saves:/saves:rw
       - ./data/environments/vita3k/home:/home/emu:rw
       - ./data/environments/vita3k/emulators:/custom-emulators:ro
-    networks: [env-vita3k-net]
+    networks:
+      env-vita3k-net:
+        ipv4_address: 172.28.7.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -203,7 +217,9 @@ services:
       - ./data/environments/xbox-one/saves:/saves:rw
       - ./data/environments/xbox-one/home:/home/emu:rw
       - ./data/environments/xbox-one/emulators:/custom-emulators:ro
-    networks: [env-xbox-one-net]
+    networks:
+      env-xbox-one-net:
+        ipv4_address: 172.28.8.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -219,7 +235,9 @@ services:
       - ./data/environments/xenia-canary/saves:/saves:rw
       - ./data/environments/xenia-canary/home:/home/emu:rw
       - ./data/environments/xenia-canary/emulators:/custom-emulators:ro
-    networks: [env-xenia-canary-net]
+    networks:
+      env-xenia-canary-net:
+        ipv4_address: 172.28.9.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -235,7 +253,9 @@ services:
       - ./data/environments/xbox-series/saves:/saves:rw
       - ./data/environments/xbox-series/home:/home/emu:rw
       - ./data/environments/xbox-series/emulators:/custom-emulators:ro
-    networks: [env-xbox-series-net]
+    networks:
+      env-xbox-series-net:
+        ipv4_address: 172.28.10.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -251,7 +271,9 @@ services:
       - ./data/environments/xemu/saves:/saves:rw
       - ./data/environments/xemu/home:/home/emu:rw
       - ./data/environments/xemu/emulators:/custom-emulators:ro
-    networks: [env-xemu-net]
+    networks:
+      env-xemu-net:
+        ipv4_address: 172.28.11.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -267,7 +289,9 @@ services:
       - ./data/environments/eden/saves:/saves:rw
       - ./data/environments/eden/home:/home/emu:rw
       - ./data/environments/eden/emulators:/custom-emulators:ro
-    networks: [env-eden-net]
+    networks:
+      env-eden-net:
+        ipv4_address: 172.28.12.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -283,7 +307,9 @@ services:
       - ./data/environments/cemu/saves:/saves:rw
       - ./data/environments/cemu/home:/home/emu:rw
       - ./data/environments/cemu/emulators:/custom-emulators:ro
-    networks: [env-cemu-net]
+    networks:
+      env-cemu-net:
+        ipv4_address: 172.28.13.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -299,7 +325,9 @@ services:
       - ./data/environments/dolphin/saves:/saves:rw
       - ./data/environments/dolphin/home:/home/emu:rw
       - ./data/environments/dolphin/emulators:/custom-emulators:ro
-    networks: [env-dolphin-net]
+    networks:
+      env-dolphin-net:
+        ipv4_address: 172.28.14.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -315,7 +343,9 @@ services:
       - ./data/environments/azahar/saves:/saves:rw
       - ./data/environments/azahar/home:/home/emu:rw
       - ./data/environments/azahar/emulators:/custom-emulators:ro
-    networks: [env-azahar-net]
+    networks:
+      env-azahar-net:
+        ipv4_address: 172.28.15.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -331,7 +361,9 @@ services:
       - ./data/environments/melonds/saves:/saves:rw
       - ./data/environments/melonds/home:/home/emu:rw
       - ./data/environments/melonds/emulators:/custom-emulators:ro
-    networks: [env-melonds-net]
+    networks:
+      env-melonds-net:
+        ipv4_address: 172.28.16.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -347,7 +379,9 @@ services:
       - ./data/environments/mgba/saves:/saves:rw
       - ./data/environments/mgba/home:/home/emu:rw
       - ./data/environments/mgba/emulators:/custom-emulators:ro
-    networks: [env-mgba-net]
+    networks:
+      env-mgba-net:
+        ipv4_address: 172.28.17.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -363,7 +397,9 @@ services:
       - ./data/environments/mupen64plus/saves:/saves:rw
       - ./data/environments/mupen64plus/home:/home/emu:rw
       - ./data/environments/mupen64plus/emulators:/custom-emulators:ro
-    networks: [env-mupen64plus-net]
+    networks:
+      env-mupen64plus-net:
+        ipv4_address: 172.28.18.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -379,7 +415,9 @@ services:
       - ./data/environments/bsnes/saves:/saves:rw
       - ./data/environments/bsnes/home:/home/emu:rw
       - ./data/environments/bsnes/emulators:/custom-emulators:ro
-    networks: [env-bsnes-net]
+    networks:
+      env-bsnes-net:
+        ipv4_address: 172.28.19.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -395,7 +433,9 @@ services:
       - ./data/environments/mesen/saves:/saves:rw
       - ./data/environments/mesen/home:/home/emu:rw
       - ./data/environments/mesen/emulators:/custom-emulators:ro
-    networks: [env-mesen-net]
+    networks:
+      env-mesen-net:
+        ipv4_address: 172.28.20.2
     entrypoint: ["python3", "/opt/emustack/console_agent.py"]
     command: []
 
@@ -435,6 +475,7 @@ services:
       EMUSTACK_AGENT_TOKEN_BSNES: ${EMUSTACK_AGENT_TOKEN_BSNES:-}
       EMUSTACK_AGENT_TOKEN_MESEN: ${EMUSTACK_AGENT_TOKEN_MESEN:-}
       EMUSTACK_MAX_ACTIVE_ENVIRONMENTS: ${EMUSTACK_MAX_ACTIVE_ENVIRONMENTS:-2}
+      EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS: "172.28.1.1,172.28.2.1,172.28.3.1,172.28.4.1,172.28.5.1,172.28.6.1,172.28.7.1,172.28.8.1,172.28.9.1,172.28.10.1,172.28.11.1,172.28.12.1,172.28.13.1,172.28.14.1,172.28.15.1,172.28.16.1,172.28.17.1,172.28.18.1,172.28.19.1,172.28.20.1"
       EMUSTACK_AGENT_PORT: "8877"
       EMUSTACK_WEB_DOCS_DIR: /opt/emustack/docs
       EMUSTACK_SOURCES_PATH: /opt/emustack/game-sources.json
@@ -447,26 +488,46 @@ services:
       - no-new-privileges:true
     cap_drop: [ALL]
     networks:
-      - env-kytyps5-net
-      - env-duckstation-net
-      - env-ppsspp-net
-      - env-shadps4-net
-      - env-rpcs3-net
-      - env-pcsx2-net
-      - env-vita3k-net
-      - env-xbox-one-net
-      - env-xenia-canary-net
-      - env-xbox-series-net
-      - env-xemu-net
-      - env-eden-net
-      - env-cemu-net
-      - env-dolphin-net
-      - env-azahar-net
-      - env-melonds-net
-      - env-mgba-net
-      - env-mupen64plus-net
-      - env-bsnes-net
-      - env-mesen-net
+      env-kytyps5-net:
+        ipv4_address: 172.28.1.3
+      env-shadps4-net:
+        ipv4_address: 172.28.2.3
+      env-rpcs3-net:
+        ipv4_address: 172.28.3.3
+      env-duckstation-net:
+        ipv4_address: 172.28.4.3
+      env-pcsx2-net:
+        ipv4_address: 172.28.5.3
+      env-ppsspp-net:
+        ipv4_address: 172.28.6.3
+      env-vita3k-net:
+        ipv4_address: 172.28.7.3
+      env-xbox-one-net:
+        ipv4_address: 172.28.8.3
+      env-xenia-canary-net:
+        ipv4_address: 172.28.9.3
+      env-xbox-series-net:
+        ipv4_address: 172.28.10.3
+      env-xemu-net:
+        ipv4_address: 172.28.11.3
+      env-eden-net:
+        ipv4_address: 172.28.12.3
+      env-cemu-net:
+        ipv4_address: 172.28.13.3
+      env-dolphin-net:
+        ipv4_address: 172.28.14.3
+      env-azahar-net:
+        ipv4_address: 172.28.15.3
+      env-melonds-net:
+        ipv4_address: 172.28.16.3
+      env-mgba-net:
+        ipv4_address: 172.28.17.3
+      env-mupen64plus-net:
+        ipv4_address: 172.28.18.3
+      env-bsnes-net:
+        ipv4_address: 172.28.19.3
+      env-mesen-net:
+        ipv4_address: 172.28.20.3
     depends_on:
       env-kytyps5:
         condition: service_healthy
@@ -522,60 +583,140 @@ networks:
   env-kytyps5-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.1.0/24
+          gateway: 172.28.1.1
   env-duckstation-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.4.0/24
+          gateway: 172.28.4.1
   env-ppsspp-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.6.0/24
+          gateway: 172.28.6.1
   env-shadps4-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.2.0/24
+          gateway: 172.28.2.1
   env-rpcs3-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.3.0/24
+          gateway: 172.28.3.1
   env-pcsx2-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.5.0/24
+          gateway: 172.28.5.1
   env-vita3k-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.7.0/24
+          gateway: 172.28.7.1
   env-xbox-one-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.8.0/24
+          gateway: 172.28.8.1
   env-xenia-canary-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.9.0/24
+          gateway: 172.28.9.1
   env-xbox-series-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.10.0/24
+          gateway: 172.28.10.1
   env-xemu-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.11.0/24
+          gateway: 172.28.11.1
   env-eden-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.12.0/24
+          gateway: 172.28.12.1
   env-cemu-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.13.0/24
+          gateway: 172.28.13.1
   env-dolphin-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.14.0/24
+          gateway: 172.28.14.1
   env-azahar-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.15.0/24
+          gateway: 172.28.15.1
   env-melonds-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.16.0/24
+          gateway: 172.28.16.1
   env-mgba-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.17.0/24
+          gateway: 172.28.17.1
   env-mupen64plus-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.18.0/24
+          gateway: 172.28.18.1
   env-bsnes-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.19.0/24
+          gateway: 172.28.19.1
   env-mesen-net:
     driver: bridge
     internal: true
+    ipam:
+      config:
+        - subnet: 172.28.20.0/24
+          gateway: 172.28.20.1

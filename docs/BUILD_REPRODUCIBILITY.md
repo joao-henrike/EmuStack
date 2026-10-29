@@ -20,7 +20,11 @@ The snapshot mode switches both Debian and Debian Security sources to the dated 
 
 ## Upstream emulator assets
 
-`FREEZE_RELEASE_LOCK=1` exports hashes of official downloadable assets observed in a successful build and attempts a second build against the strict lock. Assets that were not downloaded/verified are not represented as pinned. KytyPS5 source is separately limited to a declared release tag and checked short commit.
+The committed `release-lock.json` is strict and covers all 20 catalog IDs. The current verified lock pins 11 downloadable official assets with SHA-256; the other 9 entries are explicitly marked `skip-upstream` with reasons instead of claiming binaries that were not verified. The lock was generated from a successful online build and a second build using the resulting strict lock completed successfully.
+
+To refresh official assets, run the GitHub Actions workflow **Freeze official emulator release assets**. It starts with an empty, non-strict lock in the temporary runner workspace to discover current official releases, then exports a candidate, validates coverage and hashes, attempts a strict rebuild, and uploads the candidate as an artifact. Review the downloaded artifact before replacing the committed lock. Do not remove explicit `skip-upstream` reasons simply to make the catalog appear complete.
+
+The Debian base image digest is pinned, but Debian APT package versions remain time-dependent unless `APT_SNAPSHOT_TIMESTAMP` is set. The strict release lock is not a byte-for-byte reproducibility guarantee.
 
 ## Remaining limits
 

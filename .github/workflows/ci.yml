@@ -29,6 +29,8 @@ jobs:
         run: python -m pip install --disable-pip-version-check pyyaml
       - name: Validate source, Python tests, JavaScript tests and shell syntax
         run: bash scripts/validate-project.sh
+      - name: Validate strict official release lock
+        run: python scripts/check-release-lock.py --require-strict --require-pins
       - name: Parse Compose manifests and compare catalog IDs
         run: |
           python - <<'PY'
@@ -47,7 +49,51 @@ jobs:
           assert len(ids) == 20 and len(set(ids)) == 20, "environment IDs invalid"
           assert set(ids) == set(cids), "catalog/environment IDs differ"
           print(f"catalog/environments: {len(ids)} matching IDs")
+          compose = yaml.safe_load((root / "compose.yaml").read_text())
+          dashboard = compose["services"]["dashboard"]
+          trusted = set(dashboard["environment"]["EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS"].split(","))
+          expected_gateways = set()
+          assert len(ids) == 20
+          for index, env_id in enumerate(ids, 1):
+              network_name = f"env-{env_id}-net"
+              service = compose["services"][f"env-{env_id}"]
+              network = compose["networks"][network_name]
+              assert service["networks"][network_name]["ipv4_address"] == f"172.28.{index}.2", env_id
+              assert dashboard["networks"][network_name]["ipv4_address"] == f"172.28.{index}.3", env_id
+              ipam = network["ipam"]["config"][0]
+              assert ipam["subnet"] == f"172.28.{index}.0/24", env_id
+              assert ipam["gateway"] == f"172.28.{index}.1", env_id
+              assert network.get("internal") is True, env_id
+              expected_gateways.add(f"172.28.{index}.1")
+          assert trusted == expected_gateways, "control client allowlist must match isolated network gateways"
+          print("dashboard/agent source-address boundary: 20 isolated static networks validated")
           PY
+      - name: Prepare isolated runtime secrets and directories
+        env:
+          # GitHub hosted runners expose only two CPUs; keep test containers within that per-container ceiling.
+          EMUSTACK_CPU_LIMIT: "0.50"
+          EMUSTACK_MEMORY_LIMIT: "768m"
+          EMUSTACK_PIDS_LIMIT: "128"
+          EMUSTACK_ENV_CPU_LIMIT: "0.25"
+          EMUSTACK_ENV_MEMORY_LIMIT: "512m"
+          EMUSTACK_ENV_PIDS_LIMIT: "128"
+        run: bash scripts/host-setup.sh
+      - name: Validate Docker Compose merged configuration
+        run: |
+          docker compose -f compose.yaml config --quiet
+          docker compose -f compose.yaml -f compose.nvidia.yaml config --quiet
+      - name: Build runtime image without optional upstream downloads
+        run: docker compose -f compose.yaml build --build-arg BUILD_KYTYPS5=0 --build-arg INSTALL_UPSTREAM=0 dashboard
+      - name: Start isolated agents and dashboard
+        run: docker compose -f compose.yaml up -d --no-build dashboard
+      - name: Run Docker runtime acceptance and inter-agent boundary probes
+        run: ./scripts/runtime-acceptance.sh
+      - name: Show service logs if a preceding runtime step failed
+        if: failure()
+        run: docker compose -f compose.yaml logs --no-color --tail=200 || true
+      - name: Stop isolated runtime
+        if: always()
+        run: docker compose -f compose.yaml down --volumes --remove-orphans || true
       - name: Check browser asset contracts
         run: |
           test -s web/index.html
