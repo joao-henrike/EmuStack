@@ -598,7 +598,7 @@ def main() -> int:
                        details="Executable is available on PATH. This confirms installation only, not game compatibility.")
                 break
         if identifier not in report:
-            report[identifier] = {"status": "not-available", "reason": "no upstream download or APT executable detected"}
+            record(report, identifier, "not-available", reason="no upstream download or APT executable detected")
     payload = {
         "project": "EmuStack",
         "version": "0.7.1",
