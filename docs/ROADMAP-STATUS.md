@@ -20,6 +20,7 @@ Este documento acompanha a execução incremental das correções prioritárias.
 | Snapshots | Restore valida tipo/estrutura do manifesto, caminhos, duplicatas, tamanhos, hashes, contagem e total de bytes; arquivos truncados/corrompidos recebem erro claro. | Testes de snapshot adulterado/truncado e preservação do estado anterior em `tests/test_manage_storage.py`. |
 | GPU opcional | Perfis Xbox One/Series sem runner foram retirados do overlay NVIDIA; o validador impede que perfis com runtime `unsupported` recebam GPU pelo overlay. | `tests/test_isolated_architecture.py` e validação Compose. |
 | Lock upstream | Motivos de `skip-upstream` foram transformados em instruções duráveis para cada um dos nove perfis; nenhum hash foi inventado. | `scripts/check-release-lock.py --require-strict --require-pins`. |
+| SBOM/CVE | CI baixa Syft/Trivy com versões e SHA-256 fixados, gera SBOM SPDX da imagem e anexa JSON de achados HIGH/CRITICAL. Política inicial é report-only para CVEs; falhas operacionais/integridade continuam bloqueando. | `supply-chain-tools.json`, `scripts/supply-chain-scan.sh` e artefatos da execução atual. |
 
 ### Persistência de saves — auditoria conservadora
 
@@ -35,7 +36,7 @@ Este documento acompanha a execução incremental das correções prioritárias.
 2. **Aceitação no host real:** executar `scripts/host-doctor.py`, `scripts/validate-project.sh`, `scripts/build-and-audit.sh` e `scripts/runtime-acceptance.sh` no host alvo; registrar display, áudio, Vulkan/GPU e controle observados. CI em runner hospedado não substitui essa etapa.
 3. **Boot e compatibilidade de perfis:** testar separadamente runner, pré-requisitos, boot observado, smoke test do menu e testes de jogos/homebrew legalmente obtidos. Não distribuir BIOS, firmware, chaves ou jogos proprietários.
 4. **Persistência de saves:** pesquisar e validar caminhos por emulador/versão antes de criar symlinks ou mover saves. O diretório `/saves` continua sendo armazenamento separado, mas nem todos os emuladores escrevem nele por padrão; parte dos dados persiste em `/home/emu`.
-5. **Segurança e cadeia de suprimentos:** adicionar SBOM/varredura de vulnerabilidades com versões de ferramentas fixadas e política explícita para alertas; avaliar o acesso por recurso gráfico e atualizar a base Debian/snapshot após revisão de patches.
+5. **Segurança e cadeia de suprimentos:** SBOM SPDX e Trivy OS/library HIGH/CRITICAL estão integrados à CI com hashes verificados e política report-only inicial. Falta triar o baseline real, registrar decisões/expirações e decidir quando achados específicos podem bloquear; revisar acesso gráfico e atualizar a base Debian/snapshot após avaliação de patches.
 6. **Resiliência e carga:** o runtime acceptance inclui um smoke somente leitura de 25 requests a `/api/health` com 4 workers e registra p50/p95/máximo. Ainda faltam testes de reinícios de agente, limites CPU/RAM/PIDs, recuperação após falha e crescimento de logs/armazenamento.
 7. **Perfis experimentais por último:** somente reavaliar KytyPS5, shadPS4 e caminhos de dashboard/Xbox quando houver runner, artefatos oficiais/inputs reproduzíveis e evidência de runtime suficiente.
 
