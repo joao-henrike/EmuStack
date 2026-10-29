@@ -51,8 +51,11 @@ def _load_json(root: Path, filename: str, errors: list[str]) -> dict:
     if not isinstance(value, dict):
         errors.append(f"{filename}: o documento raiz precisa ser um objeto JSON")
         return {}
-    if value.get("schema_version") != 1:
-        errors.append(f"{filename}: schema_version deve ser 1")
+    expected_schema_version = 2 if filename == "game-sources.json" else 1
+    if value.get("schema_version") != expected_schema_version:
+        errors.append(
+            f"{filename}: schema_version deve ser {expected_schema_version}"
+        )
     return value
 
 
