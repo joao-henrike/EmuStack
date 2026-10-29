@@ -11,6 +11,7 @@ import hashlib
 import html.parser
 import json
 import os
+import platform
 import re
 import shutil
 import stat
@@ -306,7 +307,36 @@ def executable_files(directory: Path) -> list[Path]:
 
 
 def record(report: dict, identifier: str, status: str, **extra) -> None:
-    report[identifier] = {"status": status, **extra}
+    # Keep the historic flat fields for existing dashboard consumers and add a
+    # stable evidence schema for diagnostics and future UI work. "not-run" is
+    # intentional: installation alone must never imply execution or boot.
+    evidence = {
+        "host_architecture": platform.machine() or "unknown",
+        "source_repository": extra.get("repo"),
+        "source_url": extra.get("url"),
+        "artifact": extra.get("asset"),
+        "version": extra.get("version"),
+        "sha256_expected": extra.get("expected_sha256"),
+        "sha256_actual": extra.get("sha256"),
+        "size_bytes": extra.get("size_bytes"),
+        "binary_path": extra.get("binary"),
+        "install_source": extra.get("source"),
+    }
+    report[identifier] = {
+        "profile_id": identifier,
+        "status": status,
+        "installation_status": status,
+        "evidence": {key: value for key, value in evidence.items() if value is not None},
+        "execution_test": {
+            "status": "not-run",
+            "reason": "The installer does not execute emulator GUI binaries; validate execution on the target host.",
+        },
+        "runtime_test": {
+            "status": "not-run",
+            "reason": "Console boot and game compatibility require separate runtime tests.",
+        },
+        **extra,
+    }
     if status == "installed":
         print(f"[INSTALADO] {identifier}: {extra.get('version', 'upstream build')} — {extra.get('asset', extra.get('binary', 'binary'))}")
     else:
@@ -370,6 +400,7 @@ def install_github_asset(identifier: str, spec: dict, target: Path, catalog_by_i
                     temp_output.replace(output)
                     record(report, identifier, "installed", version=release.get("tag_name", "unknown"), repo=repo,
                            asset=asset_name, url=asset["browser_download_url"], sha256=asset_hash,
+                           expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned" else None),
                            size_bytes=asset_size, checksum=checksum_info, binary=str(output))
                     return True
 
@@ -399,6 +430,7 @@ def install_github_asset(identifier: str, spec: dict, target: Path, catalog_by_i
             alias_path.symlink_to(selected.relative_to(target))
             record(report, identifier, "installed", version=release.get("tag_name", "unknown"), repo=repo,
                    asset=asset_name, url=asset["browser_download_url"], sha256=asset_hash,
+                   expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned" else None),
                    size_bytes=asset_size, checksum=checksum_info, binary=str(alias_path))
             return True
         except urllib.error.HTTPError as exc:
@@ -458,7 +490,8 @@ def install_eden(target: Path, report: dict, catalog_by_id: dict, lock_item: dic
             candidate.unlink(missing_ok=True)
         checksum_text = "SHA-256 matched release lock" if lock_item and lock_item.get("mode") == "pinned-url" else "SHA-256 local only; no upstream checksum verifier wired"
         record(report, "eden", "installed", version=version, asset=Path(urllib.parse.urlparse(url).path).name,
-               url=url, sha256=asset_hash, size_bytes=asset_size, checksum=checksum_text, binary=str(output))
+               url=url, sha256=asset_hash, expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned-url" else None),
+               size_bytes=asset_size, checksum=checksum_text, binary=str(output))
         return True
     except Exception as exc:
         record(report, "eden", "failed", reason=f"{type(exc).__name__}: {exc}")
@@ -498,7 +531,8 @@ def install_dolphin_appimage(target: Path, report: dict, catalog_by_id: dict, lo
             candidate.unlink(missing_ok=True)
         checksum_text = "SHA-256 matched release lock" if lock_item and lock_item.get("mode") == "pinned-url" else "SHA-256 local only; upstream page does not expose a matching checksum"
         record(report, "dolphin", "installed", version=version, asset=alias,
-               url=url, sha256=asset_hash, size_bytes=asset_size, checksum=checksum_text, binary=str(output))
+               url=url, sha256=asset_hash, expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned-url" else None),
+               size_bytes=asset_size, checksum=checksum_text, binary=str(output))
         return True
     except Exception as exc:
         record(report, "dolphin", "not-available", reason=f"official AppImage download failed ({type(exc).__name__}: {exc}); apt package fallback is used if present")
@@ -568,6 +602,7 @@ def main() -> int:
     payload = {
         "project": "EmuStack",
         "version": "0.7.1",
+        "schema_version": 2,
         "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "important": "A download/build status is not proof that every game works. No games, BIOS, firmware, keys, or copyrighted system files are bundled.",
         "items": report,
