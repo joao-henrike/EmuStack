@@ -109,7 +109,9 @@ def _parse_volume(volume: object) -> tuple[str, str, str] | None:
     return None
 
 
-def _check_compose(\n    root: Path, environments: dict[str, dict], errors: list[str], unsupported_ids: set[str] | None = None\n) -> None:
+def _check_compose(
+    root: Path, environments: dict[str, dict], errors: list[str], unsupported_ids: set[str] | None = None
+) -> None:
     try:
         import yaml
     except ImportError:
