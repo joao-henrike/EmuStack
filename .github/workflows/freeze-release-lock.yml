@@ -1,9 +1,6 @@
 name: Freeze official emulator release assets
 
 on:
-  push:
-    branches:
-      - hardening/release-lock-experiment
   workflow_dispatch:
 
 permissions:

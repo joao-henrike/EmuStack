@@ -206,7 +206,7 @@ def build_release_lock(report_payload: dict[str, Any], catalog_payload: dict[str
         "strict": True,
         "project": "EmuStack",
         "generated_from_version": str(report_payload.get("version", "unknown")),
-        "scope": "Pins downloadable official release assets. The Debian base-image multi-architecture digest is pinned; Debian APT is time-pinned only when APT_SNAPSHOT_TIMESTAMP is set. KytyPS5 is pinned to a declared upstream release tag and checked short commit. This does not guarantee bit-for-bit reproducibility across architectures/build environments.",
+        "scope": "Pins downloadable official release assets observed during the build. Entries marked `pinned` or `pinned-url` contain SHA-256 hashes; `skip-upstream` entries are deliberately not installed from a pinned upstream asset. The current lock does not pin or claim a KytyPS5 source build. The Debian base-image digest is pinned; Debian APT versions are time-pinned only when APT_SNAPSHOT_TIMESTAMP is set. This does not guarantee bit-for-bit reproducibility across architectures/build environments.",
         "items": lock_items,
     }
 

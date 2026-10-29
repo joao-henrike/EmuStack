@@ -37,6 +37,8 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(lock["items"]["kytyps5"]["mode"], "skip-upstream")
         self.assertIn("source", lock["items"]["kytyps5"]["reason"])
         self.assertEqual(len(lock["items"]), 20)
+        self.assertIn("skip-upstream", lock["scope"])
+        self.assertIn("does not pin or claim a KytyPS5 source build", lock["scope"])
 
     def test_release_lock_rejects_unapproved_pinned_urls(self):
         payload = {"version": "0.7.1", "items": {"eden": {
