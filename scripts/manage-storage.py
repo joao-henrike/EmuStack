@@ -142,6 +142,19 @@ def assert_stopped(env_id: str, allow_running: bool = False) -> None:
 def backup_env(env_id: str, output: Path | None, allow_running: bool) -> Path:
     env_id = validate_env(env_id)
     assert_stopped(env_id, allow_running)
+
+    created = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    requested_destination = output or (BACKUP_ROOT / env_id / f"emustack-{env_id}-{created}.tar.gz")
+    requested_destination = Path(requested_destination).expanduser()
+    if requested_destination.is_symlink() or requested_destination.exists():
+        raise FileExistsError(f"Refusing to overwrite existing backup: {requested_destination}")
+    requested_destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    destination = requested_destination.parent.resolve() / requested_destination.name
+    # The preflight check gives a clear error; os.link below also closes the race
+    # where another process creates the destination while this backup is running.
+    if destination.is_symlink() or destination.exists():
+        raise FileExistsError(f"Refusing to overwrite existing backup: {destination}")
+
     root = env_root(env_id)
     ensure_layout(env_id)
     files = []
@@ -152,26 +165,30 @@ def backup_env(env_id: str, output: Path | None, allow_running: bool) -> Path:
         if total > MAX_BACKUP_BYTES:
             raise ValueError("Environment exceeds the configured 2 TiB snapshot safety limit")
         files.append({"path": path.relative_to(root).as_posix(), "size": size, "sha256": sha256_file(path)})
-    created = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    destination = output or (BACKUP_ROOT / env_id / f"emustack-{env_id}-{created}.tar.gz")
-    destination = destination.expanduser().resolve()
-    destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     manifest = {"format": "emustack-environment-snapshot", "schema_version": 1, "project_version": VERSION,
                 "environment_id": env_id, "created_utc": datetime.now(timezone.utc).isoformat(),
                 "source_root": f"data/environments/{env_id}", "file_count": len(files), "total_bytes": total, "files": files}
     manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
-    tmp = destination.with_name(destination.name + ".partial")
+
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.", suffix=".partial", dir=destination.parent
+    )
+    os.close(fd)
+    temporary_path = Path(temporary_name)
     try:
-        with tarfile.open(tmp, "w:gz", compresslevel=5) as archive:
+        with tarfile.open(temporary_path, "w:gz", compresslevel=5) as archive:
             archive.addfile(_tar_info("manifest.json", len(manifest_bytes)), _BytesReader(manifest_bytes))
             for name in ALLOWED_DIRS:
                 path = root / name
                 archive.add(path, arcname=f"environment/{env_id}/{name}", recursive=True, filter=_safe_tar_filter)
-        tmp.replace(destination)
+        os.chmod(temporary_path, 0o600)
+        # A hard-link creation is atomic and fails if destination already exists;
+        # unlike Path.replace(), it never overwrites another backup.
+        os.link(temporary_path, destination)
     except Exception:
-        tmp.unlink(missing_ok=True)
+        temporary_path.unlink(missing_ok=True)
         raise
-    os.chmod(destination, 0o600)
+    temporary_path.unlink(missing_ok=True)
     return destination
 
 
