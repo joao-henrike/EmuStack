@@ -21,6 +21,14 @@ Este documento acompanha a execução incremental das correções prioritárias.
 | GPU opcional | Perfis Xbox One/Series sem runner foram retirados do overlay NVIDIA; o validador impede que perfis com runtime `unsupported` recebam GPU pelo overlay. | `tests/test_isolated_architecture.py` e validação Compose. |
 | Lock upstream | Motivos de `skip-upstream` foram transformados em instruções duráveis para cada um dos nove perfis; nenhum hash foi inventado. | `scripts/check-release-lock.py --require-strict --require-pins`. |
 
+### Persistência de saves — auditoria conservadora
+
+- [x] Criado `save-paths.json` para os 20 perfis, distinguindo caminhos upstream documentados de perfis que ainda precisam de validação em runtime.
+- [x] Criado `scripts/audit-save-layout.py`, somente de leitura, sem listagem de nomes de arquivos e sem symlinks/migrações automáticas.
+- [x] Integrado o contrato de saves ao validador de manifestos e ao `validate-project.sh`; testes cobrem caminhos perigosos, diretórios ausentes, candidato observado e symlink não seguido.
+- [ ] Continua pendente executar o audit em cada ambiente real, iniciar o emulador, criar um save de teste, fechar/reabrir o processo e demonstrar que o mesmo save é carregado.
+- [ ] Só após a evidência por versão/build decidir se algum emulador merece configuração explícita de save path ou mapeamento dedicado para `/saves`. O conteúdo atual sob `/home/emu` continua coberto pelos snapshots, portanto não há migração automática.
+
 ## Próximas tarefas na ordem recomendada
 
 1. **Fechar CI do HEAD atual:** aguardar a execução completa, corrigir qualquer regressão e só registrar sucesso após build + runtime acceptance.
