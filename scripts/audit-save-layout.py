@@ -193,10 +193,10 @@ def audit_save_layout(project_root: Path, data_root: Path | None = None) -> dict
 
         model = profile.get("storage_model", "manual")
         confidence = profile.get("confidence", "needs-runtime-validation")
-        if model == "unsupported":
-            status = "unsupported-profile"
-        elif home_state["state"] in {"unsafe-symlink", "unsafe-path", "not-directory"} or saves_state["state"] in {"unsafe-symlink", "unsafe-path", "not-directory"} or any(path["state"] in {"unsafe-symlink", "unsafe-path", "not-directory"} for path in candidates):
+        if home_state["state"] in {"unsafe-symlink", "unsafe-path", "not-directory"} or saves_state["state"] in {"unsafe-symlink", "unsafe-path", "not-directory"} or any(path["state"] in {"unsafe-symlink", "unsafe-path", "not-directory"} for path in candidates):
             status = "unsafe-path-needs-review"
+        elif model == "unsupported":
+            status = "unsupported-profile"
         elif model == "rom-adjacent-or-configured":
             status = "runtime-validation-required-read-only-games"
         elif confidence == "needs-runtime-validation" or model == "manual":
