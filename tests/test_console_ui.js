@@ -20,7 +20,7 @@ assert.match(css, /\.console-system-grid/);
 assert.match(css, /\.system-setup-dialog/);
 assert.match(html, /não desenha dashboards falsos/i);
 assert.match(html, /id="install-report-list"/);
-assert.match(js, /async function renderInstallReport/);
+assert.match(js, /function renderInstallReport\(\)/);
 assert.match(js, /api\('\/api\/report'\)/);
 assert.match(js, /SHA-256 esperado/);
 assert.match(js, /Console boot and game compatibility require separate runtime tests/);
