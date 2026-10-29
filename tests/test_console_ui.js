@@ -26,4 +26,7 @@ assert.match(js, /SHA-256 esperado/);
 assert.match(js, /Teste de runtime/);
 assert.match(js, /Teste não registrado no relatório legado/);
 assert.match(css, /\.install-report-row/);
+assert.match(js, /refresh-install-report.*addEventListener\('click', refreshAll\)/);
+assert.match(js, /Arquitetura observada na instalação/);
+assert.match(js, /installer_architecture \|\| evidence\.host_architecture/);
 console.log('Console-system and installation-report UI static tests passed.');
