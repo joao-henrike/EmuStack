@@ -95,6 +95,68 @@ def container_env(container: dict) -> dict[str, str]:
     return result
 
 
+def dashboard_health_load_smoke() -> dict[str, int | float]:
+    """Send a fixed, read-only burst to dashboard loopback from its own container."""
+    if not DASHBOARD_CONTAINER_ID:
+        raise RuntimeError("Dashboard container ID is not available for bounded API smoke")
+    probe_script = r"""
+import concurrent.futures
+import json
+import math
+import time
+import urllib.request
+
+REQUESTS = 25
+WORKERS = 4
+URL = "http://127.0.0.1:8765/api/health"
+
+def one(_index):
+    started = time.perf_counter()
+    try:
+        with urllib.request.urlopen(URL, timeout=4) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+            ok = response.status == 200 and payload.get("healthy") is True and "environments" not in payload
+            error = None if ok else "unexpected-health-response"
+    except Exception as exc:
+        ok = False
+        error = type(exc).__name__
+    return {"ok": ok, "ms": (time.perf_counter() - started) * 1000, "error": error}
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=WORKERS) as pool:
+    results = list(pool.map(one, range(REQUESTS)))
+latencies = sorted(item["ms"] for item in results)
+p95_index = min(len(latencies) - 1, math.ceil(0.95 * len(latencies)) - 1)
+report = {
+    "requests": len(results),
+    "concurrency": WORKERS,
+    "failures": sum(1 for item in results if not item["ok"]),
+    "p50_ms": round(latencies[len(latencies) // 2], 2),
+    "p95_ms": round(latencies[p95_index], 2),
+    "max_ms": round(latencies[-1], 2),
+    "failure_kinds": sorted({item["error"] for item in results if item["error"]}),
+}
+print(json.dumps(report, sort_keys=True))
+raise SystemExit(0 if report["requests"] == REQUESTS and report["failures"] == 0 else 1)
+"""
+    result = run(
+        ["docker", "exec", DASHBOARD_CONTAINER_ID, "python3", "-c", probe_script],
+        check=False,
+        timeout=20,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Bounded dashboard health API smoke failed: "
+            f"{result.stdout.strip()[:800]} {result.stderr.strip()[:800]}"
+        )
+    try:
+        report = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Bounded dashboard health API smoke did not return JSON") from exc
+    if report.get("requests") != 25 or report.get("concurrency") != 4 or report.get("failures") != 0:
+        raise RuntimeError(f"Bounded dashboard health API smoke returned unexpected results: {report}")
+    return report
+
+
 def probe_record(probes: list[dict], warnings: list[str], errors: list[str], name: str,
                  ok: bool, detail: str, configured: bool, required: bool) -> None:
     if ok:
@@ -387,6 +449,14 @@ def main() -> int:
         if path == "/api/console-systems" and not data.get("systems"):
             raise RuntimeError("Console-system capability matrix is empty")
     checks.append("dashboard health and capability APIs respond")
+
+    # Bounded read-only concurrency probe; no launch/stop/data-changing endpoint is called.
+    load_stats = dashboard_health_load_smoke()
+    checks.append(
+        "bounded dashboard health smoke passed: "
+        f"{load_stats['requests']} requests / {load_stats['concurrency']} workers, "
+        f"p95 {load_stats['p95_ms']} ms, max {load_stats['max_ms']} ms"
+    )
 
     status, _ = api("/api/console-systems/launch", "POST", {"system": "ps5-system", "action": "boot"})
     if status not in (409, 400):
