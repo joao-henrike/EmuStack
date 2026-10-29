@@ -95,7 +95,7 @@ def container_env(container: dict) -> dict[str, str]:
     return result
 
 
-def dashboard_health_load_smoke() -> dict[str, int | float]:
+def dashboard_health_load_smoke() -> dict[str, int | float | list[str]]:
     """Send a fixed, read-only burst to dashboard loopback from its own container."""
     if not DASHBOARD_CONTAINER_ID:
         raise RuntimeError("Dashboard container ID is not available for bounded API smoke")
