@@ -245,7 +245,9 @@ def restore_env(env_id: str, archive_path: Path, allow_running: bool) -> Path:
                 if not isinstance(item, dict):
                     raise ValueError(f"Snapshot manifest files[{index}] must be an object")
                 raw_path = item.get("path")
-                rel = PurePosixPath(raw_path) if isinstance(raw_path, str) else PurePosixPath()
+                if not isinstance(raw_path, str) or not raw_path.strip():
+                    raise ValueError(f"Invalid path in snapshot manifest files[{index}]")
+                rel = PurePosixPath(raw_path)
                 if rel.is_absolute() or not rel.parts or any(p in {"", ".", ".."} for p in rel.parts):
                     raise ValueError("Invalid relative path in snapshot manifest")
                 if rel.parts[0] not in ALLOWED_DIRS:
@@ -253,20 +255,19 @@ def restore_env(env_id: str, archive_path: Path, allow_running: bool) -> Path:
                 normalized = rel.as_posix()
                 if normalized in expected:
                     raise ValueError(f"Duplicate path in snapshot manifest: {normalized}")
-                try:
-                    size = int(item.get("size", -1))
-                except (TypeError, ValueError) as exc:
-                    raise ValueError(f"Invalid size in snapshot manifest for {normalized}") from exc
-                digest = item.get("sha256")
-                if size < 0:
+                size = item.get("size")
+                if isinstance(size, bool) or not isinstance(size, int) or size < 0:
                     raise ValueError(f"Invalid size in snapshot manifest for {normalized}")
+                digest = item.get("sha256")
                 if not isinstance(digest, str) or len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest.lower()):
                     raise ValueError(f"Invalid SHA-256 in snapshot manifest for {normalized}")
                 declared_total += size
                 expected[normalized] = item
-            if manifest.get("file_count") != len(expected):
+            file_count = manifest.get("file_count")
+            if isinstance(file_count, bool) or not isinstance(file_count, int) or file_count != len(expected):
                 raise ValueError("Snapshot manifest file_count does not match files list")
-            if manifest.get("total_bytes") != declared_total:
+            total_bytes = manifest.get("total_bytes")
+            if isinstance(total_bytes, bool) or not isinstance(total_bytes, int) or total_bytes != declared_total:
                 raise ValueError("Snapshot manifest total_bytes does not match files list")
             total = 0
             seen_files: set[str] = set()
