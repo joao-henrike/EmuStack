@@ -6,6 +6,7 @@
 - Add live runtime probes that attempt state-changing requests from each agent with spoofed HTTP headers.
 - Fix Debian package selection to require a real APT install candidate; add an image build check in CI without optional upstream downloads.
 - Commit a strict SHA-256 lock for 11 verified official emulator assets and explicit skip reasons for nine unavailable/unpinned entries; add a tested workflow to refresh the lock and rebuild strictly.
+- Clarify that the current strict lock covers downloadable official assets only; KytyPS5 source compilation is not claimed by this lock or the default acceptance run.
 - Keep Docker runtime acceptance and game/system boot validation as explicit host-side requirements.
 
 ## 0.7.1 — catalog of authorized game-content sources
