@@ -387,10 +387,10 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
     }
     for identifier, profile in save_map.items():
         model = profile.get("storage_model")
-        if model not in valid_storage_models:
+        if not isinstance(model, str) or model not in valid_storage_models:
             errors.append(f"save-paths.json:{identifier}: storage_model inválido {model!r}")
         confidence = profile.get("confidence")
-        if confidence not in valid_confidence:
+        if not isinstance(confidence, str) or confidence not in valid_confidence:
             errors.append(f"save-paths.json:{identifier}: confidence inválido {confidence!r}")
         paths = profile.get("home_paths")
         if not isinstance(paths, list):
@@ -408,7 +408,7 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
                 errors.append(f"save-paths.json:{identifier}: caminho duplicado {path_value!r}")
             else:
                 seen_paths.add(path_value)
-            if path_item.get("kind") not in valid_path_kinds:
+            if not isinstance(path_item.get("kind"), str) or path_item.get("kind") not in valid_path_kinds:
                 errors.append(f"save-paths.json:{identifier}: kind inválido em home_paths[{index}]")
             if not isinstance(path_item.get("purpose"), str) or not path_item.get("purpose", "").strip():
                 errors.append(f"save-paths.json:{identifier}: purpose obrigatório em home_paths[{index}]")
