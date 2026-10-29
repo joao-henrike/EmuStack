@@ -72,6 +72,10 @@ PROCESS_LOCK = threading.RLock()
 PROCESS_REGISTRY: dict[int, dict[str, Any]] = {}
 LAUNCH_RESERVATIONS = 0
 ACTIVE_ENVIRONMENT_RESERVATIONS: dict[str, int] = {}
+SUMMARY_CACHE_TTL_SECONDS = 2.0
+SUMMARY_CACHE_LOCK = threading.Lock()
+SUMMARY_CACHE: dict[str, Any] | None = None
+SUMMARY_CACHE_AT = 0.0
 
 
 def _capture_process_output(process: subprocess.Popen, log_path: Path) -> None:
@@ -473,6 +477,21 @@ def summarize(catalog_fn: Callable[[], dict[str, Any]], status_fn: Callable[[dic
     return summary
 
 
+def cached_summarize(
+    catalog_fn: Callable[[], dict[str, Any]],
+    status_fn: Callable[[dict[str, Any]], tuple[str, str | None]],
+) -> dict[str, Any]:
+    """Coalesce concurrent summary requests and cache the detailed response briefly."""
+    global SUMMARY_CACHE, SUMMARY_CACHE_AT
+    with SUMMARY_CACHE_LOCK:
+        now = time.monotonic()
+        if SUMMARY_CACHE is not None and now - SUMMARY_CACHE_AT < SUMMARY_CACHE_TTL_SECONDS:
+            return SUMMARY_CACHE
+        SUMMARY_CACHE = summarize(catalog_fn, status_fn)
+        SUMMARY_CACHE_AT = time.monotonic()
+        return SUMMARY_CACHE
+
+
 def format_size(value: int) -> str:
     size = float(value)
     for unit in ("B", "KB", "MB", "GB", "TB"):
@@ -567,13 +586,17 @@ def make_handler(catalog_fn, status_fn, safe_game_path_fn):
             # Agents share a network with this service so that the dashboard can
             # reach them; do not let an agent use that route to read other environments.
             if not _is_trusted_dashboard_client(self.client_address[0]):
-                if path == "/api/health":
+                if path in {"/api/health", "/api/ready"}:
                     self._json({"healthy": True})
                 else:
                     self._error("Acesso recusado: origem de rede não confiável.", 403)
                 return
+            if path == "/api/ready":
+                # Cheap liveness/readiness probe; do not fan out to all agents.
+                self._json({"healthy": True})
+                return
             if path == "/api/health":
-                self._json(summarize(catalog_fn, status_fn))
+                self._json(cached_summarize(catalog_fn, status_fn))
                 return
             if path == "/api/environments":
                 records = environment_records(catalog_fn(), status_fn)
