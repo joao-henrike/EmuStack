@@ -257,38 +257,44 @@ def _prune_logs() -> None:
 
 
 def _start(args: list[str], display_name: str, game_label: str | None) -> tuple[int, dict[str, Any]]:
-    with _LOCK:
-        running = sum(1 for rec in _SESSIONS.values() if rec["process"].poll() is None)
-        if running >= MAX_ACTIVE_PER_ENV:
-            return 429, {"started": False, "error": f"Limite por ambiente atingido ({MAX_ACTIVE_PER_ENV} sessões)."}
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
         session_id = uuid.uuid4().hex
         log_path = LOG_DIR / f"{ENV_ID}-{int(time.time())}-{session_id[:8]}.log"
-        fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        os.close(fd)
-        _prune_logs()
-        process = subprocess.Popen(
-            args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            start_new_session=True, close_fds=True, bufsize=0,
-        )
+        with _LOCK:
+            # Admission, process creation, and registration are one critical section.
+            # Otherwise concurrent requests can all pass the limit check before any
+            # of their newly started processes is visible in _SESSIONS.
+            running = sum(1 for rec in _SESSIONS.values() if rec["process"].poll() is None)
+            if running >= MAX_ACTIVE_PER_ENV:
+                return 429, {"started": False, "error": f"Limite por ambiente atingido ({MAX_ACTIVE_PER_ENV} sessões)."}
+            fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            os.close(fd)
+            _prune_logs()
+            try:
+                process = subprocess.Popen(
+                    args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                    start_new_session=True, close_fds=True, bufsize=0,
+                )
+            except OSError:
+                log_path.unlink(missing_ok=True)
+                raise
+            record = {
+                "process": process, "emulator_name": display_name, "game": game_label,
+                "started_at": datetime.now(timezone.utc).isoformat(), "log_path": str(log_path),
+            }
+            _SESSIONS[session_id] = record
+            if len(_SESSIONS) > 100:
+                completed = [(sid, item) for sid, item in _SESSIONS.items() if item["process"].poll() is not None]
+                completed.sort(key=lambda pair: pair[1]["started_at"])
+                for sid, old in completed[: max(0, len(_SESSIONS) - 100)]:
+                    _SESSIONS.pop(sid, None)
+                    try:
+                        Path(old["log_path"]).unlink(missing_ok=True)
+                    except OSError:
+                        pass
     except OSError as exc:
         return 500, {"started": False, "error": f"Falha ao iniciar o launcher isolado: {exc}"}
-    record = {
-        "process": process, "emulator_name": display_name, "game": game_label,
-        "started_at": datetime.now(timezone.utc).isoformat(), "log_path": str(log_path),
-    }
-    with _LOCK:
-        _SESSIONS[session_id] = record
-        if len(_SESSIONS) > 100:
-            completed = [(sid, item) for sid, item in _SESSIONS.items() if item["process"].poll() is not None]
-            completed.sort(key=lambda pair: pair[1]["started_at"])
-            for sid, old in completed[: max(0, len(_SESSIONS) - 100)]:
-                _SESSIONS.pop(sid, None)
-                try:
-                    Path(old["log_path"]).unlink(missing_ok=True)
-                except OSError:
-                    pass
     threading.Thread(target=_capture_output, args=(process, log_path), daemon=True, name=f"emustack-log-{process.pid}").start()
     time.sleep(0.12)
     exit_code = process.poll()
