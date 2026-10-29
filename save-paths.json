@@ -43,7 +43,7 @@
     {
       "id": "pcsx2",
       "storage_model": "home-relative",
-      "confidence": "documented-upstream",
+      "confidence": "needs-runtime-validation",
       "home_paths": [
         {
           "path": ".config/PCSX2/memcards",
@@ -57,7 +57,7 @@
         }
       ],
       "source_url": "https://pcsx2.net/docs/configuration/memcards/",
-      "notes": "Open Data Directory in PCSX2 is authoritative if the selected build or configuration overrides the path. Save states can be version-sensitive; use memory cards for long-term game saves."
+      "notes": "The upstream UI is authoritative for the actual Memory Cards directory. The paths here are candidates for the current Linux user-data layout and must be confirmed in the selected build before declaring them active."
     },
     {
       "id": "ppsspp",
