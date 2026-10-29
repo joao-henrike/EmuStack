@@ -256,6 +256,79 @@ def verify_locked_sha256(actual_sha256: str, lock_item: dict | None) -> None:
         raise ValueError(f"Pinned SHA-256 mismatch: expected {expected}, got {actual_sha256}")
 
 
+def _remove_installer_path(path: Path) -> None:
+    """Remove a file/link or tree without following a top-level symlink."""
+    if path.is_symlink() or path.is_file():
+        path.unlink(missing_ok=True)
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+
+def _atomic_promote_payload(
+    staging_dir: Path, project_dir: Path, selected_binary: Path, alias_path: Path
+) -> None:
+    """Promote a verified extracted payload while preserving the previous install on failure.
+
+    All paths are required to share the install root so directory renames stay on
+    one filesystem. The prior payload and launcher alias are kept as rollback
+    backups until both the new payload and relative launcher symlink are in place.
+    """
+    install_root = project_dir.parent.resolve()
+    if staging_dir.parent.resolve() != install_root or alias_path.parent.resolve() != install_root:
+        raise ValueError("Atomic payload promotion paths must share the install root")
+    staging_root = staging_dir.resolve()
+    try:
+        relative_binary = selected_binary.relative_to(staging_root)
+    except ValueError as exc:
+        raise ValueError("Selected emulator binary is outside the staging directory") from exc
+    if selected_binary.is_symlink() or not selected_binary.is_file():
+        raise ValueError("Selected emulator binary must be a regular file inside the staging directory")
+    if project_dir.is_symlink() or (project_dir.exists() and not project_dir.is_dir()):
+        raise ValueError("Existing payload path is not a real directory; refusing replacement")
+    if alias_path.exists() and not alias_path.is_file() and not alias_path.is_symlink():
+        raise ValueError("Existing launcher alias is not a file or symlink; refusing replacement")
+
+    token = f"{os.getpid()}-{time.time_ns()}"
+    project_backup = install_root / f".{project_dir.name}.backup-{token}"
+    alias_backup = install_root / f".{alias_path.name}.backup-{token}"
+    alias_temp = install_root / f".{alias_path.name}.new-{token}"
+    relative_target = os.path.relpath(project_dir / relative_binary, start=install_root)
+    alias_temp.symlink_to(relative_target)
+    project_saved = False
+    alias_saved = False
+    payload_promoted = False
+    try:
+        if alias_path.exists() or alias_path.is_symlink():
+            alias_path.replace(alias_backup)
+            alias_saved = True
+        if project_dir.exists():
+            project_dir.replace(project_backup)
+            project_saved = True
+        staging_dir.replace(project_dir)
+        payload_promoted = True
+        alias_temp.replace(alias_path)
+    except Exception:
+        if alias_path.exists() or alias_path.is_symlink():
+            if alias_saved:
+                _remove_installer_path(alias_path)
+        if payload_promoted and (project_dir.exists() or project_dir.is_symlink()):
+            _remove_installer_path(project_dir)
+        if project_saved and project_backup.exists():
+            project_backup.replace(project_dir)
+        if alias_saved and (alias_backup.exists() or alias_backup.is_symlink()):
+            alias_backup.replace(alias_path)
+        raise
+    finally:
+        _remove_installer_path(alias_temp)
+    # Once both new paths are committed, stale backups may be removed. A cleanup
+    # failure is intentionally non-fatal: it must not invalidate the new launcher.
+    for backup in (project_backup, alias_backup):
+        try:
+            _remove_installer_path(backup)
+        except OSError:
+            pass
+
+
 def safe_extract(archive_path: Path, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     root = destination.resolve()
@@ -404,35 +477,37 @@ def install_github_asset(identifier: str, spec: dict, target: Path, catalog_by_i
                            size_bytes=asset_size, checksum=checksum_info, binary=str(output))
                     return True
 
-                # Archives are extracted to a dedicated directory with traversal protection.
+                # Extract to a fresh staging directory. Never delete an existing
+                # valid installation until archive validation and executable selection succeed.
                 project_dir = target / (identifier + "-payload")
-                if project_dir.exists():
-                    shutil.rmtree(project_dir)
-                safe_extract(archive, project_dir)
-
-            binaries = executable_files(project_dir)
-            candidates = [p for name in spec.get("binary_candidates", [])
-                          for p in binaries if p.name.lower() == name.lower()]
-            if not candidates:
-                candidates = [p for p in binaries
-                              if not re.search(r"(unins|updat|crashpad|helper|symbols|\.dll$)", p.name, re.I)]
-            if not candidates:
-                record(report, identifier, "failed", reason="archive downloaded but no executable file was found",
-                       repo=repo, asset=asset_name, checksum=checksum_info)
-                return False
-            selected = candidates[0]
-            aliases = item.get("binary_names", [])
-            alias = next((n for n in aliases if not n.lower().endswith(".appimage")), selected.name)
-            alias_path = target / alias
-            if alias_path.exists() or alias_path.is_symlink():
-                alias_path.unlink()
-            # The target is a relative link within /opt/emustack/installed.
-            alias_path.symlink_to(selected.relative_to(target))
-            record(report, identifier, "installed", version=release.get("tag_name", "unknown"), repo=repo,
-                   asset=asset_name, url=asset["browser_download_url"], sha256=asset_hash,
-                   expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned" else None),
-                   size_bytes=asset_size, checksum=checksum_info, binary=str(alias_path))
-            return True
+                staging_dir = Path(tempfile.mkdtemp(prefix=f".{identifier}-payload-stage-", dir=target))
+                try:
+                    safe_extract(archive, staging_dir)
+                    binaries = executable_files(staging_dir)
+                    candidates = [p for name in spec.get("binary_candidates", [])
+                                  for p in binaries if p.name.lower() == name.lower()]
+                    if not candidates:
+                        candidates = [p for p in binaries
+                                      if not re.search(r"(unins|updat|crashpad|helper|symbols|\.dll$)", p.name, re.I)]
+                    if not candidates:
+                        record(report, identifier, "failed", reason="archive downloaded but no executable file was found; previous installation preserved",
+                               repo=repo, asset=asset_name, checksum=checksum_info)
+                        return False
+                    selected = candidates[0]
+                    aliases = item.get("binary_names", [])
+                    alias = next((n for n in aliases if not n.lower().endswith(".appimage")), selected.name)
+                    alias_path = target / alias
+                    _atomic_promote_payload(staging_dir, project_dir, selected, alias_path)
+                    installed_binary = project_dir / selected.relative_to(staging_dir)
+                    record(report, identifier, "installed", version=release.get("tag_name", "unknown"), repo=repo,
+                           asset=asset_name, url=asset["browser_download_url"], sha256=asset_hash,
+                           expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned" else None),
+                           size_bytes=asset_size, checksum=checksum_info, binary=str(alias_path),
+                           payload_directory=str(project_dir), selected_binary=str(installed_binary))
+                    return True
+                finally:
+                    if staging_dir.exists():
+                        shutil.rmtree(staging_dir, ignore_errors=True)
         except urllib.error.HTTPError as exc:
             problems.append(f"{repo}: HTTP {exc.code}")
         except Exception as exc:
