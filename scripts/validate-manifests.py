@@ -21,6 +21,7 @@ JSON_MANIFESTS = (
     "game-sources.json",
     "release-lock.json",
     "save-paths.json",
+    "supply-chain-tools.json",
 )
 COMPOSE_FILES = ("compose.yaml", "compose.nvidia.yaml")
 BOOT_STRATEGIES = {
@@ -277,6 +278,7 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
     sources_doc = documents["game-sources.json"]
     lock_doc = documents["release-lock.json"]
     save_paths_doc = documents["save-paths.json"]
+    supply_chain_doc = documents["supply-chain-tools.json"]
 
     emulators = _records(catalog, "emulators", "catalog.json", errors)
     environments = _records(environments_doc, "environments", "environments.json", errors)
@@ -420,6 +422,52 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
         if model == "unsupported" and paths:
             errors.append(f"save-paths.json:{identifier}: perfil sem runner não deve declarar save paths")
 
+    scan_tools = _records(supply_chain_doc, "tools", "supply-chain-tools.json", errors)
+    scan_tool_map = _id_map(scan_tools, "supply-chain-tools.json:tools", errors)
+    expected_scan_tools = {"syft", "trivy"}
+    if set(scan_tool_map) != expected_scan_tools:
+        errors.append(
+            "supply-chain-tools.json: tools must pin exactly syft and trivy; "
+            f"received={sorted(scan_tool_map)}"
+        )
+    allowed_scan_urls = {
+        "syft": "https://github.com/anchore/syft/releases/download/",
+        "trivy": "https://github.com/aquasecurity/trivy/releases/download/",
+    }
+    for tool_id, tool in scan_tool_map.items():
+        version = tool.get("version")
+        if not isinstance(version, str) or not re.fullmatch(r"[0-9]+\\.[0-9]+\\.[0-9]+", version):
+            errors.append(f"supply-chain-tools.json:{tool_id}: version must be a pinned semantic version")
+            version = ""
+        url = tool.get("url")
+        prefix = allowed_scan_urls.get(tool_id, "")
+        if not isinstance(url, str) or not url.startswith(prefix) or f"/v{version}/" not in url:
+            errors.append(f"supply-chain-tools.json:{tool_id}: URL must be a versioned official release URL")
+        if not LOCK_SHA256.fullmatch(str(tool.get("sha256", ""))):
+            errors.append(f"supply-chain-tools.json:{tool_id}: SHA-256 must be pinned")
+        executable = tool.get("executable")
+        if executable != tool_id:
+            errors.append(f"supply-chain-tools.json:{tool_id}: executable must match the tool ID")
+
+    scan_policy = supply_chain_doc.get("scan_policy")
+    if not isinstance(scan_policy, dict):
+        errors.append("supply-chain-tools.json: scan_policy must be an object")
+    else:
+        if scan_policy.get("mode") != "report-only":
+            errors.append("supply-chain-tools.json: initial vulnerability policy must be report-only")
+        if scan_policy.get("severities") != ["HIGH", "CRITICAL"]:
+            errors.append("supply-chain-tools.json: report threshold must be HIGH,CRITICAL")
+        if scan_policy.get("vulnerability_types") != ["os", "library"]:
+            errors.append("supply-chain-tools.json: scan must include OS and library vulnerabilities")
+        if scan_policy.get("exit_code_on_findings") != 0:
+            errors.append("supply-chain-tools.json: findings exit code must remain report-only until baseline triage")
+        if scan_policy.get("fail_on_tool_download_checksum_or_scan_error") is not True:
+            errors.append("supply-chain-tools.json: tool integrity and scanner errors must fail")
+
+    target_image = supply_chain_doc.get("target_image")
+    if not isinstance(target_image, str) or not target_image.strip():
+        errors.append("supply-chain-tools.json: target_image must be a non-empty image reference")
+
     lock_items = lock_doc.get("items")
     if not isinstance(lock_items, dict):
         errors.append("release-lock.json: items precisa ser um objeto por ID de emulador")
@@ -483,13 +531,15 @@ def main() -> int:
     sources = json.loads((args.root / "game-sources.json").read_text(encoding="utf-8"))
     lock = json.loads((args.root / "release-lock.json").read_text(encoding="utf-8"))
     save_paths = json.loads((args.root / "save-paths.json").read_text(encoding="utf-8"))
+    supply_chain = json.loads((args.root / "supply-chain-tools.json").read_text(encoding="utf-8"))
     pinned = sum(1 for item in lock["items"].values() if item.get("mode") in {"pinned", "pinned-url"})
     skipped = sum(1 for item in lock["items"].values() if item.get("mode") == "skip-upstream")
     print(
         "MANIFEST VALIDATION OK: "
         f"{len(catalog['emulators'])} emulators, {len(environments['environments'])} environments, "
         f"{len(systems['systems'])} system profiles, {len(sources['sources'])} sources, "
-        f"{len(save_paths['profiles'])} save-path profiles; "
+        f"{len(save_paths['profiles'])} save-path profiles, "
+        f"{len(supply_chain['tools'])} supply-chain tools pinned; "
         f"{pinned} pinned lock entries and {skipped} explicit skips; Compose wiring valid."
     )
     return 0
