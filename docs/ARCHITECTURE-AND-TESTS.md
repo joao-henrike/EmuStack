@@ -94,3 +94,19 @@ APT_SNAPSHOT_TIMESTAMP=20261027T000000Z FREEZE_RELEASE_LOCK=1 ./scripts/build-an
 ```
 
 O aceite de runtime verifica topologia Docker, endpoints e, quando configurados, conectividade básica de display/áudio/Vulkan/controle. Não verifica entradas físicas do controle nem compatibilidade universal de jogos; o boot real de cada sistema ainda exige teste individual por perfil.
+
+## Validação cruzada de manifestos
+
+A validação local/CI inclui agora `scripts/validate-manifests.py`, executado por `scripts/validate-project.sh`. Ele cruza os contratos de `catalog.json`, `environments.json`, `console-systems.json`, `game-sources.json`, `release-lock.json`, `compose.yaml` e `compose.nvidia.yaml`.
+
+A verificação valida IDs únicos e referências, versão de schema por manifesto (incluindo `game-sources.json` v2), caminhos relativos por ambiente, estratégias de boot permitidas, categorias/URLs das fontes, cobertura do lock estrito, serviços de agentes, mounts e modos esperados, redes internas/IPs estáticos e allowlist de origem do dashboard. O validador tem testes negativos para IDs duplicados e referências de ambiente quebradas.
+
+Execute em uma cópia do projeto com Python e PyYAML instalados:
+
+```bash
+python3 scripts/validate-manifests.py
+python3 -m unittest discover -s tests -v
+bash scripts/validate-project.sh
+```
+
+Esta validação prova consistência estrutural dos manifestos e do YAML; não testa downloads de upstream, executabilidade real dos emuladores, BIOS, boots de console, compatibilidade de jogos nem aceleração por GPU física.
