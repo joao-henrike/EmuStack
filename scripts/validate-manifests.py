@@ -112,7 +112,11 @@ def _parse_volume(volume: object) -> tuple[str, str, str] | None:
 
 
 def _check_compose(
-    root: Path, environments: dict[str, dict], errors: list[str], unsupported_ids: set[str] | None = None
+    root: Path,
+    environments: dict[str, dict],
+    errors: list[str],
+    unsupported_ids: set[str] | None = None,
+    expected_image: str | None = None,
 ) -> None:
     try:
         import yaml
@@ -149,6 +153,11 @@ def _check_compose(
     if not isinstance(dashboard, dict):
         errors.append("compose.yaml: serviço 'dashboard' ausente ou inválido")
         dashboard = {}
+    if expected_image and dashboard.get("image") != expected_image:
+        errors.append(
+            f"compose.yaml: dashboard image {dashboard.get('image')!r} does not match "
+            f"supply-chain-tools.json target_image {expected_image!r}"
+        )
     dashboard_env = dashboard.get("environment", {})
     if not isinstance(dashboard_env, dict):
         dashboard_env = {}
@@ -510,7 +519,14 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
             identifier for identifier, emulator in emulator_map.items()
             if emulator.get("runtime") == "unsupported"
         }
-        _check_compose(root, environment_map, errors, unsupported_ids)
+        scan_image = supply_chain_doc.get("target_image")
+        _check_compose(
+            root,
+            environment_map,
+            errors,
+            unsupported_ids,
+            scan_image if isinstance(scan_image, str) else None,
+        )
     return errors
 
 
