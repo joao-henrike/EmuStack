@@ -380,6 +380,22 @@ def resolve_systems(
             profile["state_label"] = "Precisa configurar firmware/sistema"
             profile["can_boot_original"] = False
             profile["can_open_emulator"] = True
+        # "can_boot_original" is retained for API compatibility; historically it
+        # means an attempt is available, not that a boot was observed.
+        profile["prerequisites_detected"] = bool(prerequisites_met)
+        profile["can_attempt_boot"] = bool(profile.get("can_boot_original", False))
+        profile["boot_observed"] = bool(profile.get("runtime_boot_observed", False))
+        profile["smoke_test_passed"] = bool(profile.get("runtime_smoke_test_passed", False))
+        if profile["smoke_test_passed"]:
+            profile["boot_validation_status"] = "smoke-test-passed"
+        elif profile["boot_observed"]:
+            profile["boot_validation_status"] = "boot-observed"
+        elif profile["can_attempt_boot"]:
+            profile["boot_validation_status"] = "attempt-available-not-tested"
+        elif profile["prerequisites_detected"]:
+            profile["boot_validation_status"] = "prerequisites-detected"
+        else:
+            profile["boot_validation_status"] = "not-ready"
         resolved.append(profile)
     return resolved
 
