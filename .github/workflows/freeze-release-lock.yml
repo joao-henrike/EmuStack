@@ -33,7 +33,13 @@ jobs:
         run: bash scripts/host-setup.sh
       - name: Enter discovery mode for the first build
         run: |
-          printf '{ "schema_version": 1, "strict": false, "items": {} }\\n' > release-lock.json
+          cat > release-lock.json <<'JSON'
+          {
+            "schema_version": 1,
+            "strict": false,
+            "items": {}
+          }
+          JSON
       - name: Build image and install official upstream assets
         run: docker compose -f compose.yaml build --build-arg BUILD_KYTYPS5=0
       - name: Export strict lock from assets actually installed
