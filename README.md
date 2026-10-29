@@ -171,4 +171,4 @@ docker compose logs --tail=200 env-rpcs3
 - EmuStack não distribui ROMs, jogos, BIOS, firmware, chaves, NAND, MLC ou HDDs proprietários. Use arquivos obtidos e utilizados legalmente.
 - A suíte de testes automatizada comprova lógica/estrutura, não compatibilidade upstream de cada sistema. Uma conclusão de funcionamento exige build e teste real no host.
 
-Mais detalhes: `docs/EMULATOR_MATRIX.md`, `docs/ORIGINAL_SYSTEM_UI.md`, `docs/LOCAL_ACCEPTANCE.md`, `docs/ISOLATED_ENVIRONMENTS.md`, `docs/BUILD_REPRODUCIBILITY.md`, `docs/SECURITY.md`, `docs/TROUBLESHOOTING.md` e `docs/ROADMAP-STATUS.md` (estado das correções prioritárias e trabalho ainda pendente).
+Mais detalhes: `docs/EMULATOR_MATRIX.md`, `docs/ORIGINAL_SYSTEM_UI.md`, `docs/LOCAL_ACCEPTANCE.md`, `docs/ISOLATED_ENVIRONMENTS.md`, `docs/BUILD_REPRODUCIBILITY.md`, `docs/SECURITY.md`, `docs/TROUBLESHOOTING.md` e `docs/ROADMAP-STATUS.md` (estado das correções prioritárias), `save-paths.json` (contratos conservadores de persistência) e `scripts/audit-save-layout.py` (auditoria de saves somente de leitura).
