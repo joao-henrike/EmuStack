@@ -24,6 +24,22 @@ The committed `release-lock.json` is strict and covers all 20 catalog IDs. The c
 
 The successful lock-generation run disabled the optional KytyPS5 source build (`BUILD_KYTYPS5=0`), so KytyPS5 is correctly marked `skip-upstream` in this lock. When explicitly enabled, the Dockerfile checks a declared KytyPS5 tag/short commit before attempting compilation; that separate source-build path is not covered by the downloadable-asset lock and is not claimed as built by the current acceptance run.
 
+### Explicitly skipped upstream entries
+
+Every `skip-upstream` entry is intentional and must remain explicit until there is verifiable provenance. The skip is not a statement that the emulator can never be installed; a separately trusted distro package may be detected, but this lock does not certify that path.
+
+| Profile | Current decision | Next action before changing the lock |
+|---|---|---|
+| `kytyps5` | `skip-upstream` | Pin source commit, toolchain and build inputs; capture the resulting artifact hash in a separate reviewed build path. |
+| `shadps4` | `skip-upstream` | Resolve official Linux artifact or reproducible source build and record exact SHA-256 before enabling download. |
+| `ppsspp` | `skip-upstream` | Capture an exact official Linux asset and verify SHA-256; otherwise rely only on separately detected trusted packages/user binaries. |
+| `xbox-one` | `skip-upstream` | Remain intentionally blocked until a credible full-system runner and verifiable build/package exist. |
+| `xbox-series` | `skip-upstream` | Remain intentionally blocked until a credible full-system runner and verifiable build/package exist. |
+| `dolphin` | `skip-upstream` | Capture an exact official Linux asset and verify SHA-256; otherwise rely only on separately detected trusted packages/user binaries. |
+| `melonds` | `skip-upstream` | Capture an exact official Linux artifact and verify SHA-256; no guessed filenames or substitutions. |
+| `mupen64plus` | `skip-upstream` | Capture an exact official Linux artifact and verify SHA-256; no guessed filenames or substitutions. |
+| `bsnes` | `skip-upstream` | Capture an exact official Linux artifact and verify SHA-256; no guessed filenames or substitutions. |
+
 To refresh official assets, run the GitHub Actions workflow **Freeze official emulator release assets**. It starts with an empty, non-strict lock in the temporary runner workspace to discover current official releases, then exports a candidate, validates coverage and hashes, attempts a strict rebuild, and uploads the candidate as an artifact. Review the downloaded artifact before replacing the committed lock. Do not remove explicit `skip-upstream` reasons simply to make the catalog appear complete.
 
 The Debian base image digest is pinned, but Debian APT package versions remain time-dependent unless `APT_SNAPSHOT_TIMESTAMP` is set. The strict release lock is not a byte-for-byte reproducibility guarantee.
