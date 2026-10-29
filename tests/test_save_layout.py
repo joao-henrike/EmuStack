@@ -71,6 +71,24 @@ class SaveLayoutAuditTests(unittest.TestCase):
             self.assertEqual(profile["status"], "unsafe-path-needs-review")
             self.assertNotIn("secret-save.bin", json.dumps(report))
 
+    def test_strict_audit_flags_symlink_for_unsupported_profile_too(self):
+        with tempfile.TemporaryDirectory() as temp:
+            temp_root = Path(temp)
+            data_root = temp_root / "environments"
+            data_root.mkdir()
+            outside = temp_root / "outside"
+            outside.mkdir()
+            (outside / "savedata.bin").write_bytes(b"x")
+            profile_root = data_root / "xbox-one"
+            profile_root.mkdir()
+            (profile_root / "home").symlink_to(outside, target_is_directory=True)
+
+            report = AUDIT.audit_save_layout(ROOT, data_root)
+            profile = next(item for item in report["profiles"] if item["profile_id"] == "xbox-one")
+
+            self.assertEqual(profile["status"], "unsafe-path-needs-review")
+            self.assertGreaterEqual(report["summary"]["profiles_with_unsafe_paths"], 1)
+
     def test_audit_rejects_manifest_path_traversal(self):
         with tempfile.TemporaryDirectory() as temp:
             temp_root = Path(temp)
