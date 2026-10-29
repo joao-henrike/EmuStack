@@ -4,8 +4,8 @@ umask 077
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-LOCK_FILE="$ROOT/supply-chain-tools.json"
-ARTIFACT_DIR="${EMUSTACK_SECURITY_ARTIFACTS_DIR:-$ROOT/artifacts}"
+LOCK_FILE="${ROOT}/supply-chain-tools.json"
+ARTIFACT_DIR="${EMUSTACK_SECURITY_ARTIFACTS_DIR:-${ROOT}/artifacts}"
 
 for required in curl sha256sum tar python3 docker; do
   command -v "$required" >/dev/null 2>&1 || {

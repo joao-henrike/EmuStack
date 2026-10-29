@@ -42,8 +42,8 @@ class SupplyChainScanContractTests(unittest.TestCase):
         self.assertIn("--exit-code 0", self.script)
 
     def test_script_resolves_repository_paths_and_uses_live_shell_expansions(self):
-        self.assertIn('SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)', self.script)
-        self.assertIn('ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)', self.script)
+        self.assertIn("SCRIPT_DIR=\"$(cd -- \"$(dirname -- \"${BASH_SOURCE[0]}\")\" && pwd)\"", self.script)
+        self.assertIn("ROOT=\"$(cd -- \"${SCRIPT_DIR}/..\" && pwd)\"", self.script)
         self.assertIn('LOCK_FILE="${ROOT}/supply-chain-tools.json"', self.script)
         self.assertNotIn(chr(92) + "${", self.script)
         self.assertLess(self.script.index('[[ -f "$LOCK_FILE" ]] ||'), self.script.index("IMAGE_REF="))
