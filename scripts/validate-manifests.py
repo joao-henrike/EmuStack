@@ -92,7 +92,7 @@ def _is_safe_relative_path(value: object) -> bool:
     if not isinstance(value, str) or not value.strip():
         return False
     path = PurePosixPath(value)
-    return not path.is_absolute() and ".." not in path.parts and "\x00" not in value
+    return not path.is_absolute() and ".." not in path.parts and "\x00" not in value and "\\" not in value
 
 
 def _parse_volume(volume: object) -> tuple[str, str, str] | None:
