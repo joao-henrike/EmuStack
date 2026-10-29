@@ -98,7 +98,7 @@
       "storage_model": "manual",
       "confidence": "needs-runtime-validation",
       "home_paths": [],
-      "source_url": "https://github.com/xenia-canary/xenia-canary",
+      "source_url": "https://github.com/xenia-canary/xenia-canary-releases/releases",
       "notes": "The Windows/Wine execution path can change the user-data root. Confirm the prefix and Xenia content directory before attempting any save redirection."
     },
     {
@@ -121,7 +121,7 @@
       "storage_model": "manual",
       "confidence": "needs-runtime-validation",
       "home_paths": [],
-      "source_url": "https://github.com/eden-emulator/Releases",
+      "source_url": "https://eden-emu.dev/",
       "notes": "Do not assume a portable save location from the executable filename. Inspect the selected build's user-data and virtual-system storage before mapping."
     },
     {
