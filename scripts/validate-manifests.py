@@ -252,9 +252,19 @@ def _check_compose(root: Path, environments: dict[str, dict], errors: list[str])
         if not isinstance(overlay_services, dict):
             errors.append("compose.nvidia.yaml: 'services' precisa ser um mapa")
         else:
+            unsupported_ids = {
+                identifier for identifier, emulator in {
+                    item.get("id"): item for item in _records(
+                        _load_json(root, "catalog.json", errors), "emulators", "catalog.json", errors
+                    )
+                }.items()
+                if emulator.get("runtime") == "unsupported"
+            }
             for name in overlay_services:
                 if name not in expected_services:
                     errors.append(f"compose.nvidia.yaml: serviço '{name}' não corresponde a um ambiente conhecido")
+                elif isinstance(name, str) and name.startswith("env-") and name[4:] in unsupported_ids:
+                    errors.append(f"compose.nvidia.yaml: perfil sem runner suportado não deve receber GPU: '{name}'")
 
 
 def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
