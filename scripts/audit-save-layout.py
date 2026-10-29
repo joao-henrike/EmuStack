@@ -49,8 +49,9 @@ def _inspect_directory(data_root: Path, relative: str) -> dict[str, Any]:
         return {"state": "unsafe-path", "reason": str(exc), "file_count": 0, "total_bytes": 0, "symlink_count": 0}
 
     data_root = Path(data_root)
-    if data_root.is_symlink():
-        return {"state": "unsafe-symlink", "reason": "data root is a symlink", "file_count": 0, "total_bytes": 0, "symlink_count": 1}
+    for ancestor in (data_root, *data_root.parents):
+        if ancestor.is_symlink():
+            return {"state": "unsafe-symlink", "reason": "data root or one of its parents is a symlink", "file_count": 0, "total_bytes": 0, "symlink_count": 1}
     if not data_root.exists():
         return {"state": "missing", "file_count": 0, "total_bytes": 0, "symlink_count": 0}
     if not data_root.is_dir():
