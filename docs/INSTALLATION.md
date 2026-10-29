@@ -39,7 +39,7 @@ Depois de instalar e testar o NVIDIA Container Toolkit no host:
 USE_NVIDIA=1 ./scripts/build-and-audit.sh
 ```
 
-Isso adiciona o mapeamento de GPU aos agentes de runtime. Ele não instala magicamente drivers válidos nem garante aceleração em cada emulador.
+Isso adiciona o mapeamento de GPU aos perfis que possuem runner conhecido no overlay opcional. Os placeholders Xbox One/Series sem runner ficam fora dessa passagem. O overlay não instala magicamente drivers válidos nem garante aceleração em cada emulador; confirme o renderer em execução.
 
 ## Acceptance de vídeo, áudio e GPU
 
