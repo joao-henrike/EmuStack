@@ -27,7 +27,8 @@ class SaveLayoutAuditTests(unittest.TestCase):
             self.assertEqual(report["mode"], "read-only")
             self.assertFalse(data_root.exists())
             self.assertEqual(report["summary"]["profiles_with_unsafe_paths"], 0)
-            self.assertTrue(all(p["status"] == "environment-not-provisioned" for p in report["profiles"]))
+            self.assertTrue(all(p["home_directory"]["state"] == "missing" for p in report["profiles"]))
+            self.assertTrue(all(p["separate_saves_directory"]["state"] == "missing" for p in report["profiles"]))
 
     def test_documented_duckstation_user_directory_is_observed_without_exposing_names(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -99,7 +100,7 @@ class SaveLayoutAuditTests(unittest.TestCase):
                 }),
                 encoding="utf-8",
             )
-            with self.assertRaisesRegex(ValueError, "relative POSIX path"):
+            with self.assertRaisesRegex(ValueError, "inside the environment data root"):
                 AUDIT.audit_save_layout(temp_root, temp_root / "data" / "environments")
 
 
