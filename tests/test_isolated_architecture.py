@@ -106,6 +106,19 @@ class IsolatedArchitectureTests(unittest.TestCase):
             self.assertEqual(by_id[env_id]["commands"], [])
             self.assertEqual(by_id[env_id]["game_arg"], "blocked")
 
+    def test_nvidia_overlay_only_targets_known_runners(self):
+        overlay = (ROOT / "compose.nvidia.yaml").read_text(encoding="utf-8")
+        self.assertNotRegex(overlay, r"(?m)^  env-xbox-one:")
+        self.assertNotRegex(overlay, r"(?m)^  env-xbox-series:")
+        environments = json.loads((ROOT / "environments.json").read_text(encoding="utf-8"))
+        known = {f"env-{record['id']}" for record in environments["environments"]}
+        declared = set(re.findall(r"(?m)^  (env-[a-z0-9-]+):$", overlay))
+        self.assertTrue(declared <= known, declared - known)
+        # GPU injection is an optional overlay and is never enabled in base Compose.
+        base = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        self.assertNotIn("NVIDIA_VISIBLE_DEVICES", base)
+        self.assertNotIn("gpus: all", base)
+
     def test_ps1_ppsspp_and_vita_profiles_are_real_distinct_platform_profiles(self):
         catalog = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8"))
         by_id = {item["id"]: item for item in catalog["emulators"]}
