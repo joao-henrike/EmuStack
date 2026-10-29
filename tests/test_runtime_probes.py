@@ -12,6 +12,7 @@ from runtime_probes import (
     is_dashboard_summary_response,
     is_software_vulkan_renderer,
     parse_env_file,
+    runtime_guardrail_issues,
 )
 
 
@@ -36,6 +37,29 @@ class RuntimeProbeHelpersTests(unittest.TestCase):
         self.assertTrue(is_software_vulkan_renderer("deviceName = llvmpipe (LLVM 18.1)"))
         self.assertTrue(is_software_vulkan_renderer("deviceName = Mesa Lavapipe"))
         self.assertFalse(is_software_vulkan_renderer("deviceName = NVIDIA GeForce RTX 3060"))
+
+    def test_runtime_guardrails_require_finite_resources_restart_and_bounded_logs(self):
+        valid = {
+            "Memory": 1024 * 1024 * 1024,
+            "NanoCpus": 2_000_000_000,
+            "PidsLimit": 256,
+            "RestartPolicy": {"Name": "unless-stopped"},
+            "LogConfig": {"Type": "json-file", "Config": {"max-size": "10m", "max-file": "3"}},
+        }
+        self.assertEqual(runtime_guardrail_issues(valid), [])
+        invalid_cases = [
+            ({**valid, "Memory": 0}, "memory limit"),
+            ({**valid, "NanoCpus": 0}, "CPU limit"),
+            ({**valid, "PidsLimit": 0}, "PID limit"),
+            ({**valid, "RestartPolicy": {"Name": "no"}}, "restart policy"),
+            ({**valid, "LogConfig": {"Type": "json-file", "Config": {}}}, "log max-size"),
+            ({**valid, "LogConfig": {"Type": "json-file", "Config": {"max-size": "10m", "max-file": "0"}}}, "max-file"),
+            ({**valid, "LogConfig": {"Type": "journald", "Config": {}}}, "logging driver"),
+        ]
+        for config, expected_issue in invalid_cases:
+            with self.subTest(expected_issue=expected_issue):
+                issues = runtime_guardrail_issues(config)
+                self.assertTrue(any(expected_issue in item for item in issues), issues)
 
     def test_dashboard_health_smoke_accepts_trusted_summary_contract(self):
         payload = {

@@ -11,7 +11,8 @@
 - Cada ambiente usa sua própria rede `internal: true`; agentes irmãos não estão conectados à rede uns dos outros e não têm saída externa por padrão.
 - Agentes validam o token, allowlist de IDs e parâmetros; não aceitam shell ou caminhos de binário arbitrários via API.
 - Caminho de jogo deve ser relativo e fica confinado a `/games`; symlinks e travessias são rejeitados.
-- `read_only`, `cap_drop: ALL`, `no-new-privileges`, `tmpfs` e limites de recursos são ativados no contêiner.
+- `read_only`, `cap_drop: ALL`, `no-new-privileges`, `tmpfs` e limites de CPU/memória/PIDs são ativados nos contêineres; a aceitação verifica os valores efetivos do Docker.
+- Logs de contêiner usam `json-file` com rotação finita (`max-size: 10m`, `max-file: 3`) para limitar crescimento local de logs.
 - Mapeamento de controle e integração gráfica/audio são explícitos; nenhum `/dev/input` inteiro é passado por padrão.
 - `.env` contém vinte tokens distintos (um por agente) e é gravado com permissões `0600`; nunca o versione nem publique.
 
@@ -23,7 +24,7 @@ Se o host habilitar GPU, X11/XWayland, áudio ou um controle, o contêiner receb
 
 ## SBOM e varredura de vulnerabilidades
 
-A CI gera um SBOM SPDX JSON da imagem de runtime que acabou de construir e publica o JSON completo da varredura de vulnerabilidades OS/library de severidade **HIGH/CRITICAL**. As versões de Syft e Trivy, os URLs de release e os SHA-256 esperados ficam em `supply-chain-tools.json`; `scripts/supply-chain-scan.sh` verifica o hash do arquivo baixado e a versão reportada antes de executar cada ferramenta.
+A CI gera um SBOM SPDX JSON da imagem de runtime que acabou de construir e publica o JSON completo da varredura de vulnerabilidades OS/library de severidade **HIGH/CRITICAL**. A aceitação de runtime também valida limites efetivos de CPU/memória/PIDs, a política de restart e rotação de logs; no CI, há um teste opt-in de recuperação forçada de um agente isolado. As versões de Syft e Trivy, os URLs de release e os SHA-256 esperados ficam em `supply-chain-tools.json`; `scripts/supply-chain-scan.sh` verifica o hash do arquivo baixado e a versão reportada antes de executar cada ferramenta.
 
 A política inicial é `report-only` para achados: o inventário precisa ser revisto antes de tornar achados um gate, sem ocultar vulnerabilidades sem correção conhecida. A CI falha se download, hash/versão, geração do SBOM, execução do scanner ou leitura do JSON falharem. Não falha apenas pela presença de CVEs neste primeiro baseline. Para cada achado HIGH/CRITICAL, revisar pacote afetado, versão corrigida, alcançabilidade no produto e risco real; exceções aceitas precisam de justificativa e data de expiração. Não transformar esse modo inicial em aceitação permanente sem triagem.
 

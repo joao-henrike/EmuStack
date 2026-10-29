@@ -2,6 +2,8 @@
 
 Este documento acompanha a execução incremental das correções prioritárias. O estado de integração da versão atual deve ser confirmado no [CI da branch/PR](https://github.com/joao-henrike/EmuStack/actions); não use uma execução antiga como prova de que o HEAD atual está validado.
 
+Última execução verde completa antes desta tranche de guardrails: [CI #110](https://github.com/joao-henrike/EmuStack/actions/runs/40947030747), SHA `36fa324de1bd6cae18122c4dcfd9b565541a9e64`. A alteração atual precisa de nova execução completa.
+
 ## P0 — integridade do modelo e das evidências
 
 | Área | Alteração aplicada | Evidência esperada |
@@ -19,6 +21,7 @@ Este documento acompanha a execução incremental das correções prioritárias.
 | Atualização de assets | Arquivos compactados são extraídos em staging e promovidos com backup/rollback do payload e do link do launcher. | Testes de promoção bem-sucedida e rollback injetado em `tests/test_installer.py`. |
 | Snapshots | Restore valida tipo/estrutura do manifesto, caminhos, duplicatas, tamanhos, hashes, contagem e total de bytes; arquivos truncados/corrompidos recebem erro claro. | Testes de snapshot adulterado/truncado e preservação do estado anterior em `tests/test_manage_storage.py`. |
 | GPU opcional | Perfis Xbox One/Series sem runner foram retirados do overlay NVIDIA; o validador impede que perfis com runtime `unsupported` recebam GPU pelo overlay. | `tests/test_isolated_architecture.py` e validação Compose. |
+| Guardrails de runtime | Compose aplica CPU/memória/PIDs, restart `unless-stopped` e rotação `json-file` (10m × 3); a aceitação confere a configuração efetiva de agentes e dashboard. CI executa teste isolado de auto-recuperação do agente `env-mgba`; host só com opt-in explícito. | `runtime_guardrail_issues()` em `scripts/runtime_probes.py`, `tests/test_runtime_probes.py` e CI runtime acceptance. |
 | Lock upstream | Motivos de `skip-upstream` foram transformados em instruções duráveis para cada um dos nove perfis; nenhum hash foi inventado. | `scripts/check-release-lock.py --require-strict --require-pins`. |
 | SBOM/CVE | CI baixa Syft/Trivy com versões e SHA-256 fixados, gera SBOM SPDX da imagem e anexa JSON de achados HIGH/CRITICAL. Política inicial é report-only para CVEs; falhas operacionais/integridade continuam bloqueando. | `supply-chain-tools.json`, `scripts/supply-chain-scan.sh` e artefatos da execução atual. |
 
@@ -37,7 +40,7 @@ Este documento acompanha a execução incremental das correções prioritárias.
 3. **Boot e compatibilidade de perfis:** testar separadamente runner, pré-requisitos, boot observado, smoke test do menu e testes de jogos/homebrew legalmente obtidos. Não distribuir BIOS, firmware, chaves ou jogos proprietários.
 4. **Persistência de saves:** pesquisar e validar caminhos por emulador/versão antes de criar symlinks ou mover saves. O diretório `/saves` continua sendo armazenamento separado, mas nem todos os emuladores escrevem nele por padrão; parte dos dados persiste em `/home/emu`.
 5. **Segurança e cadeia de suprimentos:** SBOM SPDX e Trivy OS/library HIGH/CRITICAL estão integrados à CI com hashes verificados e política report-only inicial. Falta triar o baseline real, registrar decisões/expirações e decidir quando achados específicos podem bloquear; revisar acesso gráfico e atualizar a base Debian/snapshot após avaliação de patches.
-6. **Resiliência e carga:** o runtime acceptance inclui um smoke somente leitura de 25 requests a `/api/health` com 4 workers e registra p50/p95/máximo. Ainda faltam testes de reinícios de agente, limites CPU/RAM/PIDs, recuperação após falha e crescimento de logs/armazenamento.
+6. **Resiliência e carga:** o runtime acceptance inclui um smoke somente leitura de 25 requests a `/api/health` com 4 workers, verifica limites efetivos e política de logs, e executa na CI uma prova de recuperação após encerrar um agente isolado. Ainda faltam testes de carga prolongada e crescimento de dados persistentes/volumes.
 7. **Perfis experimentais por último:** somente reavaliar KytyPS5, shadPS4 e caminhos de dashboard/Xbox quando houver runner, artefatos oficiais/inputs reproduzíveis e evidência de runtime suficiente.
 
 ## Limites que devem permanecer explícitos

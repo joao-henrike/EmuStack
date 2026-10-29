@@ -66,3 +66,16 @@ O runtime acceptance não inicia automaticamente todo jogo, BIOS ou dashboard. F
 O XMB do PPSSPP usa `--vsh` em builds compatíveis, mas o upstream declara a pesquisa de VSH como exploratória; exige dump de firmware em `assets/flash0/` e não é uma experiência garantida. Ver a documentação oficial: <https://www.ppsspp.org/docs/getting-started/how-to-run-the-vsh/> e <https://www.ppsspp.org/docs/reference/command-line/>.
 
 Sistemas para os quais o projeto declara `unsupported` permanecem bloqueados e não devem ser representados por uma interface HTML imitada. O EmuStack não inclui BIOS, firmware, NAND, chaves ou jogos proprietários.
+
+
+## 7. Limites de recursos, rotação de logs e recuperação
+
+A aceitação inspeciona os valores efetivos do Docker para cada agente e para o dashboard: limite de CPU, memória e PIDs, política unless-stopped, driver de logs json-file e rotação finita (max-size=10m, max-file=3). Se a configuração efetiva divergir, a aceitação falha; não basta que o YAML pareça correto.
+
+A CI executa uma prova de recuperação opt-in que envia SIGKILL somente ao agente env-mgba, aguarda o Docker reiniciá-lo e confirma que seu endpoint de saúde volta a responder. Isso testa a política de restart, não a preservação de estado de um jogo.
+
+No host real, essa prova não roda por padrão. Ative-a somente quando for seguro interromper esse perfil e não houver jogo com progresso não salvo:
+
+    EMUSTACK_RUN_RECOVERY_TESTS=1 ./scripts/runtime-acceptance.sh
+
+Não execute esse teste durante uma sessão ativa de emulação: o encerramento forçado do agente pode causar perda de progresso que ainda não foi salvo. A rotação limita cada arquivo de log a 10m e mantém até três arquivos por contêiner; isso não limita os dados gravados nos volumes persistentes.

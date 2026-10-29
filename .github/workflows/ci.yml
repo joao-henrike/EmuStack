@@ -91,6 +91,8 @@ jobs:
       - name: Start isolated agents and dashboard
         run: docker compose -f compose.yaml up -d --no-build dashboard
       - name: Run Docker runtime acceptance and inter-agent boundary probes
+        env:
+          EMUSTACK_RUN_RECOVERY_TESTS: "1"
         run: ./scripts/runtime-acceptance.sh
       - name: Show service logs if a preceding runtime step failed
         if: failure()
