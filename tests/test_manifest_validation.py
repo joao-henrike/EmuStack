@@ -76,6 +76,20 @@ class ManifestValidationTests(unittest.TestCase):
 
         self.assertTrue(any("save-path/catalog ID mismatch" in error for error in errors), errors)
 
+    def test_malformed_save_storage_model_is_reported_not_crashed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            temp_root = Path(temp)
+            for filename in VALIDATOR.JSON_MANIFESTS:
+                shutil.copy2(ROOT / filename, temp_root / filename)
+            paths_file = temp_root / "save-paths.json"
+            data = json.loads(paths_file.read_text(encoding="utf-8"))
+            data["profiles"][0]["storage_model"] = []
+            paths_file.write_text(json.dumps(data), encoding="utf-8")
+
+            errors = VALIDATOR.validate_repository(temp_root, include_compose=False)
+
+        self.assertTrue(any("storage_model inválido" in error for error in errors), errors)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
