@@ -1,63 +1,75 @@
-# Sistemas originais e menus reais
+# 🖥️ Sistemas originais, BIOS e menus reais
 
-O EmuStack não recria o XMB, o Home Menu nem outros dashboards em HTML. Quando existe suporte real, ele invoca o emulador com os arquivos de sistema do usuário e a tela original vem desse código emulado. Quando não existe caminho comprovado, o perfil permanece manual/indisponível/não suportado.
+EmuStack **não desenha réplicas HTML** dos dashboards dos consoles. Quando há uma rota, o agente chama um emulador e a tela deve vir do sistema efetivamente emulado. Quando não há suporte conhecido, o perfil fica manual, indisponível ou bloqueado.
 
-## Onde ficam os arquivos
+## 📁 Onde ficam os arquivos
 
-Todos os caminhos são relativos à raiz de **um único ambiente**:
+Cada perfil deve manter seu próprio estado:
 
 ```text
-data/environments/<id>/bios/    # BIOS/boot ROMs autorizados (montagem read-only)
-data/environments/<id>/home/    # HOME persistente: firmware instalado, NAND/MLC/HDD e configs, quando aplicável
-data/environments/<id>/saves/   # espaço persistente para saves quando suportado
+data/environments/<id>/bios/   # dumps de BIOS/boot/firmware quando lidos deste caminho
+data/environments/<id>/home/   # configs e estado persistente, inclusive NAND/MLC/HDD quando aplicável
+data/environments/<id>/saves/  # saves quando o emulador usa este diretório
 ```
 
-Não use uma pasta global para compartilhar BIOS, NAND, MLC, HDD, saves ou configurações entre ambientes. O HOME isolado de cada agente é `/home/emu` dentro do contêiner.
+Não compartilhe essas pastas entre ambientes via symlinks, nem use uma pasta global para todos os sistemas. O container vê o HOME do perfil em `/home/emu`.
 
-## Caminhos integrados e limites
+## 🎮 Rotas de boot e pré-requisitos
 
 ### PlayStation 3 — RPCS3 / VSH-XMB
+A rota procura o módulo VSH instalado dentro da configuração do RPCS3 no HOME do perfil. Instale firmware por fluxo oficial do RPCS3 e confira os logs/estado. Encontrar o arquivo não prova que a versão do binário inicializará o XMB; registre um boot real no host.
 
-A estratégia procura o módulo VSH instalado pelo RPCS3 em pastas de configuração dentro do HOME daquele agente. Instale firmware do PS3 usando o fluxo/documentação oficial do RPCS3 e confira o estado do perfil. O caminho precisa ainda ser testado com a versão de emulador/build que foi instalada.
+### PlayStation 2 — PCSX2 / BIOS Browser
+O perfil procura BIOS `.bin` em `data/environments/pcsx2/bios/pcsx2/` e locais configurados do PCSX2 no `home/`. Confirme a seleção na interface do emulador. Um arquivo arbitrário com extensão/nome esperado não é necessariamente um dump válido.
 
-### PlayStation 2 — PCSX2 / BIOS-Browser
+### PlayStation 1 — DuckStation / BIOS shell
+A rota é condicional à detecção de arquivo BIOS compatível e ao reconhecimento do argumento pelo build instalado. Teste visualmente no host; o lock de asset não certifica o dump da BIOS.
 
-O perfil procura BIOS `.bin` em `data/environments/pcsx2/bios/pcsx2/` e nas pastas de BIOS do PCSX2 dentro de `data/environments/pcsx2/home/`. Confirme a seleção de BIOS na interface do PCSX2. O boot não é ativado só pela existência de um arquivo de nome arbitrário; deve existir um dump válido e permitido.
+### PlayStation Portable — PPSSPP / VSH-XMB
+A estratégia experimental procura firmware em `data/environments/ppsspp/bios/flash0/`, incluindo `vsh/module/vshmain.prx` e `kd/pspbtcnf.bin`. O caminho usa `--vsh` em versões compatíveis, mas o boot VSH do upstream é exploratório e não deve ser descrito como estável/garantido. Referências: [CLI oficial do PPSSPP](https://www.ppsspp.org/docs/reference/command-line/) e [investigação upstream de VSH](https://github.com/hrydgard/ppsspp/blob/master/docs/VSHBootInvestigation.md).
 
 ### Xbox original — xemu
+Configuração em `data/environments/xemu/home/.config/xemu/xemu.toml`. O arquivo deve apontar para MCPX boot ROM, BIOS/Flash ROM e HDD dentro dos mounts permitidos. A presença do TOML/HDD não prova dashboard Microsoft original. O comando de atestação abaixo exige uma confirmação explícita e vincula a declaração ao hash do HDD:
 
-A configuração é por ambiente em `data/environments/xemu/home/.config/xemu/xemu.toml`. A presença do TOML não prova que o HDD contenha o dashboard original Microsoft; uma imagem de demonstração pode conter um dashboard aberto alternativo. O boot é bloqueado até que o caminho do HDD configurado exista, seja validado e receba uma atestação explícita do operador ligada ao SHA-256. Gere-a com `scripts/attest-xemu-dashboard.py --hdd <caminho> --confirm-original-microsoft-dashboard` somente depois de verificar manualmente o dump. Isso é uma declaração auditável, não reconhecimento automático de conteúdo. O EmuStack ainda não consegue verificar por conta própria se o HDD contém o dashboard retail original.
+```bash
+python3 scripts/attest-xemu-dashboard.py --hdd data/environments/xemu/saves/SEU-HDD-DUMP --confirm-original-microsoft-dashboard
+```
+
+Troque o caminho pelo arquivo real que também corresponde ao `hdd_path` configurado. Não use a atestação para contornar dúvida: **ela registra uma declaração do operador, não inspeciona nem autentica criptograficamente o dashboard dentro do HDD.** Consulte [documentação oficial de arquivos exigidos do xemu](https://xemu.app/docs/required-files/).
 
 ### Nintendo Wii — Dolphin
-
-O perfil procura o Wii System Menu instalado no NAND do Dolphin em `data/environments/dolphin/home/.local/share/dolphin-emu/Wii/` (ou os diretórios alternativos reconhecidos). Instale apenas arquivos de sistema que você pode legalmente utilizar. A detecção de pastas não prova que todos os menus/jogos funcionem corretamente.
+O perfil verifica o Wii System Menu no NAND persistente do Dolphin, normalmente sob `data/environments/dolphin/home/.local/share/dolphin-emu/Wii/`. Configure o NAND e System Menu usando fluxo autorizado e teste o boot. Diretório encontrado não significa que os menus e jogos são válidos.
 
 ### Nintendo Wii U — Cemu
+O estado MLC separado é esperado em `data/environments/cemu/home/.local/share/Cemu/mlc01/`. A rota procura `men.rpx` em caminhos de região conhecidos. Requer conteúdo de sistema configurado; uma pasta MLC vazia não serve.
 
-A MLC isolada fica por padrão em `data/environments/cemu/home/.local/share/Cemu/mlc01/`. O menu requer arquivos de sistema próprios e um `men.rpx` compatível; a simples pasta MLC não basta.
+### Azahar e melonDS
+Os fluxos de firmware/menu são manuais ou condicionais. Abra e configure o emulador diretamente se a integração não declarar uma estratégia de boot automática. Não assuma que a interface do próprio emulador é o menu de console original.
 
-### Outras gerações
+### Nintendo Switch, PS4, PS5, Xbox 360/One/Series e PS Vita
+O perfil não é uma promessa de boot integral do sistema original. Alguns focam jogos compatíveis e a maturidade depende do upstream; Xbox One/Series ficam bloqueados sem runner completo; PS5 é experimental. Vita3K tem sua própria UI, não um LiveArea original. Não substitua um caminho ausente por um dashboard falso em HTML.
 
-Azahar e melonDS têm fluxos manuais de sistema/firmware; GBA/N64/SNES/NES usam sequências de inicialização apropriadas à geração, e não um dashboard comparável ao de consoles modernos. PS4, PS5, Switch, Xbox 360 e Xbox One não estão declarados como boot integral de sistema nesta versão.
+### Sistemas clássicos (GB/GBA, NES, SNES, N64 e similares)
+Esses sistemas usam sequências de inicialização específicas e não possuem necessariamente um dashboard moderno análogo ao XMB/Home Menu. A ausência de “dashboard de console” não significa ausência de emulação de jogos.
 
-## Como conferir
+## 🔍 Como conferir o estado
 
-Abra **Sistemas originais**, escolha o perfil e leia estado, checks e passos de configuração. Se o status não permitir boot, a rota de API rejeita o pedido; não há fallback para uma tela HTML falsa. Para cada mudança de firmware, configuração ou versão do emulador, valide primeiro o log daquele ambiente.
+Na seção **Sistemas originais**, examine pré-requisitos, estratégia e mensagem do perfil. Depois:
+1. verifique o relatório de instalação e a versão do binário;
+2. confira o log do agente;
+3. tente o boot no host com GUI/renderer configurados;
+4. registre o resultado e a combinação de firmware/binário;
+5. mantenha indisponível o que não foi comprovado.
 
-## Referências upstream de linha de comando
+## 📚 Referências de linha de comando upstream
 
-Essas páginas/fonte são usadas para conferir a sintaxe dos argumentos integrados; elas **não** provam que um firmware, menu ou jogo inicializará nesta imagem e GPU:
+Esses links documentam sintaxe/opções; não são provas de que a rota específica funcione em cada build:
 
-- PCSX2 — [opções oficiais de linha de comando](https://pcsx2.net/docs/advanced/cli/) (`-bios`, `-fullscreen`).
-- Dolphin — [referência de uso no repositório oficial](https://github.com/dolphin-emu/dolphin/blob/master/Readme.md?plain=1) (`-n` / `--nand_title`).
-- Cemu — [opções oficiais implementadas na linha de comando](https://github.com/cemu-project/Cemu/blob/main/src/config/LaunchSettings.cpp) (`--mlc`, `--game`, `--fullscreen`).
-- xemu — [argumentos oficiais](https://xemu.app/docs/cli/) (`-full-screen`, `-config_path`).
-- RPCS3 — [implementação de BootVSH no projeto](https://github.com/RPCS3/rpcs3/blob/master/rpcs3/rpcs3qt/main_window.cpp); o boot integrado do EmuStack ainda depende de testar a versão do binário instalado.
+- [PCSX2 CLI](https://pcsx2.net/docs/advanced/cli/)
+- [Dolphin](https://github.com/dolphin-emu/dolphin/blob/master/Readme.md?plain=1)
+- [Cemu LaunchSettings](https://github.com/cemu-project/Cemu/blob/main/src/config/LaunchSettings.cpp)
+- [xemu CLI](https://xemu.app/docs/cli/)
+- [RPCS3 BootVSH implementation](https://github.com/RPCS3/rpcs3/blob/master/rpcs3/rpcs3qt/main_window.cpp)
+- [PPSSPP CLI](https://www.ppsspp.org/docs/reference/command-line/)
 
-
-### PlayStation Portable (PSP)
-
-O EmuStack 0.7.1 inclui uma rota experimental para o VSH/XMB do PSP via `PPSSPP --vsh --fullscreen`. O caminho upstream depende de um dump real de firmware em `assets/flash0/` e é explicitamente exploratório, não uma função estável garantida. No ambiente isolado, o caminho host é `data/environments/ppsspp/bios/flash0/`, montado como `/opt/emustack/assets/flash0/` somente leitura.
-
-A rota só é apresentada como disponível quando os arquivos `vsh/module/vshmain.prx` e `kd/pspbtcnf.bin` foram encontrados sem symlinks. Isso verifica pré-requisitos, não o sucesso visual do boot. A instalação do PPSSPP precisa reconhecer `--vsh`. Referências oficiais: [CLI do PPSSPP](https://www.ppsspp.org/docs/reference/command-line/) e [investigação upstream do VSH](https://github.com/hrydgard/ppsspp/blob/master/docs/VSHBootInvestigation.md).
-
+EmuStack não fornece BIOS, firmware, chaves, NAND, MLC, HDDs nem imagens proprietárias. Os arquivos usados nos testes ficam no seu host e não devem ser enviados em issues/PRs.

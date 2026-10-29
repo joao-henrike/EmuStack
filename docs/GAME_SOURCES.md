@@ -1,49 +1,44 @@
-# Fontes de jogos e conteúdo autorizado
+# 🕹️ Fontes de jogos e conteúdo autorizado
 
-EmuStack é um organizador e lançador; não é um site de ROMs. O projeto não baixa, inclui ou distribui jogos comerciais, ROMs, discos, BIOS, chaves ou firmware. A aba **Fontes de jogos** reúne lojas oficiais, índices de homebrew/demos e documentação. Ela permite filtrar as recomendações por console; isso não significa que um emulador ou repositório baixe jogos automaticamente.
+EmuStack organiza e lança conteúdo que o usuário fornece. **Não é um repositório de ROMs, não instala jogos comerciais automaticamente e não contorna proteções.** A aba Fontes de jogos é alimentada por `game-sources.json` e mostra links/avisos para ajudar na descoberta de conteúdo.
 
-## Lojas oficiais
+## 🏪 Lojas e páginas oficiais
 
-- [Steam](https://store.steampowered.com/) — jogos de PC; confirme compatibilidade com Linux na página de cada produto.
-- [GOG](https://www.gog.com/) — catálogo de jogos para PC; confira os requisitos e os termos de cada item.
-- [itch.io](https://itch.io/) — jogos independentes, demos e freeware publicados pelos criadores.
-- [Xbox para PC](https://www.xbox.com/pt-BR/xbox-on-pc) — títulos com versão para Windows e ofertas de jogos Xbox disponíveis no PC.
+- [Steam](https://store.steampowered.com/) — jogos de PC; confirme suporte Linux/requisitos por título.
+- [GOG](https://www.gog.com/) — jogos de PC; confira formato, requisitos e termos de cada item.
+- [itch.io](https://itch.io/) — conteúdo independente; autores podem publicar jogos completos, demos, freeware e homebrew.
+- [Xbox para PC](https://www.xbox.com/pt-BR/xbox-on-pc) — catálogo e disponibilidade para PC, conforme os termos de cada jogo/serviço.
 - [PlayStation Store Brasil](https://store.playstation.com/pt-br/) — loja oficial PlayStation.
 - [Nintendo Store](https://www.nintendo.com/pt-br/store/games/) — loja oficial Nintendo.
 
-**Importante:** comprar uma versão de PC ou console numa loja não significa que você recebeu um arquivo de jogo que possa ser usado diretamente por um emulador. Confira o formato, os termos da plataforma e a documentação do emulador.
+Comprar um produto para PC/console não significa necessariamente receber uma ROM/ISO ou ter direito a extrair/distribuir o arquivo. Leia os termos aplicáveis.
 
-## Homebrew, demos e freeware
+## 🧪 Homebrew, demos e freeware
 
-- [PDRoms](https://pdroms.de/) — coleção comunitária que declara ter predominantemente freeware, donationware, open-source, public-domain ou itens autorizados. A licença de cada item ainda deve ser conferida.
-- [PPSSPP — guia oficial de demos e homebrew](https://www.ppsspp.org/docs/getting-started/how-to-get-demos-and-homebrew/) — orientação específica para demos PSP e homebrew.
-- [itch.io — homebrew gratuito](https://itch.io/games/free/tag-homebrew) — filtro de descoberta, não garantia de licença ou formato de ROM.
-- [itch.io — homebrew NES ROM](https://itch.io/games/free/tag-homebrew/tag-nes-rom) — filtro de projetos NES, publicados por seus autores.
+- [PDRoms](https://pdroms.de/) — índice comunitário de homebrew; confira a licença e autorização de cada item.
+- [GameBrew](https://www.gamebrew.org/wiki/Main_Page) — wiki comunitária de homebrew e ferramentas.
+- [itch.io — homebrew grátis](https://itch.io/games/free/tag-homebrew) — filtro para descobrir projetos publicados por autores.
+- [itch.io — homebrew NES ROM](https://itch.io/games/free/tag-homebrew/tag-nes-rom) — filtro de descoberta, não garantia de arquivo/licença.
+- [PPSSPP — demos e homebrew](https://www.ppsspp.org/docs/getting-started/how-to-get-demos-and-homebrew/) — guia oficial específico para PSP.
+- [GitHub — tópicos de homebrew](https://github.com/topics/homebrew-game) — pesquisa por projetos publicados; verifique a licença do repositório e do download.
 
-- [GameBrew](https://www.gamebrew.org/wiki/Main_Page) — wiki comunitária para descobrir projetos, ferramentas e conteúdo homebrew.
-- [itch.io: tag homebrew](https://itch.io/games/tag-homebrew) — projetos publicados por criadores independentes.
-- [GitHub: homebrew-game](https://github.com/topics/homebrew-game) — repositórios comunitários; confira a release e a licença de cada projeto.
+Essas fontes ajudam a encontrar conteúdo, mas não certificam todos os downloads, licenças, ausência de malware, formato ou compatibilidade. Prefira a página do criador e uma release assinada/hash publicada quando disponível.
 
-A classificação como “homebrew” ou “gratuito” não garante automaticamente redistribuição autorizada. Confirme que o autor publicou o arquivo e que a licença permite baixar, executar e redistribuir quando aplicável. Prefira a página oficial do projeto.
+## ⚖️ Direitos e segurança
 
-## Sua própria biblioteca
+- Verifique a licença de cada item e as leis/termos aplicáveis ao seu país e plataforma.
+- Dê preferência a homebrew, demos, freeware ou software distribuído pelo titular dos direitos para uso no emulador.
+- Não compartilhe dumps de BIOS/firmware/keys, NAND, MLC, HDDs ou saves proprietários.
+- O projeto não fornece links para cópias comerciais não autorizadas nem baixa esse conteúdo.
+- Um hash pode ajudar a conferir integridade em relação a uma referência confiável; ele não prova licença ou autenticidade por si só.
+- “Tenho uma cópia física/digital” não determina automaticamente se qualquer método de dump, modificação ou conversão é permitido.
 
-Se a lei local, os termos da plataforma e as circunstâncias permitirem, organize arquivos que você possua ou criou e esteja autorizado a usar. Não há uma regra universal que permita fazer cópias de todo jogo, remover proteções ou usar qualquer firmware. EmuStack não fornece instruções de bypass nem distribui arquivos de sistema.
+Esta página é orientação técnica geral, não aconselhamento jurídico.
 
-## Formatos não são compatibilidade
+## 📦 Formato e compatibilidade não são a mesma coisa
 
-A biblioteca reconhece extensões comuns (`.iso`, `.chd`, `.cue`, `.pkg`, `.elf`, `.rvz`, `.wbfs`, `.nsp`, `.xci`, `.3ds`, `.cia`, `.nds`, `.gba`, `.nes`, entre outras). Isso ajuda a organizar; não é uma certificação do conteúdo nem uma garantia de que um emulador aceite aquele formato.
+Um arquivo listado na biblioteca pode não ser suportado pelo runner. Regiões, versões do emulador, updates, DLC, firmware, chaves, patches, formato/container e configuração gráfica podem alterar o resultado. Não converta um erro de extensão em promessa de suporte.
 
+## 🧭 Como a lista por console funciona
 
-## Como a lista por console funciona
-
-O catálogo `game-sources.json` contém `platform_guidance` para os 20 perfis EmuStack. A interface filtra fontes de descoberta adequadas e mostra uma nota específica sobre cada ambiente. Os IDs representam perfis de emulação, não uma afirmação de que o sistema completo ou o dashboard original é suportado.
-
-A regra é deliberadamente conservadora:
-
-- Repositórios oficiais de emuladores são fontes para o programa do emulador, não para jogos comerciais.
-- Lojas oficiais são fontes para versões oferecidas naquela loja; uma versão de PC ou compra digital não se transforma automaticamente em arquivo de console utilizável no emulador.
-- Homebrew e demos podem ser utilizados somente quando o autor os publica em formato compatível e com autorização apropriada. Um filtro ou site comunitário não garante os direitos de cada item.
-- Para jogos comerciais, não há links de downloads não autorizados. Use apenas arquivos que você tenha autorização para copiar e utilizar, observando a legislação local e os termos da plataforma.
-
-O EmuStack não tem mecanismo de download de jogos, scraping, torrent ou instalação automática de conteúdo de terceiros. O usuário decide o que importar para `data/environments/<id>/games/` e é responsável por verificar origem, licença, integridade e compatibilidade.
+O dashboard lê `game-sources.json`, com categoria, descrição, links e orientação por perfil. Os filtros tornam a descoberta mais organizada, mas não baixam conteúdo nem verificam automaticamente cada página de destino. Se um link ou licença mudou, verifique a fonte original antes de usar ou sugerir atualização.
