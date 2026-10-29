@@ -46,6 +46,35 @@ class ManifestValidationTests(unittest.TestCase):
             errors = VALIDATOR.validate_repository(temp_root, include_compose=False)
 
         self.assertTrue(any("catalog/environment ID mismatch" in error for error in errors), errors)
+ 
+    def test_save_paths_cover_catalog_ids_and_reject_traversal(self):
+        with tempfile.TemporaryDirectory() as temp:
+            temp_root = Path(temp)
+            for filename in VALIDATOR.JSON_MANIFESTS:
+                shutil.copy2(ROOT / filename, temp_root / filename)
+            paths_file = temp_root / "save-paths.json"
+            data = json.loads(paths_file.read_text(encoding="utf-8"))
+            duckstation = next(item for item in data["profiles"] if item["id"] == "duckstation")
+            duckstation["home_paths"][0]["path"] = "../outside"
+            paths_file.write_text(json.dumps(data), encoding="utf-8")
+
+            errors = VALIDATOR.validate_repository(temp_root, include_compose=False)
+
+        self.assertTrue(any("caminho inseguro" in error for error in errors), errors)
+
+    def test_save_path_profile_set_must_match_catalog(self):
+        with tempfile.TemporaryDirectory() as temp:
+            temp_root = Path(temp)
+            for filename in VALIDATOR.JSON_MANIFESTS:
+                shutil.copy2(ROOT / filename, temp_root / filename)
+            paths_file = temp_root / "save-paths.json"
+            data = json.loads(paths_file.read_text(encoding="utf-8"))
+            data["profiles"] = data["profiles"][:-1]
+            paths_file.write_text(json.dumps(data), encoding="utf-8")
+
+            errors = VALIDATOR.validate_repository(temp_root, include_compose=False)
+
+        self.assertTrue(any("save-path/catalog ID mismatch" in error for error in errors), errors)
 
 
 if __name__ == "__main__":
