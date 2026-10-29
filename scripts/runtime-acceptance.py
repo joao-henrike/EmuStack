@@ -12,7 +12,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from runtime_probes import env_flag, has_readonly_device_mapping, is_allowed_input_device, is_software_vulkan_renderer, parse_env_file
+from runtime_probes import env_flag, has_readonly_device_mapping, is_allowed_input_device, is_dashboard_summary_response, is_software_vulkan_renderer, parse_env_file
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "http://127.0.0.1:8765"
@@ -103,8 +103,12 @@ def dashboard_health_load_smoke() -> dict[str, int | float | list[str]]:
 import concurrent.futures
 import json
 import math
+import sys
 import time
 import urllib.request
+
+sys.path.insert(0, "/opt/emustack/scripts")
+from runtime_probes import is_dashboard_summary_response
 
 REQUESTS = 25
 WORKERS = 4
@@ -115,8 +119,8 @@ def one(_index):
     try:
         with urllib.request.urlopen(URL, timeout=4) as response:
             payload = json.loads(response.read().decode("utf-8"))
-            ok = response.status == 200 and payload.get("healthy") is True and "environments" not in payload
-            error = None if ok else "unexpected-health-response"
+            ok = is_dashboard_summary_response(response.status, payload, expected_profiles=20)
+            error = None if ok else "unexpected-dashboard-summary-contract"
     except Exception as exc:
         ok = False
         error = type(exc).__name__
