@@ -109,7 +109,7 @@ def _parse_volume(volume: object) -> tuple[str, str, str] | None:
     return None
 
 
-def _check_compose(root: Path, environments: dict[str, dict], errors: list[str]) -> None:
+def _check_compose(\n    root: Path, environments: dict[str, dict], errors: list[str], unsupported_ids: set[str] | None = None\n) -> None:
     try:
         import yaml
     except ImportError:
@@ -252,14 +252,7 @@ def _check_compose(root: Path, environments: dict[str, dict], errors: list[str])
         if not isinstance(overlay_services, dict):
             errors.append("compose.nvidia.yaml: 'services' precisa ser um mapa")
         else:
-            unsupported_ids = {
-                identifier for identifier, emulator in {
-                    item.get("id"): item for item in _records(
-                        _load_json(root, "catalog.json", errors), "emulators", "catalog.json", errors
-                    )
-                }.items()
-                if emulator.get("runtime") == "unsupported"
-            }
+            unsupported_ids = unsupported_ids or set()
             for name in overlay_services:
                 if name not in expected_services:
                     errors.append(f"compose.nvidia.yaml: serviço '{name}' não corresponde a um ambiente conhecido")
@@ -411,7 +404,11 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
             errors.append(f"release-lock.json:{identifier}: modo desconhecido {mode!r}")
 
     if include_compose:
-        _check_compose(root, environment_map, errors)
+        unsupported_ids = {
+            identifier for identifier, emulator in emulator_map.items()
+            if emulator.get("runtime") == "unsupported"
+        }
+        _check_compose(root, environment_map, errors, unsupported_ids)
     return errors
 
 
