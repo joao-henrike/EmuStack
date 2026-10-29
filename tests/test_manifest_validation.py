@@ -17,7 +17,7 @@ SPEC.loader.exec_module(VALIDATOR)
 class ManifestValidationTests(unittest.TestCase):
     def test_repository_manifests_and_compose_are_consistent(self):
         errors = VALIDATOR.validate_repository(ROOT, include_compose=True)
-        self.assertEqual(errors, [], "\\n".join(errors))
+        self.assertEqual(errors, [], "\n".join(errors))
 
     def test_duplicate_catalog_ids_fail_with_an_actionable_message(self):
         with tempfile.TemporaryDirectory() as temp:
