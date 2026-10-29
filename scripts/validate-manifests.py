@@ -20,6 +20,7 @@ JSON_MANIFESTS = (
     "console-systems.json",
     "game-sources.json",
     "release-lock.json",
+    "save-paths.json",
 )
 COMPOSE_FILES = ("compose.yaml", "compose.nvidia.yaml")
 BOOT_STRATEGIES = {
@@ -275,6 +276,7 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
     systems_doc = documents["console-systems.json"]
     sources_doc = documents["game-sources.json"]
     lock_doc = documents["release-lock.json"]
+    save_paths_doc = documents["save-paths.json"]
 
     emulators = _records(catalog, "emulators", "catalog.json", errors)
     environments = _records(environments_doc, "environments", "environments.json", errors)
@@ -368,6 +370,56 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
         if parsed.scheme != "https" or not parsed.netloc:
             errors.append(f"game-sources.json:{identifier}: URL deve ser HTTPS válida")
 
+    save_profiles = _records(save_paths_doc, "profiles", "save-paths.json", errors)
+    save_map = _id_map(save_profiles, "save-paths.json:profiles", errors)
+    if set(save_map) != catalog_ids:
+        errors.append(
+            "save-path/catalog ID mismatch: "
+            f"sem perfil={sorted(catalog_ids - set(save_map))}, "
+            f"sem emulador={sorted(set(save_map) - catalog_ids)}"
+        )
+    valid_storage_models = {
+        "home-relative", "system-nand", "rom-adjacent-or-configured", "manual", "unsupported"
+    }
+    valid_confidence = {"documented-upstream", "needs-runtime-validation", "manual", "not-applicable"}
+    valid_path_kinds = {
+        "user-data", "memory-card", "save-state", "save-data", "system-nand-save-data"
+    }
+    for identifier, profile in save_map.items():
+        model = profile.get("storage_model")
+        if model not in valid_storage_models:
+            errors.append(f"save-paths.json:{identifier}: storage_model inválido {model!r}")
+        confidence = profile.get("confidence")
+        if confidence not in valid_confidence:
+            errors.append(f"save-paths.json:{identifier}: confidence inválido {confidence!r}")
+        paths = profile.get("home_paths")
+        if not isinstance(paths, list):
+            errors.append(f"save-paths.json:{identifier}: home_paths precisa ser uma lista")
+            paths = []
+        seen_paths: set[str] = set()
+        for index, path_item in enumerate(paths):
+            if not isinstance(path_item, dict):
+                errors.append(f"save-paths.json:{identifier}: home_paths[{index}] precisa ser um objeto")
+                continue
+            path_value = path_item.get("path")
+            if not _is_safe_relative_path(path_value):
+                errors.append(f"save-paths.json:{identifier}: caminho inseguro em home_paths[{index}]: {path_value!r}")
+            elif path_value in seen_paths:
+                errors.append(f"save-paths.json:{identifier}: caminho duplicado {path_value!r}")
+            else:
+                seen_paths.add(path_value)
+            if path_item.get("kind") not in valid_path_kinds:
+                errors.append(f"save-paths.json:{identifier}: kind inválido em home_paths[{index}]")
+            if not isinstance(path_item.get("purpose"), str) or not path_item.get("purpose", "").strip():
+                errors.append(f"save-paths.json:{identifier}: purpose obrigatório em home_paths[{index}]")
+        source_url = profile.get("source_url")
+        if source_url:
+            parsed = urlparse(str(source_url))
+            if parsed.scheme != "https" or not parsed.netloc:
+                errors.append(f"save-paths.json:{identifier}: source_url deve ser HTTPS válida")
+        if model == "unsupported" and paths:
+            errors.append(f"save-paths.json:{identifier}: perfil sem runner não deve declarar save paths")
+
     lock_items = lock_doc.get("items")
     if not isinstance(lock_items, dict):
         errors.append("release-lock.json: items precisa ser um objeto por ID de emulador")
@@ -430,12 +482,14 @@ def main() -> int:
     systems = json.loads((args.root / "console-systems.json").read_text(encoding="utf-8"))
     sources = json.loads((args.root / "game-sources.json").read_text(encoding="utf-8"))
     lock = json.loads((args.root / "release-lock.json").read_text(encoding="utf-8"))
+    save_paths = json.loads((args.root / "save-paths.json").read_text(encoding="utf-8"))
     pinned = sum(1 for item in lock["items"].values() if item.get("mode") in {"pinned", "pinned-url"})
     skipped = sum(1 for item in lock["items"].values() if item.get("mode") == "skip-upstream")
     print(
         "MANIFEST VALIDATION OK: "
         f"{len(catalog['emulators'])} emulators, {len(environments['environments'])} environments, "
-        f"{len(systems['systems'])} system profiles, {len(sources['sources'])} sources; "
+        f"{len(systems['systems'])} system profiles, {len(sources['sources'])} sources, "
+        f"{len(save_paths['profiles'])} save-path profiles; "
         f"{pinned} pinned lock entries and {skipped} explicit skips; Compose wiring valid."
     )
     return 0
