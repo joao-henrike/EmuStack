@@ -26,6 +26,22 @@ O token de 256 bits é criado por `scripts/host-setup.sh` e guardado em `.env` c
 
 Os serviços de runtime usam `read_only: true`, `cap_drop: ALL`, `no-new-privileges`, limites de CPU/RAM/PIDs e `tmpfs` para temporários. Só um dispositivo de controle explicitamente selecionado pode ser mapeado. A integração gráfica/audio também é opt-in.
 
+## Auditoria de saves e dados persistentes
+
+EmuStack mantém dois diretórios persistentes por ambiente: `home` (montado em `/home/emu`) e `saves` (montado em `/saves`). Alguns upstreams usam subpastas próprias em `home`; outros gravam ao lado do arquivo do jogo ou dentro de armazenamento virtual/NAND. O projeto **não cria symlinks genéricos nem move saves automaticamente**, porque isso pode corromper dados, quebrar a configuração ou tentar gravar no mount `/games`, que é somente leitura.
+
+O contrato conservador está em `save-paths.json`; ele distingue caminhos documentados de candidatos que ainda exigem validação no runtime. Para auditar a instalação local sem abrir nem listar nomes/conteúdos dos arquivos:
+
+```bash
+python3 scripts/audit-save-layout.py
+python3 scripts/audit-save-layout.py --strict
+python3 scripts/audit-save-layout.py --output /tmp/emustack-save-layout-audit.json
+```
+
+A auditoria é somente de leitura por padrão. Ela informa diretórios candidatos observados, contagem agregada de arquivos/tamanho, entradas symlink ignoradas e perfis que precisam de validação manual. O resultado não registra nomes de arquivos nem caminhos absolutos do host. `--strict` retorna erro se detectar caminhos inseguros/symlinks no caminho auditado; `--output` só grava o relatório porque essa saída foi solicitada explicitamente.
+
+Para declarar um caminho funcional, ainda é necessário iniciar o emulador com conteúdo de teste autorizado, gravar um save, fechar o processo, confirmar que o arquivo foi persistido e carregá-lo novamente. A presença de uma pasta, por si só, não demonstra que aquele build utiliza o caminho.
+
 ## O que isso não promete
 
 É isolamento por contêiner Linux, não virtualização completa da placa-mãe de um console. Todos os agentes executam a mesma imagem de programas, ainda que seus dados persistentes sejam separados. O dashboard é privilegiado *logicamente* como orquestrador e, se comprometido, poderia enviar solicitações aos agentes; por isso deve permanecer local. O processo do emulador dentro de um contêiner também pode ter acesso a dispositivos de infraestrutura concedidos, como display/GPU.
