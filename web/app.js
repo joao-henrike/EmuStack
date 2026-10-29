@@ -164,6 +164,8 @@ function installStatusLabel(status) {
   const labels = {
     installed: 'Instalado',
     failed: 'Falhou',
+    'not-run': 'Não executado',
+    passed: 'Aprovado',
     'not-available': 'Indisponível',
     'skipped-by-lock': 'Ignorado pelo lock',
     'unsupported-no-runner': 'Sem runner suportado',
@@ -211,7 +213,7 @@ function renderInstallReport() {
       <div class="install-report-evidence">
         <dl>
           <dt>Versão</dt><dd>${escapeHtml(String(version))}</dd>
-          <dt>Arquitetura do host</dt><dd>${escapeHtml(String(evidence.host_architecture || 'não registrada'))}</dd>
+          <dt>Arquitetura observada na instalação</dt><dd>${escapeHtml(String(evidence.installer_architecture || evidence.host_architecture || 'não registrada'))}<br><small>${escapeHtml(String(evidence.architecture_basis || 'O campo legado não certifica a arquitetura física do host.'))}</small></dd>
           <dt>Origem</dt><dd>${escapeHtml(String(source))}</dd>
           <dt>Ativo</dt><dd>${escapeHtml(String(artifact))}</dd>
           <dt>SHA-256 esperado</dt><dd><code>${escapeHtml(String(expectedSha))}</code></dd>
@@ -683,7 +685,7 @@ async function refreshAll() {
     ]);
     state.health=health; state.emulators=catalog.emulators||[]; state.games=games.games||[]; state.sources=sources; state.docs=docs.documents||[]; state.sessions=processes.processes||[]; state.consoleSystems=consoleSystems.systems||[]; state.consoleSystemsError=consoleSystems.error||''; state.environments=environments.environments||[];
     state.installReport = reportResult.available ? reportResult.report : null;
-    state.installReportError = reportResult.available ? '' : (reportResult.message || '');
+    state.installReportError = reportResult.available ? '' : (/não encontrado/i.test(reportResult.message || '') ? '' : (reportResult.message || ''));
     renderOverview(); renderInstallReport(); renderPlatformOptions(); renderEmulators(); renderEnvironments(); renderConsoleSystems(); renderLibrary(); renderSources(); renderDocs(); renderSessions();
   } catch(error) {
     $('#side-health').textContent='API indisponível';
