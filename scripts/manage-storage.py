@@ -7,6 +7,7 @@ folder before the verified snapshot is promoted.
 """
 from __future__ import annotations
 import argparse
+import gzip
 import hashlib
 import json
 import os
@@ -326,7 +327,7 @@ def restore_env(env_id: str, archive_path: Path, allow_running: bool) -> Path:
         for path in dest.iterdir():
             if path.is_dir(): os.chmod(path, 0o700)
         return rollback_root if rollback_root.exists() else dest
-    except (tarfile.TarError, EOFError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+    except (tarfile.TarError, gzip.BadGzipFile, EOFError, json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise ValueError(f"Snapshot is corrupt or truncated: {exc}") from exc
     finally:
         shutil.rmtree(stage, ignore_errors=True)
