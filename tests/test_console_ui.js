@@ -23,6 +23,7 @@ assert.match(html, /id="install-report-list"/);
 assert.match(js, /function renderInstallReport\(\)/);
 assert.match(js, /api\('\/api\/report'\)/);
 assert.match(js, /SHA-256 esperado/);
-assert.match(js, /Console boot and game compatibility require separate runtime tests/);
+assert.match(js, /Teste de runtime/);
+assert.match(js, /Teste não registrado no relatório legado/);
 assert.match(css, /\.install-report-row/);
 console.log('Console-system and installation-report UI static tests passed.');
