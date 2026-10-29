@@ -436,7 +436,7 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
     }
     for tool_id, tool in scan_tool_map.items():
         version = tool.get("version")
-        if not isinstance(version, str) or not re.fullmatch(r"[0-9]+\\.[0-9]+\\.[0-9]+", version):
+        if not isinstance(version, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
             errors.append(f"supply-chain-tools.json:{tool_id}: version must be a pinned semantic version")
             version = ""
         url = tool.get("url")
