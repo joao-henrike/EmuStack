@@ -155,7 +155,8 @@ class WebAppTests(unittest.TestCase):
                 result = json.load(response)
 
         self.assertFalse(result["available"])
-        self.assertIn("mensagem", result.get("message", "").lower() or "mensagem" if False else result["message"].lower())
+        self.assertIn("relatório", result["message"].lower())
+        self.assertIn("build", result["message"].lower())
 
 
     def test_console_system_boot_starts_ps2_bios_profile_through_managed_launcher(self):
