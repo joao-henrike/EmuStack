@@ -60,9 +60,9 @@ install_locked_tool() {
   tool_dir="$work_dir/$tool_id"
   mkdir -p "$tool_dir"
   archive="$tool_dir/$tool_id.tar.gz"
-  echo "Downloading pinned $tool_id $tool_version"
+  echo "Downloading pinned $tool_id $tool_version" >&2
   curl --fail --location --retry 3 --retry-all-errors --silent --show-error "$url" --output "$archive"
-  printf '%s  %s\n' "$expected_sha" "$archive" | sha256sum --check
+  printf '%s  %s\n' "$expected_sha" "$archive" | sha256sum --check >&2
   tar -xzf "$archive" -C "$tool_dir"
   [[ -x "$tool_dir/$executable" ]] || {
     echo "ERROR: expected executable missing after verified extraction: $tool_id/$executable" >&2
@@ -165,7 +165,7 @@ lines = [
     "| Severity | Count |",
     "|---|---:|",
 ]
-for severity in ("CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"):
+for severity in ("CRITICAL", "HIGH", "UNKNOWN"):
     lines.append(f"| {severity} | {severity_counts.get(severity, 0)} |")
 lines.extend(["", "## HIGH/CRITICAL findings (up to 100 shown)", ""])
 if not findings:
