@@ -51,6 +51,9 @@ class WebAppTests(unittest.TestCase):
             webapp.PROCESS_REGISTRY.clear()
             webapp.LAUNCH_RESERVATIONS = 0
             webapp.ACTIVE_ENVIRONMENT_RESERVATIONS.clear()
+        with webapp.SUMMARY_CACHE_LOCK:
+            webapp.SUMMARY_CACHE = None
+            webapp.SUMMARY_CACHE_AT = 0.0
         self.tempdir = tempfile.TemporaryDirectory()
         self.root = Path(self.tempdir.name)
         self.games = self.root / "games"
