@@ -12,6 +12,12 @@ EXPECTED_IDS = {
 
 
 class IsolatedArchitectureTests(unittest.TestCase):
+    def test_default_agent_cpu_limit_fits_two_cpu_hosts(self):
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        example = (ROOT / ".env.example").read_text(encoding="utf-8")
+        self.assertIn("cpus: ${EMUSTACK_ENV_CPU_LIMIT:-2}", compose)
+        self.assertIn("EMUSTACK_ENV_CPU_LIMIT=2", example)
+
     def test_manifest_has_twenty_unique_environment_roots(self):
         payload = json.loads((ROOT / "environments.json").read_text(encoding="utf-8"))
         records = payload["environments"]
