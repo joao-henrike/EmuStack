@@ -21,6 +21,14 @@ Docker compartilha o kernel do host. Não é uma sandbox de alta garantia para e
 
 Se o host habilitar GPU, X11/XWayland, áudio ou um controle, o contêiner recebe acesso ao recurso correspondente. X11 em particular pode expor a sessão gráfica ao cliente. Não habilite essas passagens para binários nos quais não confia. O overlay opcional `compose.nvidia.yaml` não inclui `env-xbox-one` nem `env-xbox-series`, pois esses perfis estão declarados sem runner suportado; a configuração base não injeta a GPU NVIDIA por padrão. Antes de adicionar novos serviços ao overlay, confirme que o perfil possui um runner e que a aceleração precisa ser exposta.
 
+## SBOM e varredura de vulnerabilidades
+
+A CI gera um SBOM SPDX JSON da imagem de runtime que acabou de construir e publica o JSON completo da varredura de vulnerabilidades OS/library de severidade **HIGH/CRITICAL**. As versões de Syft e Trivy, os URLs de release e os SHA-256 esperados ficam em `supply-chain-tools.json`; `scripts/supply-chain-scan.sh` verifica o hash do arquivo baixado e a versão reportada antes de executar cada ferramenta.
+
+A política inicial é `report-only` para achados: o inventário precisa ser revisto antes de tornar achados um gate, sem ocultar vulnerabilidades sem correção conhecida. A CI falha se download, hash/versão, geração do SBOM, execução do scanner ou leitura do JSON falharem. Não falha apenas pela presença de CVEs neste primeiro baseline. Para cada achado HIGH/CRITICAL, revisar pacote afetado, versão corrigida, alcançabilidade no produto e risco real; exceções aceitas precisam de justificativa e data de expiração. Não transformar esse modo inicial em aceitação permanente sem triagem.
+
+Os artefatos são associados ao commit da execução: `emustack-image.spdx.json`, `emustack-trivy-vulnerabilities.json`, `supply-chain-summary.md`, `supply-chain-tool-lock.json` e os logs de versão das ferramentas. A inteligência de vulnerabilidades do Trivy é atualizada entre execuções, então resultados de runs diferentes não são comparáveis sem registrar a data/versão do banco. O relatório não prova que todos os binários upstream foram instalados: na CI os downloads de emuladores permanecem desligados, embora os pacotes Debian presentes na imagem sejam escaneados.
+
 ## Dados privados e firmware
 
 Não versione nem publique BIOS, firmware, chaves, NAND, HDDs ou saves sensíveis. O projeto não inclui tais arquivos. Não recomendo expor o painel com reverse proxy ou encaminhamento de porta sem autenticação, proteção CSRF, limitação de taxa e revisão completa adicional.
