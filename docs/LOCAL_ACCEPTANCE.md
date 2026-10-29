@@ -51,6 +51,8 @@ Troque o caminho por um dispositivo que realmente exista no host e o ambiente pe
 
 Após uma execução estruturalmente bem-sucedida, o script grava `data/runtime-acceptance.json` com timestamp, verificações, probes, warnings e falhas. Ele não inclui tokens nem captura eventos do controle. O relatório é local e deve ser revisado antes de compartilhar.
 
+O mesmo acceptance executa ainda um smoke de API **somente leitura** no loopback do container do dashboard: 25 chamadas concorrentes limitadas a 4 workers para `/api/health`. O relatório/check mostra p50, p95, máximo e falhas; não chama rotas de boot/stop nem mede compatibilidade de emuladores. Esse teste é um sinal básico de estabilidade sob concorrência leve, não um benchmark de carga ou capacidade de produção.
+
 ## 5. Teste de bloqueio de requisições de agente ao dashboard
 
 O `runtime-acceptance.sh` tenta enviar uma requisição POST a partir de cada ambiente, forjando `Host` e `X-EmuStack-Request`. Cada tentativa precisa ser recusada com HTTP 403 devido ao IP TCP de origem `.2`. O script também confere gateways, IPs estáticos e a allowlist do dashboard.
