@@ -389,7 +389,9 @@ def _resolved_console_systems(catalog_fn: Callable[[], dict[str, Any]], status_f
             continue
         profile.update({
             "state": "environment-offline", "state_label": "Ambiente isolado indisponível",
-            "can_boot_original": False, "can_open_emulator": False,
+            "can_boot_original": False, "can_attempt_boot": False, "can_open_emulator": False,
+            "prerequisites_detected": False, "boot_observed": False, "smoke_test_passed": False,
+            "boot_validation_status": "environment-offline",
             "binary_found": False, "environment_online": False,
             "environment_id": emulator_ids[0],
             "checks": [{"label": "Agente isolado", "ok": False, "detail": f"O ambiente env-{emulator_ids[0]} não respondeu. Inicie/recrie os serviços com Docker Compose."}],
@@ -845,7 +847,7 @@ def make_handler(catalog_fn, status_fn, safe_game_path_fn):
                     if profile is None:
                         self._error("Sistema não reconhecido", 404)
                         return
-                    if action == "boot" and not profile.get("can_boot_original"):
+                    if action == "boot" and not profile.get("can_attempt_boot", profile.get("can_boot_original", False)):
                         self._json({
                             "error": "O boot automático da interface original não está disponível neste momento.",
                             "state": profile.get("state"), "state_label": profile.get("state_label"),
