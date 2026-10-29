@@ -7,6 +7,7 @@ folder before the verified snapshot is promoted.
 """
 from __future__ import annotations
 import argparse
+import gzip
 import hashlib
 import json
 import os
@@ -230,17 +231,44 @@ def restore_env(env_id: str, archive_path: Path, allow_running: bool) -> Path:
             if manifest_file is None:
                 raise ValueError("Cannot read snapshot manifest")
             manifest = json.loads(manifest_file.read().decode("utf-8"))
+            if not isinstance(manifest, dict):
+                raise ValueError("Snapshot manifest must be a JSON object")
             if manifest.get("format") != "emustack-environment-snapshot" or manifest.get("schema_version") != 1:
                 raise ValueError("Unsupported snapshot format")
             if manifest.get("environment_id") != env_id:
                 raise ValueError("Snapshot belongs to a different environment")
-            for item in manifest.get("files", []):
-                rel = PurePosixPath(str(item.get("path", "")))
+            manifest_files = manifest.get("files")
+            if not isinstance(manifest_files, list):
+                raise ValueError("Snapshot manifest 'files' must be a list")
+            declared_total = 0
+            for index, item in enumerate(manifest_files):
+                if not isinstance(item, dict):
+                    raise ValueError(f"Snapshot manifest files[{index}] must be an object")
+                raw_path = item.get("path")
+                if not isinstance(raw_path, str) or not raw_path.strip():
+                    raise ValueError(f"Invalid path in snapshot manifest files[{index}]")
+                rel = PurePosixPath(raw_path)
                 if rel.is_absolute() or not rel.parts or any(p in {"", ".", ".."} for p in rel.parts):
                     raise ValueError("Invalid relative path in snapshot manifest")
                 if rel.parts[0] not in ALLOWED_DIRS:
                     raise ValueError("Snapshot manifest attempts to write outside allowed environment directories")
-                expected[rel.as_posix()] = item
+                normalized = rel.as_posix()
+                if normalized in expected:
+                    raise ValueError(f"Duplicate path in snapshot manifest: {normalized}")
+                size = item.get("size")
+                if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+                    raise ValueError(f"Invalid size in snapshot manifest for {normalized}")
+                digest = item.get("sha256")
+                if not isinstance(digest, str) or len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest.lower()):
+                    raise ValueError(f"Invalid SHA-256 in snapshot manifest for {normalized}")
+                declared_total += size
+                expected[normalized] = item
+            file_count = manifest.get("file_count")
+            if isinstance(file_count, bool) or not isinstance(file_count, int) or file_count != len(expected):
+                raise ValueError("Snapshot manifest file_count does not match files list")
+            total_bytes = manifest.get("total_bytes")
+            if isinstance(total_bytes, bool) or not isinstance(total_bytes, int) or total_bytes != declared_total:
+                raise ValueError("Snapshot manifest total_bytes does not match files list")
             total = 0
             seen_files: set[str] = set()
             for member in members:
@@ -300,6 +328,8 @@ def restore_env(env_id: str, archive_path: Path, allow_running: bool) -> Path:
         for path in dest.iterdir():
             if path.is_dir(): os.chmod(path, 0o700)
         return rollback_root if rollback_root.exists() else dest
+    except (tarfile.TarError, gzip.BadGzipFile, EOFError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError(f"Snapshot is corrupt or truncated: {exc}") from exc
     finally:
         shutil.rmtree(stage, ignore_errors=True)
 

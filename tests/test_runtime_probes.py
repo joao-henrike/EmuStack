@@ -5,7 +5,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from runtime_probes import env_flag, has_readonly_device_mapping, is_allowed_input_device, is_software_vulkan_renderer, parse_env_file
+from runtime_probes import (
+    env_flag,
+    has_readonly_device_mapping,
+    is_allowed_input_device,
+    is_dashboard_summary_response,
+    is_software_vulkan_renderer,
+    parse_env_file,
+    runtime_guardrail_issues,
+)
 
 
 class RuntimeProbeHelpersTests(unittest.TestCase):
@@ -29,6 +37,53 @@ class RuntimeProbeHelpersTests(unittest.TestCase):
         self.assertTrue(is_software_vulkan_renderer("deviceName = llvmpipe (LLVM 18.1)"))
         self.assertTrue(is_software_vulkan_renderer("deviceName = Mesa Lavapipe"))
         self.assertFalse(is_software_vulkan_renderer("deviceName = NVIDIA GeForce RTX 3060"))
+
+    def test_runtime_guardrails_require_finite_resources_restart_and_bounded_logs(self):
+        valid = {
+            "Memory": 1024 * 1024 * 1024,
+            "NanoCpus": 2_000_000_000,
+            "PidsLimit": 256,
+            "RestartPolicy": {"Name": "unless-stopped"},
+            "LogConfig": {"Type": "json-file", "Config": {"max-size": "10m", "max-file": "3"}},
+        }
+        self.assertEqual(runtime_guardrail_issues(valid), [])
+        invalid_cases = [
+            ({**valid, "Memory": 0}, "memory limit"),
+            ({**valid, "NanoCpus": 0}, "CPU limit"),
+            ({**valid, "PidsLimit": 0}, "PID limit"),
+            ({**valid, "RestartPolicy": {"Name": "no"}}, "restart policy"),
+            ({**valid, "LogConfig": {"Type": "json-file", "Config": {}}}, "log max-size"),
+            ({**valid, "LogConfig": {"Type": "json-file", "Config": {"max-size": "10m", "max-file": "0"}}}, "max-file"),
+            ({**valid, "LogConfig": {"Type": "journald", "Config": {}}}, "logging driver"),
+        ]
+        for config, expected_issue in invalid_cases:
+            with self.subTest(expected_issue=expected_issue):
+                issues = runtime_guardrail_issues(config)
+                self.assertTrue(any(expected_issue in item for item in issues), issues)
+
+    def test_dashboard_health_smoke_accepts_trusted_summary_contract(self):
+        payload = {
+            "project": "EmuStack",
+            "emulator_count": 20,
+            "launchers_ready": 3,
+            "needs_attention": 5,
+            "game_count": 2,
+            "game_bytes": 4096,
+            "active_process_count": 0,
+            "process_count": 0,
+            "install_report_count": 20,
+            "generated_at": "2026-10-29T17:20:00+00:00",
+            "security": {"privileged": False},
+        }
+        self.assertTrue(is_dashboard_summary_response(200, payload))
+        self.assertFalse(is_dashboard_summary_response(503, payload))
+        self.assertFalse(is_dashboard_summary_response(200, {**payload, "emulator_count": True}))
+        self.assertFalse(is_dashboard_summary_response(200, {**payload, "generated_at": "not-a-timestamp"}))
+        self.assertFalse(is_dashboard_summary_response(200, {**payload, "security": []}))
+
+    def test_dashboard_health_smoke_rejects_minimal_untrusted_agent_health(self):
+        self.assertFalse(is_dashboard_summary_response(200, {"healthy": True}))
+        self.assertFalse(is_dashboard_summary_response(200, {"project": "other", "emulator_count": 20}))
 
     def test_input_device_paths_are_restricted_to_device_nodes(self):
         self.assertTrue(is_allowed_input_device("/dev/input/event4"))

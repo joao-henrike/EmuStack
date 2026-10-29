@@ -61,3 +61,16 @@ O EmuStack 0.7.1 inclui uma rota experimental para o VSH/XMB do PSP via `PPSSPP 
 
 A rota só é apresentada como disponível quando os arquivos `vsh/module/vshmain.prx` e `kd/pspbtcnf.bin` foram encontrados sem symlinks. Isso verifica pré-requisitos, não o sucesso visual do boot. A instalação do PPSSPP precisa reconhecer `--vsh`. Referências oficiais: [CLI do PPSSPP](https://www.ppsspp.org/docs/reference/command-line/) e [investigação upstream do VSH](https://github.com/hrydgard/ppsspp/blob/master/docs/VSHBootInvestigation.md).
 
+## Semântica dos estados e evidências de boot
+
+A API dos perfis distingue explicitamente a disponibilidade para tentar iniciar de uma inicialização comprovada:
+
+- `prerequisites_detected`: os arquivos/configurações esperados foram encontrados; isto **não** confirma integridade do firmware nem boot bem-sucedido.
+- `can_attempt_boot`: os pré-requisitos/configurações permitem solicitar uma tentativa de boot pelo caminho implementado; não é uma garantia de compatibilidade.
+- `boot_observed`: existe uma observação de runtime registrada de que o boot ocorreu. Não deve ser inferida apenas da presença de um executável ou arquivo de sistema.
+- `smoke_test_passed`: um teste mínimo definido para o perfil passou; deve ter evidência reproduzível.
+- `boot_validation_status`: resumo da etapa de validação (`not-ready`, `prerequisites-detected`, `attempt-available-not-tested`, `boot-observed` ou `smoke-test-passed`).
+
+O campo legado `can_boot_original` permanece por compatibilidade com clientes antigos; o seu significado histórico é “a tentativa está habilitada”, e **não** “o boot foi comprovado”. O CLI, o agente isolado e o dashboard devem preferir `can_attempt_boot`. Até que um teste de runtime real grave evidência, a interface precisa continuar exibindo o boot como não verificado.
+
+Esses estados também não equivalem à compatibilidade de jogos. O sucesso de inicialização do menu, quando comprovado, é uma etapa separada de qualquer teste de jogo ou gameplay.

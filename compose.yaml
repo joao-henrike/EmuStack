@@ -1,5 +1,11 @@
 name: emustack-0.7.1
 
+x-container-logging: &emustack-bounded-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 x-build: &emustack-build
   context: .
   args:
@@ -36,6 +42,7 @@ x-agent-common: &agent-common
   build: *emustack-build
   init: true
   restart: unless-stopped
+  logging: *emustack-bounded-logging
   cpus: ${EMUSTACK_ENV_CPU_LIMIT:-6}
   mem_limit: ${EMUSTACK_ENV_MEMORY_LIMIT:-5g}
   pids_limit: ${EMUSTACK_ENV_PIDS_LIMIT:-512}
@@ -60,6 +67,7 @@ services:
     build: *emustack-build
     init: true
     cpus: ${EMUSTACK_CLI_CPU_LIMIT:-2}
+    logging: *emustack-bounded-logging
     mem_limit: ${EMUSTACK_CLI_MEMORY_LIMIT:-2g}
     pids_limit: ${EMUSTACK_CLI_PIDS_LIMIT:-128}
     environment:
@@ -445,6 +453,7 @@ services:
     init: true
     restart: unless-stopped
     cpus: ${EMUSTACK_CPU_LIMIT:-2}
+    logging: *emustack-bounded-logging
     mem_limit: ${EMUSTACK_MEMORY_LIMIT:-1g}
     pids_limit: ${EMUSTACK_PIDS_LIMIT:-256}
     environment:

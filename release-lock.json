@@ -7,11 +7,11 @@
   "items": {
     "kytyps5": {
       "mode": "skip-upstream",
-      "reason": "source commit/build inputs are not pinned by this lockfile"
+      "reason": "Source-build inputs are not represented by this downloadable-asset lock. Keep skipped until the source commit, build inputs, toolchain and resulting artifact hash are captured by a dedicated reproducible build path."
     },
     "shadps4": {
       "mode": "skip-upstream",
-      "reason": "upstream binary not installed in captured report (status=failed)"
+      "reason": "No compatible official Linux binary or source-build result is pinned with verified inputs and SHA-256 in this lock. Keep upstream installation skipped until a reproducible, reviewable official artifact/build path is captured."
     },
     "rpcs3": {
       "mode": "pinned",
@@ -36,7 +36,7 @@
     },
     "ppsspp": {
       "mode": "skip-upstream",
-      "reason": "upstream binary not installed in captured report (status=not-available)"
+      "reason": "No official Linux upstream asset is pinned with a verified SHA-256 in this lock. A trusted distro package or user-supplied binary may still be detected separately; neither should be inferred from this skip entry."
     },
     "vita3k": {
       "mode": "pinned",
@@ -47,7 +47,7 @@
     },
     "xbox-one": {
       "mode": "skip-upstream",
-      "reason": "upstream binary not installed in captured report (status=unsupported-no-runner)"
+      "reason": "Intentional safety block: this catalog profile has no supported full-system Xbox One runner. Do not install or launch a generic/unrelated executable to make the profile appear available."
     },
     "xenia-canary": {
       "mode": "pinned",
@@ -58,7 +58,7 @@
     },
     "xbox-series": {
       "mode": "skip-upstream",
-      "reason": "upstream binary not installed in captured report (status=unsupported-no-runner)"
+      "reason": "Intentional safety block: this catalog profile has no supported full-system Xbox Series runner. Do not install or launch a generic/unrelated executable to make the profile appear available."
     },
     "xemu": {
       "mode": "pinned",
@@ -83,7 +83,7 @@
     },
     "dolphin": {
       "mode": "skip-upstream",
-      "reason": "upstream binary not installed in captured report (status=not-available)"
+      "reason": "No official Linux upstream asset is pinned with a verified SHA-256 in this lock. A trusted distro package or user-supplied binary may still be detected separately; neither should be inferred from this skip entry."
     },
     "azahar": {
       "mode": "pinned",
@@ -94,7 +94,7 @@
     },
     "melonds": {
       "mode": "skip-upstream",
-      "reason": "upstream binary not installed in captured report (status=not-available)"
+      "reason": "No official Linux upstream asset is pinned with a verified SHA-256 in this lock. Keep upstream installation skipped until an exact official artifact and SHA-256 are reviewed and captured."
     },
     "mgba": {
       "mode": "pinned",
@@ -105,11 +105,11 @@
     },
     "mupen64plus": {
       "mode": "skip-upstream",
-      "reason": "upstream binary not installed in captured report (status=not-available)"
+      "reason": "No official Linux upstream asset is pinned with a verified SHA-256 in this lock. Keep upstream installation skipped until an exact official artifact and SHA-256 are reviewed and captured."
     },
     "bsnes": {
       "mode": "skip-upstream",
-      "reason": "upstream binary not installed in captured report (status=not-available)"
+      "reason": "No official Linux upstream asset is pinned with a verified SHA-256 in this lock. Keep upstream installation skipped until an exact official artifact and SHA-256 are reviewed and captured."
     },
     "mesen": {
       "mode": "pinned",

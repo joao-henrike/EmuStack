@@ -1,7 +1,7 @@
 # EmuStack 0.7.1 — Relatório de arquitetura, alterações e testes
 
-**Data:** 28 de outubro de 2026  
-**Resultado da validação remota (29 de outubro de 2026):** o workflow GitHub Actions `EmuStack CI` passou no commit `f0c746a43773b6d3afb6db548129b045448bc3c0` (run [40793752673](https://github.com/joao-henrike/EmuStack/actions/runs/40793752673)). A CI validou código/testes, lock estrito, Compose, build Docker, inicialização do dashboard/agentes, runtime acceptance e fronteiras entre agentes. Isso não equivale a certificar todos os jogos e firmwares em toda GPU/host.
+**Data:** 29 de outubro de 2026  
+**Última validação remota confirmada na revisão:** o workflow GitHub Actions `EmuStack CI` passou no commit `f3b28fa435a5083def049f389cb8016c961b86ea` (run [#35](https://github.com/joao-henrike/EmuStack/actions/runs/40886953420)). Essa execução reportou 79 testes Python aprovados, lock estrito, validação de Compose, build e runtime acceptance. O build usou `INSTALL_UPSTREAM=0` e `BUILD_KYTYPS5=0`: portanto, não comprovou downloads/builds upstream nem suporte a KytyPS5. O runner reportou `llvmpipe`, logo não comprova aceleração por GPU física. CI verde não certifica todos os jogos, firmwares ou hosts.
 
 ## Resumo
 
@@ -14,7 +14,7 @@ Isto não equivale a 20 consoles integralmente emulados. O dashboard é um plano
 ### Ambientes e isolamento
 
 - O dashboard aplica uma allowlist de IPs TCP de origem para POSTs mutáveis. Cada rede usa IPAM estático (`gateway .1`, agente `.2`, dashboard `.3`) para impedir que cabeçalhos HTTP forjados por um agente autorizem uma chamada ao dashboard.
-- O runtime acceptance verifica a fronteira de origem e tenta requisições forjadas a partir dos agentes. O workflow CI do GitHub passou por essa etapa no run [40793752673](https://github.com/joao-henrike/EmuStack/actions/runs/40793752673); isso comprova a topologia/testes daquela execução de CI, não uma prova universal contra todo ataque ou configuração de host.
+- O runtime acceptance verifica a fronteira de origem e tenta requisições forjadas a partir dos agentes. O workflow CI do GitHub passou por essa etapa no run [40886953420](https://github.com/joao-henrike/EmuStack/actions/runs/40886953420); isso comprova a topologia/testes daquela execução de CI, não uma prova universal contra todo ataque ou configuração de host.
 
 - 20 IDs correspondem exatamente entre `catalog.json` e `environments.json`.
 - Cada agente tem diretórios próprios `games/`, `bios/`, `saves/`, `home/` e `emulators/`.
@@ -67,7 +67,7 @@ Isto não equivale a 20 consoles integralmente emulados. O dashboard é um plano
 
 ## Não executado / limitações externas
 
-O container de auditoria usado para inspeção local não contém `docker`, `podman` nem `buildah`, então não pôde executar o runtime localmente. Isso foi coberto, para a versão commitada no GitHub, pelo workflow CI remoto: no run [40793752673](https://github.com/joao-henrike/EmuStack/actions/runs/40793752673), o build Docker, a inicialização dos agentes/dashboard e o `scripts/runtime-acceptance.sh` concluíram com sucesso. O workflow constrói sem downloads opcionais de upstream, portanto não prova que todos os binários comerciais/experimentais estejam instalados; confira o `release-lock.json` e o relatório de instalação. Ainda são necessários testes de compatibilidade por jogo e de boot real de firmware/menu no hardware-alvo.
+O container de auditoria usado para inspeção local não contém `docker`, `podman` nem `buildah`, então não pôde executar o runtime localmente. Isso foi coberto, para a versão commitada no GitHub, pelo workflow CI remoto: no run [40886953420](https://github.com/joao-henrike/EmuStack/actions/runs/40886953420), o build Docker, a inicialização dos agentes/dashboard e o `scripts/runtime-acceptance.sh` concluíram com sucesso. O workflow constrói sem downloads opcionais de upstream, portanto não prova que todos os binários comerciais/experimentais estejam instalados; confira o `release-lock.json` e o relatório de instalação. Ainda são necessários testes de compatibilidade por jogo e de boot real de firmware/menu no hardware-alvo.
 
 Também não foi possível provar a execução com sua GPU, áudio, controle, jogos, firmware, NAND/MLC/HDD ou interfaces originais no seu computador. São necessários testes no Debian host com Docker Engine + Compose v2 e arquivos próprios legalmente utilizáveis.
 
@@ -94,3 +94,25 @@ APT_SNAPSHOT_TIMESTAMP=20261027T000000Z FREEZE_RELEASE_LOCK=1 ./scripts/build-an
 ```
 
 O aceite de runtime verifica topologia Docker, endpoints e, quando configurados, conectividade básica de display/áudio/Vulkan/controle. Não verifica entradas físicas do controle nem compatibilidade universal de jogos; o boot real de cada sistema ainda exige teste individual por perfil.
+
+## Evidência de validação por execução
+
+O bloco de resultado fixo acima registra a última execução de referência de `main` observada durante esta revisão; ele não é um atestado perpétuo do estado de todo branch. Para evitar que novos resultados fiquem presos a um SHA antigo, cada execução de `EmuStack CI` gera agora um resumo no **GitHub Actions Step Summary** e publica o artefato `emustack-validation-report-<run_number>` com o commit, o resultado do job e os limites explícitos da validação. Ao revisar uma mudança, use o artefato da execução ligada ao commit/PR em questão, junto dos logs de cada etapa.
+
+A CI mantém downloads upstream e o build experimental de KytyPS5 desligados, e roda em runner hospedado. Portanto, o relatório distingue a validação de código, manifestos, Compose e runtime isolado de qualquer teste em GPU física, firmware próprio, boot de console ou compatibilidade de jogos. Um relatório verde não amplia esse escopo.
+
+## Validação cruzada de manifestos
+
+A validação local/CI inclui agora `scripts/validate-manifests.py`, executado por `scripts/validate-project.sh`. Ele cruza os contratos de `catalog.json`, `environments.json`, `console-systems.json`, `game-sources.json`, `release-lock.json`, `compose.yaml` e `compose.nvidia.yaml`.
+
+A verificação valida IDs únicos e referências, versão de schema por manifesto (incluindo `game-sources.json` v2), caminhos relativos por ambiente, estratégias de boot permitidas, categorias/URLs das fontes, cobertura do lock estrito, serviços de agentes, mounts e modos esperados, redes internas/IPs estáticos e allowlist de origem do dashboard. O validador tem testes negativos para IDs duplicados e referências de ambiente quebradas.
+
+Execute em uma cópia do projeto com Python e PyYAML instalados:
+
+```bash
+python3 scripts/validate-manifests.py
+python3 -m unittest discover -s tests -v
+bash scripts/validate-project.sh
+```
+
+Esta validação prova consistência estrutural dos manifestos e do YAML; não testa downloads de upstream, executabilidade real dos emuladores, BIOS, boots de console, compatibilidade de jogos nem aceleração por GPU física.

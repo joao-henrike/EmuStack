@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -35,8 +36,19 @@ class InstallerTests(unittest.TestCase):
             expected = {item["id"] for item in catalog["emulators"]}
             self.assertEqual(set(data["items"]), expected)
             self.assertEqual(len(data["items"]), 20)
+            self.assertEqual(data["schema_version"], 2)
             self.assertEqual(data["items"]["xbox-one"]["status"], "unsupported-no-runner")
             self.assertEqual(data["items"]["xbox-series"]["status"], "unsupported-no-runner")
+            for profile_id, item in data["items"].items():
+                self.assertEqual(item["profile_id"], profile_id)
+                self.assertEqual(item["installation_status"], item["status"])
+                self.assertIn("host_architecture", item["evidence"])
+                self.assertEqual(item["evidence"]["installer_architecture"], item["evidence"]["host_architecture"])
+                self.assertIn("physical host/GPU is not attested", item["evidence"]["architecture_basis"])
+                self.assertIn(item["execution_test"]["status"], {"not-run", "passed", "failed"})
+                self.assertIn(item["runtime_test"]["status"], {"not-run", "passed", "failed"})
+                self.assertIsInstance(item["execution_test"]["reason"], str)
+                self.assertIsInstance(item["runtime_test"]["reason"], str)
 
     def test_downloader_rejects_non_allowlisted_host_before_network_access(self):
         spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)
@@ -127,6 +139,96 @@ class InstallerTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 module.safe_extract(archive, root / "out")
             self.assertFalse((root / "escape.txt").exists())
+
+
+    def test_archive_payload_promotes_atomically_and_updates_relative_alias(self):
+        spec = importlib.util.spec_from_file_location("install_upstream_atomic", INSTALLER)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            project = root / "rpcs3-payload"
+            project.mkdir()
+            (project / "old-runner").write_text("old", encoding="utf-8")
+            alias = root / "rpcs3"
+            alias.symlink_to("rpcs3-payload/old-runner")
+            stage = Path(tempfile.mkdtemp(prefix=".rpcs3-stage-", dir=root))
+            selected = stage / "new-runner"
+            selected.write_text("new", encoding="utf-8")
+            selected.chmod(0o755)
+
+            module._atomic_promote_payload(stage, project, selected, alias)
+
+            self.assertEqual((project / "new-runner").read_text(encoding="utf-8"), "new")
+            self.assertFalse((project / "old-runner").exists())
+            self.assertTrue(alias.is_symlink())
+            self.assertEqual(alias.read_text(encoding="utf-8"), "new")
+            self.assertEqual(os.readlink(alias), "rpcs3-payload/new-runner")
+            self.assertFalse(stage.exists())
+            self.assertFalse(list(root.glob(".*.backup-*")))
+            self.assertFalse(list(root.glob(".*.new-*")))
+
+    def test_archive_payload_rolls_back_when_alias_promotion_fails(self):
+        spec = importlib.util.spec_from_file_location("install_upstream_atomic_rollback", INSTALLER)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            project = root / "rpcs3-payload"
+            project.mkdir()
+            (project / "old-runner").write_text("old-payload", encoding="utf-8")
+            alias = root / "rpcs3"
+            alias.symlink_to("rpcs3-payload/old-runner")
+            stage = Path(tempfile.mkdtemp(prefix=".rpcs3-stage-", dir=root))
+            selected = stage / "new-runner"
+            selected.write_text("new-payload", encoding="utf-8")
+
+            original_replace = Path.replace
+            def fail_new_alias(self, target):
+                if self.name.startswith(f".{alias.name}.new-"):
+                    raise OSError("injected alias promotion failure")
+                return original_replace(self, target)
+
+            with unittest.mock.patch.object(Path, "replace", new=fail_new_alias):
+                with self.assertRaisesRegex(OSError, "injected alias promotion failure"):
+                    module._atomic_promote_payload(stage, project, selected, alias)
+
+            self.assertEqual((project / "old-runner").read_text(encoding="utf-8"), "old-payload")
+            self.assertTrue(alias.is_symlink())
+            self.assertEqual(alias.read_text(encoding="utf-8"), "old-payload")
+            self.assertFalse((project / "new-runner").exists())
+            self.assertFalse(list(root.glob(".*.backup-*")))
+            self.assertFalse(list(root.glob(".*.new-*")))
+            if stage.exists():
+                module.shutil.rmtree(stage)
+
+    def test_archive_payload_refuses_to_replace_a_directory_launcher_alias(self):
+        spec = importlib.util.spec_from_file_location("install_upstream_atomic_alias", INSTALLER)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            project = root / "rpcs3-payload"
+            project.mkdir()
+            old_binary = project / "old-runner"
+            old_binary.write_text("old", encoding="utf-8")
+            alias = root / "rpcs3"
+            alias.mkdir()
+            marker = alias / "keep.txt"
+            marker.write_text("keep", encoding="utf-8")
+            stage = Path(tempfile.mkdtemp(prefix=".rpcs3-stage-", dir=root))
+            selected = stage / "new-runner"
+            selected.write_text("new", encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "launcher alias"):
+                module._atomic_promote_payload(stage, project, selected, alias)
+
+            self.assertEqual(old_binary.read_text(encoding="utf-8"), "old")
+            self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
+            module.shutil.rmtree(stage)
 
 
 if __name__ == "__main__":

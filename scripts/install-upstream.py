@@ -11,6 +11,7 @@ import hashlib
 import html.parser
 import json
 import os
+import platform
 import re
 import shutil
 import stat
@@ -255,6 +256,79 @@ def verify_locked_sha256(actual_sha256: str, lock_item: dict | None) -> None:
         raise ValueError(f"Pinned SHA-256 mismatch: expected {expected}, got {actual_sha256}")
 
 
+def _remove_installer_path(path: Path) -> None:
+    """Remove a file/link or tree without following a top-level symlink."""
+    if path.is_symlink() or path.is_file():
+        path.unlink(missing_ok=True)
+    elif path.is_dir():
+        shutil.rmtree(path)
+
+
+def _atomic_promote_payload(
+    staging_dir: Path, project_dir: Path, selected_binary: Path, alias_path: Path
+) -> None:
+    """Promote a verified extracted payload while preserving the previous install on failure.
+
+    All paths are required to share the install root so directory renames stay on
+    one filesystem. The prior payload and launcher alias are kept as rollback
+    backups until both the new payload and relative launcher symlink are in place.
+    """
+    install_root = project_dir.parent.resolve()
+    if staging_dir.parent.resolve() != install_root or alias_path.parent.resolve() != install_root:
+        raise ValueError("Atomic payload promotion paths must share the install root")
+    staging_root = staging_dir.resolve()
+    try:
+        relative_binary = selected_binary.relative_to(staging_root)
+    except ValueError as exc:
+        raise ValueError("Selected emulator binary is outside the staging directory") from exc
+    if selected_binary.is_symlink() or not selected_binary.is_file():
+        raise ValueError("Selected emulator binary must be a regular file inside the staging directory")
+    if project_dir.is_symlink() or (project_dir.exists() and not project_dir.is_dir()):
+        raise ValueError("Existing payload path is not a real directory; refusing replacement")
+    if alias_path.exists() and not alias_path.is_file() and not alias_path.is_symlink():
+        raise ValueError("Existing launcher alias is not a file or symlink; refusing replacement")
+
+    token = f"{os.getpid()}-{time.time_ns()}"
+    project_backup = install_root / f".{project_dir.name}.backup-{token}"
+    alias_backup = install_root / f".{alias_path.name}.backup-{token}"
+    alias_temp = install_root / f".{alias_path.name}.new-{token}"
+    relative_target = os.path.relpath(project_dir / relative_binary, start=install_root)
+    alias_temp.symlink_to(relative_target)
+    project_saved = False
+    alias_saved = False
+    payload_promoted = False
+    try:
+        if alias_path.exists() or alias_path.is_symlink():
+            alias_path.replace(alias_backup)
+            alias_saved = True
+        if project_dir.exists():
+            project_dir.replace(project_backup)
+            project_saved = True
+        staging_dir.replace(project_dir)
+        payload_promoted = True
+        alias_temp.replace(alias_path)
+    except Exception:
+        if alias_path.exists() or alias_path.is_symlink():
+            if alias_saved:
+                _remove_installer_path(alias_path)
+        if payload_promoted and (project_dir.exists() or project_dir.is_symlink()):
+            _remove_installer_path(project_dir)
+        if project_saved and project_backup.exists():
+            project_backup.replace(project_dir)
+        if alias_saved and (alias_backup.exists() or alias_backup.is_symlink()):
+            alias_backup.replace(alias_path)
+        raise
+    finally:
+        _remove_installer_path(alias_temp)
+    # Once both new paths are committed, stale backups may be removed. A cleanup
+    # failure is intentionally non-fatal: it must not invalidate the new launcher.
+    for backup in (project_backup, alias_backup):
+        try:
+            _remove_installer_path(backup)
+        except OSError:
+            pass
+
+
 def safe_extract(archive_path: Path, destination: Path) -> None:
     destination.mkdir(parents=True, exist_ok=True)
     root = destination.resolve()
@@ -306,7 +380,41 @@ def executable_files(directory: Path) -> list[Path]:
 
 
 def record(report: dict, identifier: str, status: str, **extra) -> None:
-    report[identifier] = {"status": status, **extra}
+    # Keep the historic flat fields for existing dashboard consumers and add a
+    # stable evidence schema for diagnostics and future UI work. "not-run" is
+    # intentional: installation alone must never imply execution or boot.
+    installer_architecture = platform.machine() or "unknown"
+    evidence = {
+        # host_architecture is retained for older consumers; it is not proof of
+        # physical host architecture because this script commonly runs in a build container.
+        "host_architecture": installer_architecture,
+        "installer_architecture": installer_architecture,
+        "architecture_basis": "platform.machine() of the installer process; physical host/GPU is not attested",
+        "source_repository": extra.get("repo"),
+        "source_url": extra.get("url"),
+        "artifact": extra.get("asset"),
+        "version": extra.get("version"),
+        "sha256_expected": extra.get("expected_sha256"),
+        "sha256_actual": extra.get("sha256"),
+        "size_bytes": extra.get("size_bytes"),
+        "binary_path": extra.get("binary"),
+        "install_source": extra.get("source"),
+    }
+    report[identifier] = {
+        "profile_id": identifier,
+        "status": status,
+        "installation_status": status,
+        "evidence": {key: value for key, value in evidence.items() if value is not None},
+        "execution_test": {
+            "status": "not-run",
+            "reason": "The installer does not execute emulator GUI binaries; validate execution on the target host.",
+        },
+        "runtime_test": {
+            "status": "not-run",
+            "reason": "Console boot and game compatibility require separate runtime tests.",
+        },
+        **extra,
+    }
     if status == "installed":
         print(f"[INSTALADO] {identifier}: {extra.get('version', 'upstream build')} — {extra.get('asset', extra.get('binary', 'binary'))}")
     else:
@@ -370,37 +478,41 @@ def install_github_asset(identifier: str, spec: dict, target: Path, catalog_by_i
                     temp_output.replace(output)
                     record(report, identifier, "installed", version=release.get("tag_name", "unknown"), repo=repo,
                            asset=asset_name, url=asset["browser_download_url"], sha256=asset_hash,
+                           expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned" else None),
                            size_bytes=asset_size, checksum=checksum_info, binary=str(output))
                     return True
 
-                # Archives are extracted to a dedicated directory with traversal protection.
+                # Extract to a fresh staging directory. Never delete an existing
+                # valid installation until archive validation and executable selection succeed.
                 project_dir = target / (identifier + "-payload")
-                if project_dir.exists():
-                    shutil.rmtree(project_dir)
-                safe_extract(archive, project_dir)
-
-            binaries = executable_files(project_dir)
-            candidates = [p for name in spec.get("binary_candidates", [])
-                          for p in binaries if p.name.lower() == name.lower()]
-            if not candidates:
-                candidates = [p for p in binaries
-                              if not re.search(r"(unins|updat|crashpad|helper|symbols|\.dll$)", p.name, re.I)]
-            if not candidates:
-                record(report, identifier, "failed", reason="archive downloaded but no executable file was found",
-                       repo=repo, asset=asset_name, checksum=checksum_info)
-                return False
-            selected = candidates[0]
-            aliases = item.get("binary_names", [])
-            alias = next((n for n in aliases if not n.lower().endswith(".appimage")), selected.name)
-            alias_path = target / alias
-            if alias_path.exists() or alias_path.is_symlink():
-                alias_path.unlink()
-            # The target is a relative link within /opt/emustack/installed.
-            alias_path.symlink_to(selected.relative_to(target))
-            record(report, identifier, "installed", version=release.get("tag_name", "unknown"), repo=repo,
-                   asset=asset_name, url=asset["browser_download_url"], sha256=asset_hash,
-                   size_bytes=asset_size, checksum=checksum_info, binary=str(alias_path))
-            return True
+                staging_dir = Path(tempfile.mkdtemp(prefix=f".{identifier}-payload-stage-", dir=target))
+                try:
+                    safe_extract(archive, staging_dir)
+                    binaries = executable_files(staging_dir)
+                    candidates = [p for name in spec.get("binary_candidates", [])
+                                  for p in binaries if p.name.lower() == name.lower()]
+                    if not candidates:
+                        candidates = [p for p in binaries
+                                      if not re.search(r"(unins|updat|crashpad|helper|symbols|\.dll$)", p.name, re.I)]
+                    if not candidates:
+                        record(report, identifier, "failed", reason="archive downloaded but no executable file was found; previous installation preserved",
+                               repo=repo, asset=asset_name, checksum=checksum_info)
+                        return False
+                    selected = candidates[0]
+                    aliases = item.get("binary_names", [])
+                    alias = next((n for n in aliases if not n.lower().endswith(".appimage")), selected.name)
+                    alias_path = target / alias
+                    _atomic_promote_payload(staging_dir, project_dir, selected, alias_path)
+                    installed_binary = project_dir / selected.relative_to(staging_dir)
+                    record(report, identifier, "installed", version=release.get("tag_name", "unknown"), repo=repo,
+                           asset=asset_name, url=asset["browser_download_url"], sha256=asset_hash,
+                           expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned" else None),
+                           size_bytes=asset_size, checksum=checksum_info, binary=str(alias_path),
+                           payload_directory=str(project_dir), selected_binary=str(installed_binary))
+                    return True
+                finally:
+                    if staging_dir.exists():
+                        shutil.rmtree(staging_dir, ignore_errors=True)
         except urllib.error.HTTPError as exc:
             problems.append(f"{repo}: HTTP {exc.code}")
         except Exception as exc:
@@ -458,7 +570,8 @@ def install_eden(target: Path, report: dict, catalog_by_id: dict, lock_item: dic
             candidate.unlink(missing_ok=True)
         checksum_text = "SHA-256 matched release lock" if lock_item and lock_item.get("mode") == "pinned-url" else "SHA-256 local only; no upstream checksum verifier wired"
         record(report, "eden", "installed", version=version, asset=Path(urllib.parse.urlparse(url).path).name,
-               url=url, sha256=asset_hash, size_bytes=asset_size, checksum=checksum_text, binary=str(output))
+               url=url, sha256=asset_hash, expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned-url" else None),
+               size_bytes=asset_size, checksum=checksum_text, binary=str(output))
         return True
     except Exception as exc:
         record(report, "eden", "failed", reason=f"{type(exc).__name__}: {exc}")
@@ -498,7 +611,8 @@ def install_dolphin_appimage(target: Path, report: dict, catalog_by_id: dict, lo
             candidate.unlink(missing_ok=True)
         checksum_text = "SHA-256 matched release lock" if lock_item and lock_item.get("mode") == "pinned-url" else "SHA-256 local only; upstream page does not expose a matching checksum"
         record(report, "dolphin", "installed", version=version, asset=alias,
-               url=url, sha256=asset_hash, size_bytes=asset_size, checksum=checksum_text, binary=str(output))
+               url=url, sha256=asset_hash, expected_sha256=(lock_item.get("sha256") if lock_item and lock_item.get("mode") == "pinned-url" else None),
+               size_bytes=asset_size, checksum=checksum_text, binary=str(output))
         return True
     except Exception as exc:
         record(report, "dolphin", "not-available", reason=f"official AppImage download failed ({type(exc).__name__}: {exc}); apt package fallback is used if present")
@@ -564,10 +678,11 @@ def main() -> int:
                        details="Executable is available on PATH. This confirms installation only, not game compatibility.")
                 break
         if identifier not in report:
-            report[identifier] = {"status": "not-available", "reason": "no upstream download or APT executable detected"}
+            record(report, identifier, "not-available", reason="no upstream download or APT executable detected")
     payload = {
         "project": "EmuStack",
         "version": "0.7.1",
+        "schema_version": 2,
         "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "important": "A download/build status is not proof that every game works. No games, BIOS, firmware, keys, or copyrighted system files are bundled.",
         "items": report,

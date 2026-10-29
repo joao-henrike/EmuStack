@@ -2,6 +2,8 @@
 
 const state = {
   health: null,
+  installReport: null,
+  installReportError: '',
   emulators: [],
   environments: [],
   consoleSystems: [],
@@ -158,6 +160,77 @@ function renderOverview() {
   $('#system-lines').innerHTML = lines.map(([label,value,tone]) => `<div class="system-line"><span>${escapeHtml(label)}</span><b class="${tone}">${escapeHtml(value)}</b></div>`).join('');
 }
 
+function installStatusLabel(status) {
+  const labels = {
+    installed: 'Instalado',
+    failed: 'Falhou',
+    'not-run': 'Não executado',
+    passed: 'Aprovado',
+    'not-available': 'Indisponível',
+    'skipped-by-lock': 'Ignorado pelo lock',
+    'unsupported-no-runner': 'Sem runner suportado',
+  };
+  return labels[status] || status || 'Desconhecido';
+}
+
+function installStatusTone(status) {
+  if (status === 'installed') return 'good';
+  if (status === 'failed') return 'bad';
+  if (status === 'skipped-by-lock' || status === 'unsupported-no-runner') return 'warn';
+  return 'muted';
+}
+
+function renderInstallReport() {
+  const host = $('#install-report-list');
+  if (!host) return;
+  if (state.installReportError) {
+    host.innerHTML = `<div class="empty-state">Não foi possível ler o relatório: ${escapeHtml(state.installReportError)}</div>`;
+    return;
+  }
+  const report = state.installReport;
+  const itemsObject = report && report.items && typeof report.items === 'object' && !Array.isArray(report.items) ? report.items : {};
+  const items = Object.entries(itemsObject).sort(([a], [b]) => a.localeCompare(b));
+  if (!report || !items.length) {
+    host.innerHTML = '<div class="empty-state">Relatório ainda não disponível. Faça o build da imagem para criar o relatório de instalação por perfil.</div>';
+    return;
+  }
+  const installed = items.filter(([, item]) => item && item.status === 'installed').length;
+  const failed = items.filter(([, item]) => item && item.status === 'failed').length;
+  const pending = items.length - installed - failed;
+  const summary = `<div class="install-report-summary"><span><b>${items.length}</b> perfis</span><span class="good"><b>${installed}</b> instalados</span><span class="bad"><b>${failed}</b> falhas</span><span class="muted"><b>${pending}</b> ignorados/indisponíveis</span></div>`;
+  const rows = items.map(([id, rawItem]) => {
+    const item = rawItem && typeof rawItem === 'object' ? rawItem : {};
+    const evidence = item.evidence && typeof item.evidence === 'object' ? item.evidence : {};
+    const execution = item.execution_test && typeof item.execution_test === 'object' ? item.execution_test : {status:'not-run',reason:'Teste não registrado no relatório legado.'};
+    const runtime = item.runtime_test && typeof item.runtime_test === 'object' ? item.runtime_test : {status:'not-run',reason:'Teste não registrado no relatório legado.'};
+    const version = item.version || evidence.version || '—';
+    const artifact = item.asset || evidence.artifact || item.binary || evidence.binary_path || '—';
+    const source = item.url || evidence.source_url || item.repo || evidence.source_repository || item.source || evidence.install_source || '—';
+    const sha = item.sha256 || evidence.sha256_actual || '—';
+    const expectedSha = evidence.sha256_expected || '—';
+    return `<details class="install-report-row">
+      <summary><span class="status-chip ${installStatusTone(item.status)}">${escapeHtml(installStatusLabel(item.status))}</span><b>${escapeHtml(id)}</b><span class="install-report-version">${escapeHtml(String(version))}</span><span class="install-report-test">Execução: ${escapeHtml(execution.status || 'not-run')}</span></summary>
+      <div class="install-report-evidence">
+        <dl>
+          <dt>Versão</dt><dd>${escapeHtml(String(version))}</dd>
+          <dt>Arquitetura observada na instalação</dt><dd>${escapeHtml(String(evidence.installer_architecture || evidence.host_architecture || 'não registrada'))}<br><small>${escapeHtml(String(evidence.architecture_basis || 'O campo legado não certifica a arquitetura física do host.'))}</small></dd>
+          <dt>Origem</dt><dd>${escapeHtml(String(source))}</dd>
+          <dt>Ativo</dt><dd>${escapeHtml(String(artifact))}</dd>
+          <dt>SHA-256 esperado</dt><dd><code>${escapeHtml(String(expectedSha))}</code></dd>
+          <dt>SHA-256 calculado</dt><dd><code>${escapeHtml(String(sha))}</code></dd>
+          <dt>Executável</dt><dd><code>${escapeHtml(String(item.binary || evidence.binary_path || '—'))}</code></dd>
+          <dt>Teste de execução</dt><dd>${escapeHtml(installStatusLabel(execution.status))}: ${escapeHtml(execution.reason || 'sem detalhe')}</dd>
+          <dt>Teste de runtime</dt><dd>${escapeHtml(installStatusLabel(runtime.status))}: ${escapeHtml(runtime.reason || 'sem detalhe')}</dd>
+        </dl>
+        ${item.reason ? `<p class="install-report-reason"><b>Motivo/erro:</b> ${escapeHtml(String(item.reason))}</p>` : ''}
+        ${item.details ? `<p class="install-report-reason">${escapeHtml(String(item.details))}</p>` : ''}
+        ${evidence.size_bytes != null ? `<p class="install-report-reason">Tamanho do ativo: ${escapeHtml(formatBytes(Number(evidence.size_bytes)))}</p>` : ''}
+      </div>
+    </details>`;
+  }).join('');
+  host.innerHTML = summary + rows;
+}
+
 function renderSessions() {
   const host = $('#process-list');
   if (!host) return;
@@ -304,7 +377,7 @@ function renderEnvironments() {
       : `<button class="button secondary" disabled title="${escapeHtml(env.launch_reason || env.capability_note || 'Launcher indisponível')}">Launcher indisponível</button>`;
     const systemProfile = (env.system_profile_ids || []).map(id => (state.consoleSystems || []).find(system => system.id === id)).find(Boolean);
     const consoleButton = systemProfile
-      ? `<button class="button secondary" data-environment-system="${escapeHtml(systemProfile.id)}">${escapeHtml(systemProfile.can_boot_original ? 'Ver passos de boot' : systemProfile.can_open_emulator ? 'Ver limites / configuração' : 'Ver indisponibilidade')}</button>`
+      ? `<button class="button secondary" data-environment-system="${escapeHtml(systemProfile.id)}">${escapeHtml(systemProfile.can_attempt_boot ? 'Ver estado de boot' : systemProfile.can_open_emulator ? 'Ver limites / configuração' : 'Ver indisponibilidade')}</button>`
       : '';
     return `<article class="environment-card ${tone}"><div class="environment-card-top"><div><div class="console-family">${escapeHtml(env.platform)}</div><h3>${escapeHtml(env.emulator_name)}</h3><p>${escapeHtml(env.name)}</p></div><span class="system-state-pill ${tone}"><i></i>${escapeHtml(env.online ? 'Agente online' : 'Agente offline')}</span></div><div class="environment-capability"><b>${escapeHtml(environmentCapabilityLabel(env))}</b><p>${escapeHtml(env.capability_note || '')}</p></div><div class="environment-detail-grid"><div><small>Ambiente</small><code>${escapeHtml(env.id)}</code></div><div><small>Runtime</small><b>${escapeHtml(env.runtime_status || '—')}</b></div><div><small>Jogos</small><code>${escapeHtml(dataRoot)}/games</code></div><div><small>BIOS / firmware</small><code>${escapeHtml(dataRoot)}/bios</code></div><div><small>Saves</small><code>${escapeHtml(dataRoot)}/saves</code></div><div><small>Configurações</small><code>${escapeHtml(dataRoot)}/home</code></div></div>${systems ? `<p class="environment-system-profiles"><b>Perfis de sistema:</b> ${escapeHtml(systems)}</p>` : ''}<div class="environment-actions">${launch}${consoleButton}<a class="source-link" href="${escapeHtml(env.url || env.emulator_url || '#')}" target="_blank" rel="noopener noreferrer">Projeto oficial ↗</a></div></article>`;
   }).join('') : `<div class="empty-state empty-state-wide">Nenhum ambiente corresponde ao filtro atual.</div>`;
@@ -320,12 +393,12 @@ function systemStateLabel(system) {
   return system.state_label || 'Estado não determinado';
 }
 function systemBootLabel(system) {
-  if (system.id === 'xbox-original-dashboard') return 'Ligar Xbox virtual (dashboard do HDD)';
-  if (system.id === 'ps3-xmb') return 'Iniciar VSH / XMB';
-  if (system.id === 'ps2-bios-menu') return 'Iniciar BIOS / Browser';
-  if (system.id === 'wiiu-menu') return 'Iniciar Wii U Menu';
-  if (system.id === 'wii-menu') return 'Iniciar Wii Menu';
-  return 'Iniciar sistema';
+  if (system.id === 'xbox-original-dashboard') return 'Tentar iniciar Xbox virtual (dashboard do HDD)';
+  if (system.id === 'ps3-xmb') return 'Tentar iniciar VSH / XMB';
+  if (system.id === 'ps2-bios-menu') return 'Tentar iniciar BIOS / Browser';
+  if (system.id === 'wiiu-menu') return 'Tentar iniciar Wii U Menu';
+  if (system.id === 'wii-menu') return 'Tentar iniciar Wii Menu';
+  return 'Tentar iniciar sistema';
 }
 function consoleSystemCard(system) {
   const family = platformFamily(system.family || system.name);
@@ -335,9 +408,14 @@ function consoleSystemCard(system) {
     const symbol = check.ok === true ? '✓' : check.ok === false ? '!' : '·';
     return `<li class="system-check ${checkClass}"><span>${symbol}</span><div><b>${escapeHtml(check.label || 'Verificação')}</b><small>${escapeHtml(check.detail || '')}</small></div></li>`;
   }).join('');
-  const bootButton = system.can_boot_original
+  const bootButton = system.can_attempt_boot
     ? `<button class="button primary system-action" data-system-action="boot" data-system-id="${escapeHtml(system.id)}">${escapeHtml(systemBootLabel(system))} <span>→</span></button>`
     : '';
+  const bootEvidenceNote = system.can_attempt_boot && !system.boot_observed
+    ? '<p class="console-system-details"><strong>Validação pendente:</strong> os pré-requisitos foram detectados, mas este host ainda não comprovou um boot real do sistema.</p>'
+    : system.boot_observed && !system.smoke_test_passed
+      ? '<p class="console-system-details"><strong>Validação parcial:</strong> há evidência de boot, mas o teste mínimo de runtime ainda não passou.</p>'
+      : '';
   const openButton = system.can_open_emulator
     ? `<button class="button secondary system-action" data-system-action="open" data-system-id="${escapeHtml(system.id)}">Abrir emulador</button>`
     : `<button class="button secondary system-action" data-system-action="open" data-system-id="${escapeHtml(system.id)}" disabled>Emulador indisponível</button>`;
@@ -346,6 +424,7 @@ function consoleSystemCard(system) {
     <div class="console-card-top"><div class="console-system-icon ${family}">${escapeHtml(platformGlyph(system.family || system.name))}</div><div class="console-system-heading"><div class="console-family">${escapeHtml(system.family || 'Console')}</div><h3>${escapeHtml(system.name)}</h3><p>${escapeHtml(system.interface_name || 'Interface do sistema')}</p></div></div>
     <div class="system-state-row"><span class="system-state-pill ${tone}"><i></i>${escapeHtml(systemStateLabel(system))}</span><span class="system-capability">${escapeHtml(String(system.capability || '').replaceAll('-', ' '))}</span></div><div class="environment-boundary-note">Ambiente isolado: <code>${escapeHtml(system.environment_id || system.emulator_ids?.[0] || 'sem runner')}</code> · ${escapeHtml(system.environment_online === false && system.environment_id ? 'offline ou não associado' : 'sem compartilhamento de dados de console')}</div>
     <p class="console-system-details">${escapeHtml(system.details || '')}</p>
+    ${bootEvidenceNote}
     ${requirements ? `<div class="system-requirements"><b>Necessário</b><ul>${requirements}</ul></div>` : ''}
     ${checks ? `<ul class="system-checks">${checks}</ul>` : ''}
     <div class="console-system-actions">${bootButton}${openButton}<button class="text-button system-info-action" data-system-setup="${escapeHtml(system.id)}">Passos e fontes ↗</button></div>
@@ -355,10 +434,10 @@ function renderConsoleSystems() {
   const host = $('#console-system-grid');
   if (!host) return;
   const systems = state.consoleSystems || [];
-  const ready = systems.filter(s => s.can_boot_original).length;
+  const ready = systems.filter(s => s.can_attempt_boot).length;
   const needs = systems.filter(s => ['needs-setup','needs-verification','manual'].includes(s.state)).length;
   const unavailable = systems.filter(s => ['unsupported','no-dashboard','launcher-missing','environment-offline'].includes(s.state)).length;
-  $('#console-system-stats').innerHTML = `<div class="summary-chip"><span>Boot nativo disponível</span><b>${ready}</b></div><div class="summary-chip"><span>Precisa configurar</span><b>${needs}</b></div><div class="summary-chip"><span>Sem boot completo</span><b>${unavailable}</b></div>`;
+  $('#console-system-stats').innerHTML = `<div class="summary-chip"><span>Pronto para tentativa (boot não garantido)</span><b>${ready}</b></div><div class="summary-chip"><span>Precisa configurar</span><b>${needs}</b></div><div class="summary-chip"><span>Sem boot completo</span><b>${unavailable}</b></div>`;
   $('#nav-console-count').textContent = systems.length || '—';
   const query = ($('#console-system-search')?.value || '').trim().toLowerCase();
   const filter = $('#console-system-filter')?.value || 'all';
@@ -601,11 +680,13 @@ async function confirmLaunch() {
 async function refreshAll() {
   $('#refresh-button').classList.add('refreshing');
   try {
-    const [health, catalog, games, sources, docs, processes, consoleSystems, environments] = await Promise.all([
-      api('/api/health'), api('/api/catalog'), api('/api/games'), api('/api/sources'), api('/api/docs'), api('/api/processes'), api('/api/console-systems').catch(error => ({systems:[], error:error.message})), api('/api/environments').catch(error => ({environments:[], error:error.message}))
+    const [health, catalog, games, sources, docs, processes, consoleSystems, environments, reportResult] = await Promise.all([
+      api('/api/health'), api('/api/catalog'), api('/api/games'), api('/api/sources'), api('/api/docs'), api('/api/processes'), api('/api/console-systems').catch(error => ({systems:[], error:error.message})), api('/api/environments').catch(error => ({environments:[], error:error.message})), api('/api/report').catch(error => ({available:false, message:error.message}))
     ]);
     state.health=health; state.emulators=catalog.emulators||[]; state.games=games.games||[]; state.sources=sources; state.docs=docs.documents||[]; state.sessions=processes.processes||[]; state.consoleSystems=consoleSystems.systems||[]; state.consoleSystemsError=consoleSystems.error||''; state.environments=environments.environments||[];
-    renderOverview(); renderPlatformOptions(); renderEmulators(); renderEnvironments(); renderConsoleSystems(); renderLibrary(); renderSources(); renderDocs(); renderSessions();
+    state.installReport = reportResult.available ? reportResult.report : null;
+    state.installReportError = reportResult.available ? '' : (/não encontrado/i.test(reportResult.message || '') ? '' : (reportResult.message || ''));
+    renderOverview(); renderInstallReport(); renderPlatformOptions(); renderEmulators(); renderEnvironments(); renderConsoleSystems(); renderLibrary(); renderSources(); renderDocs(); renderSessions();
   } catch(error) {
     $('#side-health').textContent='API indisponível';
     toast(`Não foi possível ler o container: ${error.message}`, 'error');
@@ -648,6 +729,7 @@ $('#launch-emulator-select').addEventListener('change', updateLaunchDialogForSel
 $('#launch-game-select').addEventListener('change', updateLaunchDialogForSelection);
 $('#refresh-button').addEventListener('click', refreshAll);
 $('#refresh-library').addEventListener('click', refreshAll);
+if ($('#refresh-install-report')) $('#refresh-install-report').addEventListener('click', refreshAll);
 if ($('#refresh-sessions')) $('#refresh-sessions').addEventListener('click', refreshSessionsOnly);
 if ($('#close-process-log')) $('#close-process-log').addEventListener('click', () => $('#process-log-dialog').close());
 $('#emulator-search').addEventListener('input', () => { $('#global-search').value=$('#emulator-search').value; renderEmulators(); });

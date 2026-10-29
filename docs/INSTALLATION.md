@@ -39,7 +39,7 @@ Depois de instalar e testar o NVIDIA Container Toolkit no host:
 USE_NVIDIA=1 ./scripts/build-and-audit.sh
 ```
 
-Isso adiciona o mapeamento de GPU aos agentes de runtime. Ele não instala magicamente drivers válidos nem garante aceleração em cada emulador.
+Isso adiciona o mapeamento de GPU aos perfis que possuem runner conhecido no overlay opcional. Os placeholders Xbox One/Series sem runner ficam fora dessa passagem. O overlay não instala magicamente drivers válidos nem garante aceleração em cada emulador; confirme o renderer em execução.
 
 ## Acceptance de vídeo, áudio e GPU
 
@@ -64,6 +64,12 @@ O caminho precisa existir como dispositivo de caracteres e ser `/dev/input/event
 ## Upgrade de 0.4.x ou anterior
 
 A versão 0.7.1 deixa de montar os diretórios compartilhados `data/games`, `data/bios`, `data/saves` e `data/home`. Faça cópias de backup e migre manualmente cada item para a raiz apropriada em `data/environments/<id>/`. Não apague o diretório antigo até confirmar jogos, saves, configurações e firmware no perfil certo.
+
+## Relatório individual por perfil
+
+Depois de construir a imagem e iniciar o dashboard, a visão geral exibe **Relatório de instalação**. Expanda cada perfil para inspecionar status, origem/artefato, versão quando conhecida, hash esperado e calculado, caminho do binário e os estados separados de teste de execução e runtime.
+
+Os estados `not-run` / **Não executado** são deliberados: o build não abre todos os GUIs nem comprova que cada sistema original ou jogo inicia. A arquitetura apresentada é a que o processo de instalação observou dentro do seu contexto; ela não certifica o hardware físico nem a GPU do computador final. Para investigar a máquina real, use `scripts/host-doctor.py` e `scripts/runtime-acceptance.sh`, e documente boots/jogos separadamente.
 
 ## Verificação
 

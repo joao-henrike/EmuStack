@@ -68,6 +68,7 @@ COPY docs/ /opt/emustack/docs/
 COPY web/ /opt/emustack/web/
 COPY scripts/install-available-apt.sh /tmp/install-available-apt.sh
 COPY scripts/install-upstream.py /opt/emustack/scripts/install-upstream.py
+COPY scripts/runtime_probes.py /opt/emustack/scripts/runtime_probes.py
 COPY --from=kyty-builder /out/kytyps5 /opt/emustack/installed/kytyps5
 RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
       case "$APT_SNAPSHOT_TIMESTAMP" in [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9][0-9][0-9]Z) ;; *) echo "Invalid APT_SNAPSHOT_TIMESTAMP" >&2; exit 2;; esac; \

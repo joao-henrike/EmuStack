@@ -24,6 +24,57 @@ The committed `release-lock.json` is strict and covers all 20 catalog IDs. The c
 
 The successful lock-generation run disabled the optional KytyPS5 source build (`BUILD_KYTYPS5=0`), so KytyPS5 is correctly marked `skip-upstream` in this lock. When explicitly enabled, the Dockerfile checks a declared KytyPS5 tag/short commit before attempting compilation; that separate source-build path is not covered by the downloadable-asset lock and is not claimed as built by the current acceptance run.
 
+### SBOM e scanner lock
+
+A CI usa duas ferramentas oficiais com versões e hashes fixos no arquivo `supply-chain-tools.json`:
+
+| Ferramenta | Versão fixada | Ativo verificado por SHA-256 | Fonte oficial |
+|---|---:|---|---|
+| Syft | 1.55.0 | `bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d` | [Release v1.55.0](https://github.com/anchore/syft/releases/tag/v1.55.0) |
+| Trivy | 0.74.0 | `2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a` | [Release v0.74.0](https://github.com/aquasecurity/trivy/releases/tag/v0.74.0) |
+
+`scripts/supply-chain-scan.sh` baixa somente os URLs fixados, valida o SHA-256 antes da extração e confirma a versão da CLI. Em seguida, o Syft gera SPDX JSON a partir da imagem local `local/emustack:0.7.1`; o Trivy varre pacotes OS e bibliotecas para HIGH/CRITICAL. A imagem é identificada também pelo ID local imutável, incluído no resumo.
+
+O scanner publica o resultado integral em JSON. O gate inicial é **report-only para achados de segurança**: resultados HIGH/CRITICAL precisam de triagem antes de serem convertidos em bloqueios. Isso evita esconder o estado real de uma primeira baseline ou aceitar silenciosamente achados sem correção, e permite distinguir uma vulnerabilidade reportada de uma falha operacional do scanner. Erros de download, checksum, versão, geração do SBOM, execução ou JSON inválido continuam falhando a CI.
+
+O banco de vulnerabilidades do Trivy é obtido durante a execução e evolui independentemente dos binários fixados. Portanto, o scan é reprodutível quanto às ferramentas e alvo, mas o resultado não é um snapshot eterno da inteligência de CVEs. Cada execução publica o SBOM, JSON completo de findings, resumo Markdown, cópia do lock e versões das CLIs em seu artefato do GitHub Actions. Faça triagem com o resumo e preserve o JSON original do run.
+
+### Schema do relatório e instalação transacional
+
+O `install-report.json` gerado pelo instalador usa atualmente `schema_version: 2`. Cada ID do catálogo recebe um estado individual e campos estruturados de evidência: repositório/URL, ativo, versão quando conhecida, hash esperado/calculado quando disponível, tamanho e caminho do launcher/payload. O instalador também declara `execution_test.status: not-run` e `runtime_test.status: not-run` até que etapas separadas tenham realmente executado esses testes.
+
+A arquitetura registrada como `installer_architecture` é o valor de `platform.machine()` no processo que instala o ativo. Como isso costuma acontecer durante o build da imagem, **não é atestação da arquitetura física do host nem da GPU**. O campo legado `host_architecture` é mantido apenas para consumidores antigos; a interface prefere o campo novo e mostra sua base de medição.
+
+Assets em formato de arquivo compacto são extraídos primeiro para uma área temporária no mesmo diretório de instalação. Só depois de validar o arquivo e selecionar um executável candidato o instalador promove o payload e o link de launcher; se a promoção falhar, tenta restaurar a versão anterior. Isso reduz o risco de uma atualização incompleta destruir um payload válido, mas não substitui os testes de runtime/boot do alvo.
+
+### Save-path contract and audit
+
+`save-paths.json` records candidate user-data/save directories relative to each isolated `/home/emu`, the upstream reference, and the confidence level. Paths labelled `needs-runtime-validation` are not promoted to supported defaults. This prevents a directory guessed from a package layout from becoming an implicit write target.
+
+Run the read-only audit:
+
+```bash
+python3 scripts/audit-save-layout.py --strict
+```
+
+The report emits aggregate counts only and never lists save filenames. It does not create storage directories and does not test emulator save/load behavior. The separate `home` and `saves` mounts are both included in snapshots; do not create links or migrate existing files until a real save/load cycle has established the exact path for the installed emulator build.
+
+### Explicitly skipped upstream entries
+
+Every `skip-upstream` entry is intentional and must remain explicit until there is verifiable provenance. The skip is not a statement that the emulator can never be installed; a separately trusted distro package may be detected, but this lock does not certify that path.
+
+| Profile | Current decision | Next action before changing the lock |
+|---|---|---|
+| `kytyps5` | `skip-upstream` | Pin source commit, toolchain and build inputs; capture the resulting artifact hash in a separate reviewed build path. |
+| `shadps4` | `skip-upstream` | Resolve official Linux artifact or reproducible source build and record exact SHA-256 before enabling download. |
+| `ppsspp` | `skip-upstream` | Capture an exact official Linux asset and verify SHA-256; otherwise rely only on separately detected trusted packages/user binaries. |
+| `xbox-one` | `skip-upstream` | Remain intentionally blocked until a credible full-system runner and verifiable build/package exist. |
+| `xbox-series` | `skip-upstream` | Remain intentionally blocked until a credible full-system runner and verifiable build/package exist. |
+| `dolphin` | `skip-upstream` | Capture an exact official Linux asset and verify SHA-256; otherwise rely only on separately detected trusted packages/user binaries. |
+| `melonds` | `skip-upstream` | Capture an exact official Linux artifact and verify SHA-256; no guessed filenames or substitutions. |
+| `mupen64plus` | `skip-upstream` | Capture an exact official Linux artifact and verify SHA-256; no guessed filenames or substitutions. |
+| `bsnes` | `skip-upstream` | Capture an exact official Linux artifact and verify SHA-256; no guessed filenames or substitutions. |
+
 To refresh official assets, run the GitHub Actions workflow **Freeze official emulator release assets**. It starts with an empty, non-strict lock in the temporary runner workspace to discover current official releases, then exports a candidate, validates coverage and hashes, attempts a strict rebuild, and uploads the candidate as an artifact. Review the downloaded artifact before replacing the committed lock. Do not remove explicit `skip-upstream` reasons simply to make the catalog appear complete.
 
 The Debian base image digest is pinned, but Debian APT package versions remain time-dependent unless `APT_SNAPSHOT_TIMESTAMP` is set. The strict release lock is not a byte-for-byte reproducibility guarantee.

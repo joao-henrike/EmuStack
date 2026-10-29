@@ -51,6 +51,8 @@ Troque o caminho por um dispositivo que realmente exista no host e o ambiente pe
 
 Após uma execução estruturalmente bem-sucedida, o script grava `data/runtime-acceptance.json` com timestamp, verificações, probes, warnings e falhas. Ele não inclui tokens nem captura eventos do controle. O relatório é local e deve ser revisado antes de compartilhar.
 
+O mesmo acceptance executa ainda um smoke de API **somente leitura** no loopback do container do dashboard: 25 chamadas concorrentes limitadas a 4 workers para `/api/health`. O relatório/check mostra p50, p95, máximo e falhas; não chama rotas de boot/stop nem mede compatibilidade de emuladores. Esse teste é um sinal básico de estabilidade sob concorrência leve, não um benchmark de carga ou capacidade de produção.
+
 ## 5. Teste de bloqueio de requisições de agente ao dashboard
 
 O `runtime-acceptance.sh` tenta enviar uma requisição POST a partir de cada ambiente, forjando `Host` e `X-EmuStack-Request`. Cada tentativa precisa ser recusada com HTTP 403 devido ao IP TCP de origem `.2`. O script também confere gateways, IPs estáticos e a allowlist do dashboard.
@@ -64,3 +66,16 @@ O runtime acceptance não inicia automaticamente todo jogo, BIOS ou dashboard. F
 O XMB do PPSSPP usa `--vsh` em builds compatíveis, mas o upstream declara a pesquisa de VSH como exploratória; exige dump de firmware em `assets/flash0/` e não é uma experiência garantida. Ver a documentação oficial: <https://www.ppsspp.org/docs/getting-started/how-to-run-the-vsh/> e <https://www.ppsspp.org/docs/reference/command-line/>.
 
 Sistemas para os quais o projeto declara `unsupported` permanecem bloqueados e não devem ser representados por uma interface HTML imitada. O EmuStack não inclui BIOS, firmware, NAND, chaves ou jogos proprietários.
+
+
+## 7. Limites de recursos, rotação de logs e recuperação
+
+A aceitação inspeciona os valores efetivos do Docker para cada agente e para o dashboard: limite de CPU, memória e PIDs, política unless-stopped, driver de logs json-file e rotação finita (max-size=10m, max-file=3). Se a configuração efetiva divergir, a aceitação falha; não basta que o YAML pareça correto.
+
+A CI executa uma prova de recuperação opt-in que envia SIGKILL somente ao agente env-mgba, aguarda o Docker reiniciá-lo e confirma que seu endpoint de saúde volta a responder. Isso testa a política de restart, não a preservação de estado de um jogo.
+
+No host real, essa prova não roda por padrão. Ative-a somente quando for seguro interromper esse perfil e não houver jogo com progresso não salvo:
+
+    EMUSTACK_RUN_RECOVERY_TESTS=1 ./scripts/runtime-acceptance.sh
+
+Não execute esse teste durante uma sessão ativa de emulação: o encerramento forçado do agente pode causar perda de progresso que ainda não foi salvo. A rotação limita cada arquivo de log a 10m e mantém até três arquivos por contêiner; isso não limita os dados gravados nos volumes persistentes.

@@ -62,6 +62,11 @@
             <section class="panel system-panel"><div class="panel-heading"><div><h3>Estado do sistema</h3><p>Resumo da instância Docker</p></div><span class="panel-live"><i></i> LIVE</span></div><div class="system-lines" id="system-lines"><div class="loading-line">Consultando container…</div></div><div class="panel-bottom"><button class="subtle-button" data-goto="docs">Abrir guia de diagnóstico ↗</button></div></section>
           </div>
           <section class="panel sessions-panel"><div class="panel-heading"><div><h3>Sessões de emuladores</h3><p>Estado dos processos iniciados pelo dashboard e saída capturada para diagnóstico.</p></div><button class="subtle-button" id="refresh-sessions">Atualizar sessões ↻</button></div><div id="process-list" class="process-list"><div class="loading-line">Consultando sessões…</div></div><div class="panel-bottom"><span>O encerramento envia SIGTERM ao grupo do processo; use os logs para investigar falhas de inicialização.</span></div></section>
+          <section class="panel install-report-panel">
+            <div class="panel-heading"><div><h3>Relatório de instalação</h3><p>Estado individual dos upstreams, hashes e testes que ainda precisam ser executados fora da etapa de instalação.</p></div><button class="subtle-button" id="refresh-install-report">Atualizar relatório ↻</button></div>
+            <div id="install-report-list" class="install-report-list"><div class="loading-line">Lendo relatório por perfil…</div></div>
+            <div class="panel-bottom"><span>Instalado não significa executado; processo iniciado não significa boot comprovado nem jogo compatível.</span></div>
+          </section>
           <footer class="page-footer"><span>EmuStack <b>0.7.1</b></span><span>20 ambientes separados · um núcleo de orquestração</span><span>Somente acesso local</span></footer>
         </section>
 

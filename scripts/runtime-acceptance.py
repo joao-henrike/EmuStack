@@ -12,7 +12,15 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-from runtime_probes import env_flag, has_readonly_device_mapping, is_allowed_input_device, is_software_vulkan_renderer, parse_env_file
+from runtime_probes import (
+    env_flag,
+    has_readonly_device_mapping,
+    is_allowed_input_device,
+    is_dashboard_summary_response,
+    is_software_vulkan_renderer,
+    parse_env_file,
+    runtime_guardrail_issues,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = "http://127.0.0.1:8765"
@@ -93,6 +101,122 @@ def container_env(container: dict) -> dict[str, str]:
             key, value = entry.split("=", 1)
             result[key] = value
     return result
+
+
+def dashboard_health_load_smoke() -> dict[str, int | float | list[str]]:
+    """Send a fixed, read-only burst to dashboard loopback from its own container."""
+    if not DASHBOARD_CONTAINER_ID:
+        raise RuntimeError("Dashboard container ID is not available for bounded API smoke")
+    probe_script = r"""
+import concurrent.futures
+import json
+import math
+import sys
+import time
+import urllib.request
+
+sys.path.insert(0, "/opt/emustack/scripts")
+from runtime_probes import is_dashboard_summary_response
+
+REQUESTS = 25
+WORKERS = 4
+URL = "http://127.0.0.1:8765/api/health"
+
+def one(_index):
+    started = time.perf_counter()
+    try:
+        with urllib.request.urlopen(URL, timeout=4) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+            ok = is_dashboard_summary_response(response.status, payload, expected_profiles=20)
+            error = None if ok else "unexpected-dashboard-summary-contract"
+    except Exception as exc:
+        ok = False
+        error = type(exc).__name__
+    return {"ok": ok, "ms": (time.perf_counter() - started) * 1000, "error": error}
+
+with concurrent.futures.ThreadPoolExecutor(max_workers=WORKERS) as pool:
+    results = list(pool.map(one, range(REQUESTS)))
+latencies = sorted(item["ms"] for item in results)
+p95_index = min(len(latencies) - 1, math.ceil(0.95 * len(latencies)) - 1)
+report = {
+    "requests": len(results),
+    "concurrency": WORKERS,
+    "failures": sum(1 for item in results if not item["ok"]),
+    "p50_ms": round(latencies[len(latencies) // 2], 2),
+    "p95_ms": round(latencies[p95_index], 2),
+    "max_ms": round(latencies[-1], 2),
+    "failure_kinds": sorted({item["error"] for item in results if item["error"]}),
+}
+print(json.dumps(report, sort_keys=True))
+raise SystemExit(0 if report["requests"] == REQUESTS and report["failures"] == 0 else 1)
+"""
+    result = run(
+        ["docker", "exec", DASHBOARD_CONTAINER_ID, "python3", "-c", probe_script],
+        check=False,
+        timeout=20,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Bounded dashboard health API smoke failed: "
+            f"{result.stdout.strip()[:800]} {result.stderr.strip()[:800]}"
+        )
+    try:
+        report = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Bounded dashboard health API smoke did not return JSON") from exc
+    if report.get("requests") != 25 or report.get("concurrency") != 4 or report.get("failures") != 0:
+        raise RuntimeError(f"Bounded dashboard health API smoke returned unexpected results: {report}")
+    return report
+
+
+
+def agent_restart_recovery_smoke(env_containers: dict[str, dict], env_id: str = "mgba") -> str:
+    """Destructively restart one isolated agent and verify automatic recovery."""
+    if not DASHBOARD_CONTAINER_ID:
+        raise RuntimeError("Dashboard container ID is not available for restart recovery probe")
+    container = env_containers.get(env_id)
+    if not container:
+        raise RuntimeError("Unknown agent selected for restart recovery probe: " + env_id)
+    before = json.loads(run(["docker", "inspect", container["Id"]]).stdout)[0]
+    before_count = before.get("RestartCount", 0)
+    if type(before_count) is not int:
+        raise RuntimeError("env-" + env_id + " RestartCount is not numeric")
+    run(["docker", "kill", "--signal", "SIGKILL", container["Id"]])
+    deadline = time.monotonic() + 90
+    recovered = None
+    last_state, last_health, last_count = "unknown", "unknown", before_count
+    while time.monotonic() < deadline:
+        result = run(["docker", "inspect", container["Id"]], check=False, timeout=8)
+        if result.returncode == 0:
+            try:
+                current = json.loads(result.stdout)[0]
+            except (json.JSONDecodeError, IndexError, TypeError):
+                current = {}
+            state = current.get("State", {}) or {}
+            health = (state.get("Health") or {}).get("Status", "none")
+            restart_count = current.get("RestartCount", before_count)
+            last_state = str(state.get("Status", "unknown"))
+            last_health = str(health)
+            last_count = restart_count if type(restart_count) is int else before_count
+            if last_state == "running" and last_health == "healthy" and last_count > before_count:
+                recovered = current
+                break
+        time.sleep(2)
+    if recovered is None:
+        raise RuntimeError(
+            "env-" + env_id + " did not auto-recover within 90 seconds after SIGKILL "
+            + "(state=" + last_state + ", health=" + last_health
+            + ", restart_count=" + str(last_count) + ", before=" + str(before_count) + ")"
+        )
+    url = "http://env-" + env_id + ":8877/health"
+    probe_code = "import urllib.request; urllib.request.urlopen(" + repr(url) + ", timeout=5).read(); print('reachable')"
+    probe = run(["docker", "exec", DASHBOARD_CONTAINER_ID, "python3", "-c", probe_code], check=False, timeout=10)
+    if probe.returncode != 0:
+        raise RuntimeError("env-" + env_id + " restarted but health route is not reachable: " + probe.stderr.strip()[:800])
+    status_code, payload = api("/api/health")
+    if not is_dashboard_summary_response(status_code, payload, expected_profiles=len(env_containers)):
+        raise RuntimeError("Dashboard summary failed after env-" + env_id + " recovery (HTTP " + str(status_code) + ")")
+    return "opt-in recovery passed: env-" + env_id + " restarted automatically (RestartCount " + str(before_count) + "->" + str(last_count) + ") and health route recovered"
 
 
 def probe_record(probes: list[dict], warnings: list[str], errors: list[str], name: str,
@@ -266,6 +390,9 @@ def main() -> int:
         if health != "healthy":
             raise RuntimeError(f"env-{env_id} health is {health!r}; inspect logs")
         host_config = container.get("HostConfig", {})
+        guardrail_issues = runtime_guardrail_issues(host_config)
+        if guardrail_issues:
+            raise RuntimeError("env-" + env_id + " runtime guardrails failed: " + "; ".join(guardrail_issues))
         if not host_config.get("ReadonlyRootfs"):
             raise RuntimeError(f"env-{env_id} root filesystem is not read-only")
         if "ALL" not in [x.upper() for x in host_config.get("CapDrop", [])]:
@@ -312,7 +439,7 @@ def main() -> int:
             raise RuntimeError(f"Network is shared/reused by multiple environments: {nname}")
         network_ids.add(network_id)
         env_containers[env_id] = container
-    checks += ["20 agents healthy", "every environment has unique mounts", "each agent has a unique internal network", "runtime hardening flags verified"]
+    checks += ["20 agents healthy", "every environment has unique mounts", "each agent has a unique internal network", "runtime hardening, CPU/memory/PID limits, restart policy and bounded logs verified"]
 
     dashboard_ids = compose("ps", "-q", "dashboard").stdout.split()
     if len(dashboard_ids) != 1:
@@ -320,6 +447,9 @@ def main() -> int:
     global DASHBOARD_CONTAINER_ID
     DASHBOARD_CONTAINER_ID = dashboard_ids[0]
     dashboard = json.loads(run(["docker", "inspect", dashboard_ids[0]]).stdout)[0]
+    dashboard_guardrail_issues = runtime_guardrail_issues(dashboard.get("HostConfig", {}))
+    if dashboard_guardrail_issues:
+        raise RuntimeError("dashboard runtime guardrails failed: " + "; ".join(dashboard_guardrail_issues))
     published = dashboard.get("HostConfig", {}).get("PortBindings", {}).get("8765/tcp") or []
     if len(published) != 1 or published[0].get("HostIp") != "127.0.0.1" or published[0].get("HostPort") != "8765":
         raise RuntimeError(f"Dashboard port must be published only on 127.0.0.1:8765; got {published}")
@@ -387,6 +517,17 @@ def main() -> int:
         if path == "/api/console-systems" and not data.get("systems"):
             raise RuntimeError("Console-system capability matrix is empty")
     checks.append("dashboard health and capability APIs respond")
+
+    # Bounded read-only concurrency probe; no launch/stop/data-changing endpoint is called.
+    load_stats = dashboard_health_load_smoke()
+    checks.append(
+        "bounded dashboard health smoke passed: "
+        f"{load_stats['requests']} requests / {load_stats['concurrency']} workers, "
+        f"p95 {load_stats['p95_ms']} ms, max {load_stats['max_ms']} ms"
+    )
+
+    if env_flag("EMUSTACK_RUN_RECOVERY_TESTS"):
+        checks.append(agent_restart_recovery_smoke(env_containers, "mgba"))
 
     status, _ = api("/api/console-systems/launch", "POST", {"system": "ps5-system", "action": "boot"})
     if status not in (409, 400):

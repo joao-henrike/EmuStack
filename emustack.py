@@ -299,7 +299,7 @@ def boot_system(system_id: str) -> int:
         raise SystemExit(f"Emulador não instalado para {profile['name']}; confira `emustack list`.")
     resolved = console_modes.resolve_systems(data, runtime_status, systems_payload)
     state = next((item for item in resolved if item.get("id") == system_id), None)
-    if not state or not state.get("can_boot_original"):
+    if not state or not state.get("can_attempt_boot", state.get("can_boot_original", False)):
         checks = state.get("checks", []) if state else []
         detail = "\n".join(f"- {item.get('label')}: {item.get('detail')}" for item in checks)
         raise SystemExit(f"Pré-requisitos do sistema original não foram atendidos.\n{detail}")
