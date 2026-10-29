@@ -119,7 +119,44 @@ class WebAppTests(unittest.TestCase):
         self.assertIn("can_boot_original", by_id["ps3-xmb"])
         self.assertEqual(by_id["ps5-system"]["state"], "unsupported")
         self.assertFalse(by_id["ps5-system"]["can_boot_original"])
-        self.assertIn("xemu", by_id["xbox-original-dashboard"]["details"].lower())
+        self.assertIn("xemu", by_id["xbox-original-dashboard"]["details"].lower()) 
+    def test_install_report_api_returns_structured_per_profile_evidence(self):
+        report_path = self.root / "install-report.json"
+        payload = {
+            "project": "EmuStack",
+            "schema_version": 2,
+            "items": {
+                "rpcs3": {
+                    "profile_id": "rpcs3",
+                    "status": "installed",
+                    "installation_status": "installed",
+                    "evidence": {"host_architecture": "x86_64", "sha256_actual": "a" * 64},
+                    "execution_test": {"status": "not-run", "reason": "GUI execution belongs to host validation."},
+                    "runtime_test": {"status": "not-run", "reason": "Boot has not been tested."},
+                }
+            },
+        }
+        report_path.write_text(json.dumps(payload), encoding="utf-8")
+        with patch.object(webapp, "INSTALL_REPORT", report_path):
+            with urlopen(self.base + "/api/report", timeout=3) as response:
+                result = json.load(response)
+
+        self.assertTrue(result["available"])
+        self.assertEqual(result["report"]["schema_version"], 2)
+        item = result["report"]["items"]["rpcs3"]
+        self.assertEqual(item["evidence"]["host_architecture"], "x86_64")
+        self.assertEqual(item["execution_test"]["status"], "not-run")
+        self.assertEqual(item["runtime_test"]["status"], "not-run")
+
+    def test_install_report_api_explains_when_report_is_missing(self):
+        report_path = self.root / "missing-install-report.json"
+        with patch.object(webapp, "INSTALL_REPORT", report_path):
+            with urlopen(self.base + "/api/report", timeout=3) as response:
+                result = json.load(response)
+
+        self.assertFalse(result["available"])
+        self.assertIn("mensagem", result.get("message", "").lower() or "mensagem" if False else result["message"].lower())
+
 
     def test_console_system_boot_starts_ps2_bios_profile_through_managed_launcher(self):
         with tempfile.TemporaryDirectory() as tmp:
