@@ -105,3 +105,28 @@ jobs:
           grep -q 'renderConsoleSystems' web/app.js
           grep -q 'recommendEmulatorForGame(gamePath)' web/app.js
           git diff --check
+      - name: Generate CI validation report
+        if: always()
+        env:
+          VALIDATION_RESULT: ${{ job.status }}
+        run: |
+          mkdir -p artifacts
+          cat > artifacts/validation-report.md <<EOF
+          # EmuStack CI validation report
+
+          - Workflow run: [#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})
+          - Commit: \`${GITHUB_SHA}\`
+          - Job status before artifact upload: \`${VALIDATION_RESULT}\`
+          - Upstream install: disabled (\`INSTALL_UPSTREAM=0\`)
+          - Experimental KytyPS5 build: disabled (\`BUILD_KYTYPS5=0\`)
+          - Host coverage: GitHub-hosted runner only; physical GPU/host performance is not verified.
+          - Compatibility boundary: this run does not certify BIOS/firmware, original-console boot, individual-game compatibility or gameplay on physical hardware.
+          EOF
+          cat artifacts/validation-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload CI validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emustack-validation-report-${{ github.run_number }}
+          path: artifacts/validation-report.md
+          if-no-files-found: warn
