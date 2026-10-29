@@ -90,6 +90,22 @@ class ManifestValidationTests(unittest.TestCase):
 
         self.assertTrue(any("storage_model inválido" in error for error in errors), errors)
 
+    def test_scan_image_must_match_compose_dashboard_image(self):
+        with tempfile.TemporaryDirectory() as temp:
+            temp_root = Path(temp)
+            for filename in VALIDATOR.JSON_MANIFESTS:
+                shutil.copy2(ROOT / filename, temp_root / filename)
+            for filename in ("compose.yaml", "compose.nvidia.yaml"):
+                shutil.copy2(ROOT / filename, temp_root / filename)
+            path = temp_root / "supply-chain-tools.json"
+            data = json.loads(path.read_text(encoding="utf-8"))
+            data["target_image"] = "local/unrelated-image:9.9.9"
+            path.write_text(json.dumps(data), encoding="utf-8")
+
+            errors = VALIDATOR.validate_repository(temp_root, include_compose=True)
+
+        self.assertTrue(any("does not match supply-chain-tools.json target_image" in error for error in errors), errors)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
