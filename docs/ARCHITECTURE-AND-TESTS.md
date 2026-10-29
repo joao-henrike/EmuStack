@@ -95,6 +95,12 @@ APT_SNAPSHOT_TIMESTAMP=20261027T000000Z FREEZE_RELEASE_LOCK=1 ./scripts/build-an
 
 O aceite de runtime verifica topologia Docker, endpoints e, quando configurados, conectividade básica de display/áudio/Vulkan/controle. Não verifica entradas físicas do controle nem compatibilidade universal de jogos; o boot real de cada sistema ainda exige teste individual por perfil.
 
+## Evidência de validação por execução
+
+O bloco de resultado fixo acima registra a última execução de referência de `main` observada durante esta revisão; ele não é um atestado perpétuo do estado de todo branch. Para evitar que novos resultados fiquem presos a um SHA antigo, cada execução de `EmuStack CI` gera agora um resumo no **GitHub Actions Step Summary** e publica o artefato `emustack-validation-report-<run_number>` com o commit, o resultado do job e os limites explícitos da validação. Ao revisar uma mudança, use o artefato da execução ligada ao commit/PR em questão, junto dos logs de cada etapa.
+
+A CI mantém downloads upstream e o build experimental de KytyPS5 desligados, e roda em runner hospedado. Portanto, o relatório distingue a validação de código, manifestos, Compose e runtime isolado de qualquer teste em GPU física, firmware próprio, boot de console ou compatibilidade de jogos. Um relatório verde não amplia esse escopo.
+
 ## Validação cruzada de manifestos
 
 A validação local/CI inclui agora `scripts/validate-manifests.py`, executado por `scripts/validate-project.sh`. Ele cruza os contratos de `catalog.json`, `environments.json`, `console-systems.json`, `game-sources.json`, `release-lock.json`, `compose.yaml` e `compose.nvidia.yaml`.
