@@ -150,8 +150,12 @@ def _check_compose(root: Path, environments: dict[str, dict], errors: list[str])
     if not isinstance(dashboard_networks, dict):
         dashboard_networks = {}
 
-    expected_services = {item.get("service_name") for item in environments.values()}
-    declared_agent_services = {name for name in services if name.startswith("env-")}
+    expected_services = {
+        item.get("service_name")
+        for item in environments.values()
+        if isinstance(item.get("service_name"), str) and item.get("service_name")
+    }
+    declared_agent_services = {name for name in services if isinstance(name, str) and name.startswith("env-")}
     for missing in sorted(expected_services - set(services)):
         errors.append(f"compose.yaml: serviço declarado em environments.json mas ausente: '{missing}'")
     for extra in sorted(declared_agent_services - expected_services):
@@ -162,6 +166,9 @@ def _check_compose(root: Path, environments: dict[str, dict], errors: list[str])
     for index, environment in enumerate(env_items, start=1):
         identifier = environment.get("id", "<sem-id>")
         service_name = environment.get("service_name")
+        if not isinstance(service_name, str) or not service_name:
+            errors.append(f"environments.json:{identifier}: service_name ausente/inválido para validação Compose")
+            continue
         service = services.get(service_name)
         if not isinstance(service, dict):
             continue
@@ -216,11 +223,13 @@ def _check_compose(root: Path, environments: dict[str, dict], errors: list[str])
             continue
         if network.get("internal") is not True:
             errors.append(f"compose.yaml:{network_name}: a bridge do agente precisa ser internal: true")
-        network_config = network.get("ipam", {}).get("config", [])
+        ipam = network.get("ipam")
+        network_config = ipam.get("config", []) if isinstance(ipam, dict) else []
         expected_subnet = f"172.28.{index}.0/24"
-        if not network_config or network_config[0].get("subnet") != expected_subnet:
+        first_network_config = network_config[0] if isinstance(network_config, list) and network_config else None
+        if not isinstance(first_network_config, dict) or first_network_config.get("subnet") != expected_subnet:
             errors.append(f"compose.yaml:{network_name}: subnet esperada {expected_subnet}")
-        elif network_config[0].get("gateway") != f"172.28.{index}.1":
+        elif first_network_config.get("gateway") != f"172.28.{index}.1":
             errors.append(f"compose.yaml:{network_name}: gateway esperada 172.28.{index}.1")
         expected_gateways.add(f"172.28.{index}.1")
         address = service_networks[network_name]
@@ -295,8 +304,9 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
     required_directory_keys = {"root", "games", "bios", "saves", "config_home", "custom_emulators"}
     service_names: set[str] = set()
     for identifier, environment in environment_map.items():
-        if environment.get("emulator_id") not in catalog_ids:
-            errors.append(f"environments.json:{identifier}: emulator_id inexistente {environment.get('emulator_id')!r}")
+        emulator_id = environment.get("emulator_id")
+        if not isinstance(emulator_id, str) or emulator_id not in catalog_ids:
+            errors.append(f"environments.json:{identifier}: emulator_id inexistente/inválido {emulator_id!r}")
         service_name = environment.get("service_name")
         if service_name != f"env-{identifier}":
             errors.append(f"environments.json:{identifier}: service_name esperado 'env-{identifier}'")
@@ -324,26 +334,27 @@ def validate_repository(root: Path, include_compose: bool = True) -> list[str]:
             errors.append(f"environments.json:{identifier}: system_profile_ids precisa ser uma lista")
         else:
             for system_id in profile_ids:
-                if system_id not in system_ids:
-                    errors.append(f"environments.json:{identifier}: system_profile_id inexistente {system_id!r}")
+                if not isinstance(system_id, str) or system_id not in system_ids:
+                    errors.append(f"environments.json:{identifier}: system_profile_id inexistente/inválido {system_id!r}")
 
     for identifier, system in system_map.items():
         strategy = system.get("boot_strategy")
-        if strategy not in BOOT_STRATEGIES:
+        if not isinstance(strategy, str) or strategy not in BOOT_STRATEGIES:
             errors.append(f"console-systems.json:{identifier}: boot_strategy inválida {strategy!r}")
         emulator_ids = system.get("emulator_ids")
         if not isinstance(emulator_ids, list):
             errors.append(f"console-systems.json:{identifier}: emulator_ids precisa ser uma lista")
             continue
         for emulator_id in emulator_ids:
-            if emulator_id not in catalog_ids:
-                errors.append(f"console-systems.json:{identifier}: emulator_id inexistente {emulator_id!r}")
+            if not isinstance(emulator_id, str) or emulator_id not in catalog_ids:
+                errors.append(f"console-systems.json:{identifier}: emulator_id inexistente/inválido {emulator_id!r}")
 
     for identifier, source in source_map.items():
         if not isinstance(source.get("name"), str) or not source["name"].strip():
             errors.append(f"game-sources.json:{identifier}: name obrigatório")
-        if source.get("category") not in category_map:
-            errors.append(f"game-sources.json:{identifier}: category desconhecida {source.get('category')!r}")
+        category = source.get("category")
+        if not isinstance(category, str) or category not in category_map:
+            errors.append(f"game-sources.json:{identifier}: category desconhecida/inválida {category!r}")
         url = source.get("url")
         parsed = urlparse(str(url or ""))
         if parsed.scheme != "https" or not parsed.netloc:
