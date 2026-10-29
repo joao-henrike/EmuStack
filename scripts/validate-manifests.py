@@ -88,7 +88,7 @@ def _is_safe_relative_path(value: object) -> bool:
     if not isinstance(value, str) or not value.strip():
         return False
     path = PurePosixPath(value)
-    return not path.is_absolute() and ".." not in path.parts and "\\x00" not in value
+    return not path.is_absolute() and ".." not in path.parts and "\x00" not in value
 
 
 def _parse_volume(volume: object) -> tuple[str, str, str] | None:
@@ -174,7 +174,7 @@ def _check_compose(root: Path, environments: dict[str, dict], errors: list[str])
                 f"compose.yaml:{service_name}: EMUSTACK_ENV_ID deveria ser '{identifier}', "
                 f"recebido {service_env.get('EMUSTACK_ENV_ID')!r}"
             )
-        if service_env.get("EMUSTACK_SYSTEMS_PATH') != "/opt/emustack/console-systems.json":
+        if service_env.get("EMUSTACK_SYSTEMS_PATH") != "/opt/emustack/console-systems.json":
             errors.append(f"compose.yaml:{service_name}: EMUSTACK_SYSTEMS_PATH ausente ou incorreto")
         if service_env.get("EMUSTACK_ENVIRONMENTS_PATH") != "/opt/emustack/environments.json":
             errors.append(f"compose.yaml:{service_name}: EMUSTACK_ENVIRONMENTS_PATH ausente ou incorreto")
