@@ -35,8 +35,17 @@ class InstallerTests(unittest.TestCase):
             expected = {item["id"] for item in catalog["emulators"]}
             self.assertEqual(set(data["items"]), expected)
             self.assertEqual(len(data["items"]), 20)
+            self.assertEqual(data["schema_version"], 2)
             self.assertEqual(data["items"]["xbox-one"]["status"], "unsupported-no-runner")
             self.assertEqual(data["items"]["xbox-series"]["status"], "unsupported-no-runner")
+            for profile_id, item in data["items"].items():
+                self.assertEqual(item["profile_id"], profile_id)
+                self.assertEqual(item["installation_status"], item["status"])
+                self.assertIn("host_architecture", item["evidence"])
+                self.assertIn(item["execution_test"]["status"], {"not-run", "passed", "failed"})
+                self.assertIn(item["runtime_test"]["status"], {"not-run", "passed", "failed"})
+                self.assertIsInstance(item["execution_test"]["reason"], str)
+                self.assertIsInstance(item["runtime_test"]["reason"], str)
 
     def test_downloader_rejects_non_allowlisted_host_before_network_access(self):
         spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)
