@@ -1,7 +1,7 @@
 # EmuStack 0.7.1 — Relatório de arquitetura, alterações e testes
 
 **Data:** 28 de outubro de 2026  
-**Resultado:** testes locais automatizados aprovados; runtime Docker e boot real não executados neste ambiente.
+**Resultado da validação remota (29 de outubro de 2026):** o workflow GitHub Actions `EmuStack CI` passou no commit `f0c746a43773b6d3afb6db548129b045448bc3c0` (run [40793752673](https://github.com/joao-henrike/EmuStack/actions/runs/40793752673)). A CI validou código/testes, lock estrito, Compose, build Docker, inicialização do dashboard/agentes, runtime acceptance e fronteiras entre agentes. Isso não equivale a certificar todos os jogos e firmwares em toda GPU/host.
 
 ## Resumo
 
@@ -14,7 +14,7 @@ Isto não equivale a 20 consoles integralmente emulados. O dashboard é um plano
 ### Ambientes e isolamento
 
 - O dashboard aplica uma allowlist de IPs TCP de origem para POSTs mutáveis. Cada rede usa IPAM estático (`gateway .1`, agente `.2`, dashboard `.3`) para impedir que cabeçalhos HTTP forjados por um agente autorizem uma chamada ao dashboard.
-- O runtime acceptance tenta agora a requisição forjada a partir de cada um dos 20 agentes. Este teste de rede exige execução Docker real e não foi executado neste ambiente.
+- O runtime acceptance verifica a fronteira de origem e tenta requisições forjadas a partir dos agentes. O workflow CI do GitHub passou por essa etapa no run [40793752673](https://github.com/joao-henrike/EmuStack/actions/runs/40793752673); isso comprova a topologia/testes daquela execução de CI, não uma prova universal contra todo ataque ou configuração de host.
 
 - 20 IDs correspondem exatamente entre `catalog.json` e `environments.json`.
 - Cada agente tem diretórios próprios `games/`, `bios/`, `saves/`, `home/` e `emulators/`.
@@ -46,7 +46,7 @@ Isto não equivale a 20 consoles integralmente emulados. O dashboard é um plano
 - O build do KytyPS5 está restrito a uma tag e checa um prefixo de commit esperado.
 - `APT_SNAPSHOT_TIMESTAMP=YYYYMMDDTHHMMSSZ` permite resolver pacotes usando um snapshot Debian datado. Isso congela também as correções de segurança do snapshot, por isso deve ser atualizado após revisão de patches.
 - `FREEZE_RELEASE_LOCK=1` tenta capturar hashes dos assets oficiais realmente obtidos e reconstruir com um lock estrito.
-- O `release-lock.json` entregue está no modo permissivo, sem assets upstream hash-pinned ainda. É necessário executar o build online no host para obter os assets disponíveis e então congelá-los. Não se afirma que isso já foi concluído.
+- O `release-lock.json` atual está em modo estrito: os assets oficiais pináveis possuem hashes SHA-256 e as entradas não instaladas ficam marcadas como `skip-upstream` com justificativa. Isso torna explícitas as limitações: projetos sem runner ou asset confiável/disponível não são instalados nem tratados como presentes. O lock não congela por si só as versões dos pacotes APT; para isso, é preciso configurar `APT_SNAPSHOT_TIMESTAMP`.
 - Não há garantia de build bit-a-bit idêntico em toda arquitetura ou versão de Docker/BuildKit. Releases experimentais, pacotes APT indisponíveis e builds upstream podem falhar; o relatório de instalação deve ser consultado.
 
 ## Resultados de validação executada
@@ -67,7 +67,7 @@ Isto não equivale a 20 consoles integralmente emulados. O dashboard é um plano
 
 ## Não executado / limitações externas
 
-O ambiente de trabalho não contém `docker`, `podman` nem `buildah`. Portanto, não foi possível executar `docker compose config`, construir a imagem real, resolver/baixar ativos upstream, verificar a saúde dos contêineres, nem executar `scripts/runtime-acceptance.sh` aqui. O `runtime-acceptance.py` foi coberto com testes unitários simulados para caminhos de sucesso/falha, mas os probes dependem de execução real dentro dos contêineres no host. O parse YAML, a sintaxe do Dockerfile e os testes unitários não substituem essas etapas.
+O container de auditoria usado para inspeção local não contém `docker`, `podman` nem `buildah`, então não pôde executar o runtime localmente. Isso foi coberto, para a versão commitada no GitHub, pelo workflow CI remoto: no run [40793752673](https://github.com/joao-henrike/EmuStack/actions/runs/40793752673), o build Docker, a inicialização dos agentes/dashboard e o `scripts/runtime-acceptance.sh` concluíram com sucesso. O workflow constrói sem downloads opcionais de upstream, portanto não prova que todos os binários comerciais/experimentais estejam instalados; confira o `release-lock.json` e o relatório de instalação. Ainda são necessários testes de compatibilidade por jogo e de boot real de firmware/menu no hardware-alvo.
 
 Também não foi possível provar a execução com sua GPU, áudio, controle, jogos, firmware, NAND/MLC/HDD ou interfaces originais no seu computador. São necessários testes no Debian host com Docker Engine + Compose v2 e arquivos próprios legalmente utilizáveis.
 
