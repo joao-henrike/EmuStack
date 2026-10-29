@@ -43,6 +43,8 @@ class InstallerTests(unittest.TestCase):
                 self.assertEqual(item["profile_id"], profile_id)
                 self.assertEqual(item["installation_status"], item["status"])
                 self.assertIn("host_architecture", item["evidence"])
+                self.assertEqual(item["evidence"]["installer_architecture"], item["evidence"]["host_architecture"])
+                self.assertIn("physical host/GPU is not attested", item["evidence"]["architecture_basis"])
                 self.assertIn(item["execution_test"]["status"], {"not-run", "passed", "failed"})
                 self.assertIn(item["runtime_test"]["status"], {"not-run", "passed", "failed"})
                 self.assertIsInstance(item["execution_test"]["reason"], str)
