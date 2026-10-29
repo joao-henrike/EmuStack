@@ -183,10 +183,11 @@ def agent_restart_recovery_smoke(env_containers: dict[str, dict], env_id: str = 
         raise RuntimeError("env-" + env_id + " RestartCount is not numeric")
 
     status_code, session_payload = api("/api/processes")
-    if status_code != 200 or not isinstance(session_payload, dict):
+    sessions = session_payload.get("processes") if isinstance(session_payload, dict) else None
+    if status_code != 200 or not isinstance(sessions, list):
         raise RuntimeError("Could not confirm active sessions before the recovery probe")
     active_sessions = [
-        item for item in session_payload.get("processes", [])
+        item for item in sessions
         if isinstance(item, dict)
         and item.get("environment_id") == env_id
         and item.get("status") == "running"
