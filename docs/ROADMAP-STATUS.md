@@ -36,7 +36,7 @@ Este documento acompanha a execução incremental das correções prioritárias.
 3. **Boot e compatibilidade de perfis:** testar separadamente runner, pré-requisitos, boot observado, smoke test do menu e testes de jogos/homebrew legalmente obtidos. Não distribuir BIOS, firmware, chaves ou jogos proprietários.
 4. **Persistência de saves:** pesquisar e validar caminhos por emulador/versão antes de criar symlinks ou mover saves. O diretório `/saves` continua sendo armazenamento separado, mas nem todos os emuladores escrevem nele por padrão; parte dos dados persiste em `/home/emu`.
 5. **Segurança e cadeia de suprimentos:** adicionar SBOM/varredura de vulnerabilidades com versões de ferramentas fixadas e política explícita para alertas; avaliar o acesso por recurso gráfico e atualizar a base Debian/snapshot após revisão de patches.
-6. **Resiliência e carga:** testar reinícios de agente, requests concorrentes, limites de CPU/RAM/PIDs, recuperação após falha e crescimento de logs/armazenamento.
+6. **Resiliência e carga:** o runtime acceptance inclui um smoke somente leitura de 25 requests a `/api/health` com 4 workers e registra p50/p95/máximo. Ainda faltam testes de reinícios de agente, limites CPU/RAM/PIDs, recuperação após falha e crescimento de logs/armazenamento.
 7. **Perfis experimentais por último:** somente reavaliar KytyPS5, shadPS4 e caminhos de dashboard/Xbox quando houver runner, artefatos oficiais/inputs reproduzíveis e evidência de runtime suficiente.
 
 ## Limites que devem permanecer explícitos
