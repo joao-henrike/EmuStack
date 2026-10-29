@@ -2,6 +2,8 @@
 
 const state = {
   health: null,
+  installReport: null,
+  installReportError: '',
   emulators: [],
   environments: [],
   consoleSystems: [],
@@ -156,6 +158,75 @@ function renderOverview() {
     ['Exposição web', 'Somente loopback (127.0.0.1)', 'good'],
   ];
   $('#system-lines').innerHTML = lines.map(([label,value,tone]) => `<div class="system-line"><span>${escapeHtml(label)}</span><b class="${tone}">${escapeHtml(value)}</b></div>`).join('');
+}
+
+function installStatusLabel(status) {
+  const labels = {
+    installed: 'Instalado',
+    failed: 'Falhou',
+    'not-available': 'Indisponível',
+    'skipped-by-lock': 'Ignorado pelo lock',
+    'unsupported-no-runner': 'Sem runner suportado',
+  };
+  return labels[status] || status || 'Desconhecido';
+}
+
+function installStatusTone(status) {
+  if (status === 'installed') return 'good';
+  if (status === 'failed') return 'bad';
+  if (status === 'skipped-by-lock' || status === 'unsupported-no-runner') return 'warn';
+  return 'muted';
+}
+
+function renderInstallReport() {
+  const host = $('#install-report-list');
+  if (!host) return;
+  if (state.installReportError) {
+    host.innerHTML = `<div class="empty-state">Não foi possível ler o relatório: ${escapeHtml(state.installReportError)}</div>`;
+    return;
+  }
+  const report = state.installReport;
+  const itemsObject = report && report.items && typeof report.items === 'object' && !Array.isArray(report.items) ? report.items : {};
+  const items = Object.entries(itemsObject).sort(([a], [b]) => a.localeCompare(b));
+  if (!report || !items.length) {
+    host.innerHTML = '<div class="empty-state">Relatório ainda não disponível. Faça o build da imagem para criar o relatório de instalação por perfil.</div>';
+    return;
+  }
+  const installed = items.filter(([, item]) => item && item.status === 'installed').length;
+  const failed = items.filter(([, item]) => item && item.status === 'failed').length;
+  const pending = items.length - installed - failed;
+  const summary = `<div class="install-report-summary"><span><b>${items.length}</b> perfis</span><span class="good"><b>${installed}</b> instalados</span><span class="bad"><b>${failed}</b> falhas</span><span class="muted"><b>${pending}</b> ignorados/indisponíveis</span></div>`;
+  const rows = items.map(([id, rawItem]) => {
+    const item = rawItem && typeof rawItem === 'object' ? rawItem : {};
+    const evidence = item.evidence && typeof item.evidence === 'object' ? item.evidence : {};
+    const execution = item.execution_test && typeof item.execution_test === 'object' ? item.execution_test : {status:'not-run',reason:'Teste não registrado no relatório legado.'};
+    const runtime = item.runtime_test && typeof item.runtime_test === 'object' ? item.runtime_test : {status:'not-run',reason:'Teste não registrado no relatório legado.'};
+    const version = item.version || evidence.version || '—';
+    const artifact = item.asset || evidence.artifact || item.binary || evidence.binary_path || '—';
+    const source = item.url || evidence.source_url || item.repo || evidence.source_repository || item.source || evidence.install_source || '—';
+    const sha = item.sha256 || evidence.sha256_actual || '—';
+    const expectedSha = evidence.sha256_expected || '—';
+    return `<details class="install-report-row">
+      <summary><span class="status-chip ${installStatusTone(item.status)}">${escapeHtml(installStatusLabel(item.status))}</span><b>${escapeHtml(id)}</b><span class="install-report-version">${escapeHtml(String(version))}</span><span class="install-report-test">Execução: ${escapeHtml(execution.status || 'not-run')}</span></summary>
+      <div class="install-report-evidence">
+        <dl>
+          <dt>Versão</dt><dd>${escapeHtml(String(version))}</dd>
+          <dt>Arquitetura do host</dt><dd>${escapeHtml(String(evidence.host_architecture || 'não registrada'))}</dd>
+          <dt>Origem</dt><dd>${escapeHtml(String(source))}</dd>
+          <dt>Ativo</dt><dd>${escapeHtml(String(artifact))}</dd>
+          <dt>SHA-256 esperado</dt><dd><code>${escapeHtml(String(expectedSha))}</code></dd>
+          <dt>SHA-256 calculado</dt><dd><code>${escapeHtml(String(sha))}</code></dd>
+          <dt>Executável</dt><dd><code>${escapeHtml(String(item.binary || evidence.binary_path || '—'))}</code></dd>
+          <dt>Teste de execução</dt><dd>${escapeHtml(installStatusLabel(execution.status))}: ${escapeHtml(execution.reason || 'sem detalhe')}</dd>
+          <dt>Teste de runtime</dt><dd>${escapeHtml(installStatusLabel(runtime.status))}: ${escapeHtml(runtime.reason || 'sem detalhe')}</dd>
+        </dl>
+        ${item.reason ? `<p class="install-report-reason"><b>Motivo/erro:</b> ${escapeHtml(String(item.reason))}</p>` : ''}
+        ${item.details ? `<p class="install-report-reason">${escapeHtml(String(item.details))}</p>` : ''}
+        ${evidence.size_bytes != null ? `<p class="install-report-reason">Tamanho do ativo: ${escapeHtml(formatBytes(Number(evidence.size_bytes)))}</p>` : ''}
+      </div>
+    </details>`;
+  }).join('');
+  host.innerHTML = summary + rows;
 }
 
 function renderSessions() {
@@ -607,11 +678,13 @@ async function confirmLaunch() {
 async function refreshAll() {
   $('#refresh-button').classList.add('refreshing');
   try {
-    const [health, catalog, games, sources, docs, processes, consoleSystems, environments] = await Promise.all([
-      api('/api/health'), api('/api/catalog'), api('/api/games'), api('/api/sources'), api('/api/docs'), api('/api/processes'), api('/api/console-systems').catch(error => ({systems:[], error:error.message})), api('/api/environments').catch(error => ({environments:[], error:error.message}))
+    const [health, catalog, games, sources, docs, processes, consoleSystems, environments, reportResult] = await Promise.all([
+      api('/api/health'), api('/api/catalog'), api('/api/games'), api('/api/sources'), api('/api/docs'), api('/api/processes'), api('/api/console-systems').catch(error => ({systems:[], error:error.message})), api('/api/environments').catch(error => ({environments:[], error:error.message})), api('/api/report').catch(error => ({available:false, message:error.message}))
     ]);
     state.health=health; state.emulators=catalog.emulators||[]; state.games=games.games||[]; state.sources=sources; state.docs=docs.documents||[]; state.sessions=processes.processes||[]; state.consoleSystems=consoleSystems.systems||[]; state.consoleSystemsError=consoleSystems.error||''; state.environments=environments.environments||[];
-    renderOverview(); renderPlatformOptions(); renderEmulators(); renderEnvironments(); renderConsoleSystems(); renderLibrary(); renderSources(); renderDocs(); renderSessions();
+    state.installReport = reportResult.available ? reportResult.report : null;
+    state.installReportError = reportResult.available ? '' : (reportResult.message || '');
+    renderOverview(); renderInstallReport(); renderPlatformOptions(); renderEmulators(); renderEnvironments(); renderConsoleSystems(); renderLibrary(); renderSources(); renderDocs(); renderSessions();
   } catch(error) {
     $('#side-health').textContent='API indisponível';
     toast(`Não foi possível ler o container: ${error.message}`, 'error');
