@@ -9,6 +9,7 @@ python3 -m compileall -q emustack.py webapp.py console_modes.py console_agent.py
 python3 scripts/check-release-lock.py release-lock.json
 printf '\n== Cross-manifest and Compose contract validation ==\n'
 python3 scripts/validate-manifests.py
+python3 scripts/audit-save-layout.py --strict >/dev/null
 printf 'Python syntax OK.\n'
 if command -v node >/dev/null 2>&1; then
   printf '\n== JavaScript syntax and launch recommendation tests ==\n'
