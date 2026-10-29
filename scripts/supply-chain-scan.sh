@@ -2,10 +2,10 @@
 set -Eeuo pipefail
 umask 077
 
-ROOT="$(cd -- "$(dirname -- "\${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 LOCK_FILE="$ROOT/supply-chain-tools.json"
-ARTIFACT_DIR="\${EMUSTACK_SECURITY_ARTIFACTS_DIR:-$ROOT/artifacts}"
-IMAGE_REF="\${EMUSTACK_SCAN_IMAGE:-$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["target_image"])' "$LOCK_FILE")}"
+ARTIFACT_DIR="${EMUSTACK_SECURITY_ARTIFACTS_DIR:-$ROOT/artifacts}"
 
 for required in curl sha256sum tar python3 docker; do
   command -v "$required" >/dev/null 2>&1 || {
@@ -14,9 +14,10 @@ for required in curl sha256sum tar python3 docker; do
   }
 done
 [[ -f "$LOCK_FILE" ]] || { echo "ERROR: missing supply-chain lock: $LOCK_FILE" >&2; exit 2; }
+IMAGE_REF="${EMUSTACK_SCAN_IMAGE:-$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["target_image"])' "$LOCK_FILE")}"
 
 mkdir -p "$ARTIFACT_DIR"
-work_dir="$(mktemp -d "\${TMPDIR:-/tmp}/emustack-supply-chain.XXXXXX")"
+work_dir="$(mktemp -d "${TMPDIR:-/tmp}/emustack-supply-chain.XXXXXX")"
 trap 'rm -rf -- "$work_dir"' EXIT
 
 read_tool_field() {
