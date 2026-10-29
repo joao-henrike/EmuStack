@@ -24,6 +24,14 @@ The committed `release-lock.json` is strict and covers all 20 catalog IDs. The c
 
 The successful lock-generation run disabled the optional KytyPS5 source build (`BUILD_KYTYPS5=0`), so KytyPS5 is correctly marked `skip-upstream` in this lock. When explicitly enabled, the Dockerfile checks a declared KytyPS5 tag/short commit before attempting compilation; that separate source-build path is not covered by the downloadable-asset lock and is not claimed as built by the current acceptance run.
 
+### Schema do relatório e instalação transacional
+
+O `install-report.json` gerado pelo instalador usa atualmente `schema_version: 2`. Cada ID do catálogo recebe um estado individual e campos estruturados de evidência: repositório/URL, ativo, versão quando conhecida, hash esperado/calculado quando disponível, tamanho e caminho do launcher/payload. O instalador também declara `execution_test.status: not-run` e `runtime_test.status: not-run` até que etapas separadas tenham realmente executado esses testes.
+
+A arquitetura registrada como `installer_architecture` é o valor de `platform.machine()` no processo que instala o ativo. Como isso costuma acontecer durante o build da imagem, **não é atestação da arquitetura física do host nem da GPU**. O campo legado `host_architecture` é mantido apenas para consumidores antigos; a interface prefere o campo novo e mostra sua base de medição.
+
+Assets em formato de arquivo compacto são extraídos primeiro para uma área temporária no mesmo diretório de instalação. Só depois de validar o arquivo e selecionar um executável candidato o instalador promove o payload e o link de launcher; se a promoção falhar, tenta restaurar a versão anterior. Isso reduz o risco de uma atualização incompleta destruir um payload válido, mas não substitui os testes de runtime/boot do alvo.
+
 ### Explicitly skipped upstream entries
 
 Every `skip-upstream` entry is intentional and must remain explicit until there is verifiable provenance. The skip is not a statement that the emulator can never be installed; a separately trusted distro package may be detected, but this lock does not certify that path.
