@@ -25,7 +25,7 @@
       "repo": "stenzek/duckstation",
       "tag": "preview",
       "asset": "DuckStation-x64-SSE2.AppImage",
-      "sha256": "c64922ed4e989c45e79270d6b3161b4a7b3d7381cf3691a6e8a293c86947d846"
+      "sha256": "3b6fef7edd105e7802cab18a44c9c22f22a5896873ebd657ed9487bb48ae4fef"
     },
     "pcsx2": {
       "mode": "pinned",
@@ -43,7 +43,7 @@
       "repo": "Vita3K/Vita3K",
       "tag": "continuous",
       "asset": "Vita3K-x86_64.AppImage",
-      "sha256": "a2b76221b8238947576e7992cd414d492fa6ae0bacc0d321ad628668ce5716f8"
+      "sha256": "d031ed6ee5e767c23eeb9a74f9ad939bcd9729bbb5c89e317704fd155935af0b"
     },
     "xbox-one": {
       "mode": "skip-upstream",
