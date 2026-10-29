@@ -384,8 +384,8 @@ def resolve_systems(
         # means an attempt is available, not that a boot was observed.
         profile["prerequisites_detected"] = bool(prerequisites_met)
         profile["can_attempt_boot"] = bool(profile.get("can_boot_original", False))
-        profile["boot_observed"] = bool(profile.get("runtime_boot_observed", False))
         profile["smoke_test_passed"] = bool(profile.get("runtime_smoke_test_passed", False))
+        profile["boot_observed"] = bool(profile.get("runtime_boot_observed", False) or profile["smoke_test_passed"])
         if profile["smoke_test_passed"]:
             profile["boot_validation_status"] = "smoke-test-passed"
         elif profile["boot_observed"]:
