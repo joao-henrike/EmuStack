@@ -338,5 +338,28 @@ class WebAppTests(unittest.TestCase):
             process.stdout.close()
 
 
+    def test_readiness_route_does_not_compute_full_summary(self):
+        with patch.object(webapp, "summarize", side_effect=AssertionError("heavy summary must not run")):
+            with urlopen(self.base + "/api/ready", timeout=3) as response:
+                self.assertEqual(response.status, 200)
+                self.assertEqual(json.load(response), {"healthy": True})
+
+    def test_cached_summary_reuses_result_within_ttl(self):
+        with webapp.SUMMARY_CACHE_LOCK:
+            webapp.SUMMARY_CACHE = None
+            webapp.SUMMARY_CACHE_AT = 0.0
+        try:
+            with patch.object(webapp, "summarize", return_value={"project": "EmuStack"}) as summarize:
+                first = webapp.cached_summarize(lambda: {}, lambda _item: ("UNKNOWN", None))
+                second = webapp.cached_summarize(lambda: {}, lambda _item: ("UNKNOWN", None))
+                self.assertEqual(first, {"project": "EmuStack"})
+                self.assertEqual(second, first)
+                summarize.assert_called_once()
+        finally:
+            with webapp.SUMMARY_CACHE_LOCK:
+                webapp.SUMMARY_CACHE = None
+                webapp.SUMMARY_CACHE_AT = 0.0
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
