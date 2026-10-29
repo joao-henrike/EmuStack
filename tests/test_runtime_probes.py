@@ -5,7 +5,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
-from runtime_probes import env_flag, has_readonly_device_mapping, is_allowed_input_device, is_software_vulkan_renderer, parse_env_file
+from runtime_probes import (
+    env_flag,
+    has_readonly_device_mapping,
+    is_allowed_input_device,
+    is_dashboard_summary_response,
+    is_software_vulkan_renderer,
+    parse_env_file,
+)
 
 
 class RuntimeProbeHelpersTests(unittest.TestCase):
@@ -29,6 +36,30 @@ class RuntimeProbeHelpersTests(unittest.TestCase):
         self.assertTrue(is_software_vulkan_renderer("deviceName = llvmpipe (LLVM 18.1)"))
         self.assertTrue(is_software_vulkan_renderer("deviceName = Mesa Lavapipe"))
         self.assertFalse(is_software_vulkan_renderer("deviceName = NVIDIA GeForce RTX 3060"))
+
+    def test_dashboard_health_smoke_accepts_trusted_summary_contract(self):
+        payload = {
+            "project": "EmuStack",
+            "emulator_count": 20,
+            "launchers_ready": 3,
+            "needs_attention": 5,
+            "game_count": 2,
+            "game_bytes": 4096,
+            "active_process_count": 0,
+            "process_count": 0,
+            "install_report_count": 20,
+            "generated_at": "2026-10-29T17:20:00+00:00",
+            "security": {"privileged": False},
+        }
+        self.assertTrue(is_dashboard_summary_response(200, payload))
+        self.assertFalse(is_dashboard_summary_response(503, payload))
+        self.assertFalse(is_dashboard_summary_response(200, {**payload, "emulator_count": True}))
+        self.assertFalse(is_dashboard_summary_response(200, {**payload, "generated_at": "not-a-timestamp"}))
+        self.assertFalse(is_dashboard_summary_response(200, {**payload, "security": []}))
+
+    def test_dashboard_health_smoke_rejects_minimal_untrusted_agent_health(self):
+        self.assertFalse(is_dashboard_summary_response(200, {"healthy": True}))
+        self.assertFalse(is_dashboard_summary_response(200, {"project": "other", "emulator_count": 20}))
 
     def test_input_device_paths_are_restricted_to_device_nodes(self):
         self.assertTrue(is_allowed_input_device("/dev/input/event4"))
