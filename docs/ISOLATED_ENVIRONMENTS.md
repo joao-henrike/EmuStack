@@ -1,33 +1,65 @@
-# Arquitetura dos ambientes isolados — 0.7.1
+# 🔒 Arquitetura dos ambientes isolados
 
-## Objetivo
+## 🎯 Objetivo e limite da separação
 
-Cada perfil do catálogo tem um contêiner/agente próprio e uma raiz de dados exclusiva. O dashboard é um plano de controle; ele não monta as bibliotecas, BIOS, saves ou HOME dos consoles. O serviço `emustack` de CLI também não recebe os dados persistentes dos ambientes.
+Cada ID do catálogo tem um agente e uma raiz persistente exclusivos. Os ambientes compartilham o kernel Linux do host e a camada de programas instalada na imagem comum, mas não recebem bind mounts graváveis das bibliotecas dos outros perfis. Trata-se de isolamento de contêiner, não de uma VM de console com kernel e hardware virtuais independentes.
 
-## Limite de confiança
+## 🧩 Classes de serviço
 
-- `dashboard`: publica apenas `127.0.0.1:8765`, conecta-se às redes dos agentes e usa os 20 segredos `EMUSTACK_AGENT_TOKEN_<ID>` (um token distinto por agente); não tem socket Docker nem mounts de dados do usuário.
-- `env-<id>`: recebe cinco mounts exclusivos (`games`, `bios`, `saves`, `home`, `emulators`) e participa de somente uma rede interna (`env-<id>-net`). Os outros agentes não participam dessa rede.
-- `emustack` CLI: usa uma rede interna de gerenciamento e não monta os dados dos consoles.
-- Imagem de runtime: os executáveis de emuladores instalados no build fazem parte de uma camada comum e imutável da imagem; os contêineres não compartilham volume gravável para esses programas. Cada ambiente pode ter binários de override próprios em `data/environments/<id>/emulators/`.
-- Dispositivos: X11/XWayland, GPU, áudio e controle não são dados de console e podem ser compartilhados com autorização explícita do host. Isso amplia a superfície de ataque e deve ser evitado em ambientes não confiáveis.
+| Serviço | Responsabilidade | Dados/autoridade |
+|---|---|---|
+| `dashboard` | UI/API e coordenação dos agentes | Publica apenas `127.0.0.1:8765`; guarda tokens dos agentes, mas não monta bibliotecas persistentes nem socket Docker. |
+| `env-<id>` | Agente de controle por perfil | Recebe apenas os mounts desse perfil; participa de uma rede interna exclusiva. |
+| `emustack` | CLI/relatórios/manutenção | Rede de gerenciamento; não recebe as raízes persistentes de todos os consoles como volumes graváveis. |
+| Imagem de runtime | Programas de emulação instalados no build | Camada comum, imutável para os serviços de runtime; cada override local é específico do ambiente. |
 
-## Política de dados
+## 📂 Política de mounts
 
-`cross_environment_storage = denied by default`. Não há bind mount de uma raiz de ambiente em outro ambiente. `games` e `bios` são read-only no contêiner; `saves` e `home` são graváveis e persistentes. Os logs ficam em `home/.local/state/emustack/logs/`. Não existe migração automática das pastas compartilhadas de versões anteriores.
+Cada agente recebe os destinos correspondentes a:
 
-## Política de rede
+| Pasta do host | Destino lógico | Modo | Conteúdo |
+|---|---|---|---|
+| `data/environments/<id>/games/` | `/games` | Somente leitura | Jogos/arquivos de conteúdo daquele perfil. |
+| `data/environments/<id>/bios/` | `/bios` | Somente leitura | Dumps/boot files colocados pelo usuário. |
+| `data/environments/<id>/saves/` | `/saves` | Gravável | Área de saves, quando suportada/configurada. |
+| `data/environments/<id>/home/` | `/home/emu` | Gravável | Configurações, estado persistente, NAND/MLC/HDD conforme o emulador. |
+| `data/environments/<id>/emulators/` | Override do perfil | Somente leitura no contrato do runtime | Binários locais de override reconhecidos pelo catálogo. |
 
-Cada rede `env-<id>-net` usa `internal: true`. O agente não recebe interface direta para qualquer rede de outro ambiente e não tem egress externo por padrão. O dashboard se conecta a todas essas redes para controlar os agentes, mas não oferece proxy genérico: usa um conjunto pequeno de endpoints e os IDs são validados contra `environments.json`.
+O mapeamento específico de cada serviço é definido em `compose.yaml`; a tabela descreve o modelo de dados e não substitui a inspeção da configuração efetiva. O dashboard não monta esses cinco diretórios. O setup e o storage recusam symlinks nas raízes que poderiam fazer dois perfis apontarem para os mesmos dados.
 
-O token de 256 bits é criado por `scripts/host-setup.sh` e guardado em `.env` com permissões restritas. As rotas de ação exigem `X-EmuStack-Agent-Token`, fazem validação do ID/sistema e não aceitam binário, shell ou lista de argumentos arbitrária fornecida pelo navegador. O endpoint de saúde só revela status básico dentro da rede correspondente.
+## 🌐 Política de rede e identidade
 
-## Defesa no contêiner
+- Cada agente tem uma bridge `internal: true` exclusiva e não participa diretamente da rede de outro perfil.
+- As redes usam IPAM estático no intervalo padrão `172.28.1.0/24` até `172.28.20.0/24`.
+- Em cada rede, gateway é `.1`, agente é `.2` e dashboard é `.3`.
+- A allowlist de clientes confiáveis do dashboard contém os gateways definidos, não os endereços dos agentes.
+- Cada agente tem um token exclusivo gerado pelo `host-setup.sh`, armazenado no `.env` local com permissão restrita.
+- Os agentes não têm egress externo por padrão; o dashboard não é um proxy genérico para essa rede.
 
-Os serviços de runtime usam `read_only: true`, `cap_drop: ALL`, `no-new-privileges`, limites de CPU/RAM/PIDs e `tmpfs` para temporários. Só um dispositivo de controle explicitamente selecionado pode ser mapeado. A integração gráfica/audio também é opt-in.
+Se a LAN/VPN do host se sobrepõe a `172.28.0.0/16`, planeje uma faixa sem conflito e altere **em conjunto** IPAM, gateways, IPs e allowlist. Não altere apenas uma das partes nem exponha o dashboard por reverse proxy.
 
-## O que isso não promete
+## 🛡️ Hardening de runtime
 
-É isolamento por contêiner Linux, não virtualização completa da placa-mãe de um console. Todos os agentes executam a mesma imagem de programas, ainda que seus dados persistentes sejam separados. O dashboard é privilegiado *logicamente* como orquestrador e, se comprometido, poderia enviar solicitações aos agentes; por isso deve permanecer local. O processo do emulador dentro de um contêiner também pode ter acesso a dispositivos de infraestrutura concedidos, como display/GPU.
+O Compose configura, quando aplicável, filesystem root read-only, capabilities removidas, `no-new-privileges`, `tmpfs` e limites de CPU/memória/PIDs. A API valida ID e parâmetros e não aceita binários arbitrários, comandos shell ou paths fora do escopo esperado. As pastas de jogo/BIOS ficam read-only dentro do agente.
 
-Os checks de unidade e de configuração não provam isolamento em runtime. Para declarar validado em uma máquina real, é necessário construir a imagem, conferir redes/mounts com Docker, testar que cada agente só vê seus próprios diretórios, verificar display/áudio/GPU e iniciar um sistema/jogo legalmente fornecido.
+Display/X11/XWayland, GPU, áudio e dispositivo de input são integrações com o host. São opt-in e ampliam a superfície de ataque; forneça apenas o recurso necessário. X11 pode possibilitar acesso amplo à sessão gráfica dependendo das permissões/configuração.
+
+## ⚠️ O que este desenho não promete
+
+- Não resiste a um host/root já comprometido nem corrige vulnerabilidades do kernel.
+- Não torna Docker equivalente a uma VM nem elimina riscos de executar emuladores de terceiros.
+- Não garante ausência absoluta de bugs em mounts, redes, API ou drivers.
+- Não autentica a licença nem a autenticidade de jogos/BIOS/firmware.
+- Não prova desempenho, GUI, áudio, controle ou boot de jogo sem testes correspondentes.
+- O dashboard coordena os agentes e conhece os tokens; por isso deve permanecer local e ser mantido atualizado.
+
+## ✅ Como verificar a separação
+
+```bash
+docker compose ps
+./scripts/runtime-acceptance.sh
+docker network ls
+docker inspect <nome-ou-id-do-container>
+```
+
+Use os nomes reais listados por `docker compose ps`; a aceitação efetua checks mais detalhados de rede, IPAM, mounts e tentativas de chamadas protegidas. Se algum check falhar, não declare isolamento validado. Consulte [Aceitação local](LOCAL_ACCEPTANCE.md) e [Segurança](SECURITY.md).

@@ -1,33 +1,77 @@
-# Build reproducibility and update policy
+# 📦 Build, lock de assets e reprodutibilidade
 
-## Debian base image
+## 🎯 Escopo do que é fixado
 
-The Dockerfile pins the multi-platform manifest digest for the official `debian:trixie-slim` image observed on 2026-10-28:
+A reprodutibilidade é parcial e explícita. Há três fontes que precisam ser consideradas separadamente:
 
-`sha256:89c1ea91e897f0fe0a3731595330bc45b8bdef4047464a07116f891a94054b31`
+1. digest da imagem base Debian;
+2. versões dos pacotes APT;
+3. assets de emuladores baixados/compilados.
 
-Reference: [official Debian image tags on Docker Hub](https://hub.docker.com/_/debian/tags/). A digest is immutable; the project should update this value only after reviewing a new official digest and security status.
+O commit do `release-lock.json` deve ser consultado junto com o relatório de instalação do build. **Um hash de asset não é certificado de compatibilidade, segurança ou execução do emulador.**
 
-## Debian package repository
+## 🐧 Imagem base Debian
 
-By default, APT uses the current Trixie repositories so rebuilds receive current package/security updates. Thus package versions can change between builds even though the base image is pinned. To use a fixed archive snapshot, set `APT_SNAPSHOT_TIMESTAMP` to a Debian snapshot ID, for example:
+O Dockerfile fixa o digest multi-plataforma observado para a imagem oficial `debian:trixie-slim`:
+
+```text
+sha256:89c1ea91e897f0fe0a3731595330bc45b8bdef4047464a07116f891a94054b31
+```
+
+A revisão futura deve conferir o digest oficial, origem e estado de segurança antes de atualizá-lo. Referência: [tags oficiais da imagem Debian](https://hub.docker.com/_/debian/tags/).
+
+## 🗃️ Repositórios APT
+
+No padrão, o build utiliza repositórios Trixie atuais para receber atualizações; assim, as versões de pacotes podem mudar mesmo que a imagem base esteja pinada. Para selecionar um snapshot datado:
 
 ```bash
 APT_SNAPSHOT_TIMESTAMP=20261027T000000Z FREEZE_RELEASE_LOCK=1 ./scripts/build-and-audit.sh
 ```
 
-The snapshot mode switches both Debian and Debian Security sources to the dated snapshot and disables `Valid-Until` checking as documented for Debian snapshots. This is intended for controlled/reproducible builds, not as a permanent security update policy: the selected date also freezes security fixes. Update the timestamp after reviewing subsequent patches. See the [official Debian snapshot documentation](https://snapshot.debian.org/).
+O timestamp é ilustrativo: escolha uma data revisada. Snapshot melhora a estabilidade da resolução, mas também congela correções de segurança posteriores. Reavalie regularmente e não trate um snapshot antigo como política permanente de atualização. Veja [Debian Snapshot](https://snapshot.debian.org/).
 
-## Upstream emulator assets
+## 🔐 Assets oficiais no release lock
 
-The committed `release-lock.json` is strict and covers all 20 catalog IDs. The current verified lock pins 11 downloadable official assets with SHA-256; the other 9 entries are explicitly marked `skip-upstream` with reasons instead of claiming binaries that were not verified. The lock was generated from a successful online build and a second build using the resulting strict lock completed successfully.
+O `release-lock.json` atualmente é estrito e cobre os 20 IDs. O estado verificado consiste em **11 assets baixáveis oficiais com SHA-256** e **9 entradas `skip-upstream`** com razão explícita. Os modos `pinned` e `pinned-url` fixam referência/URL e hash do asset baixado; `skip-upstream` significa que o asset não é instalado pelo caminho upstream pinado nessa entrada.
 
-The successful lock-generation run disabled the optional KytyPS5 source build (`BUILD_KYTYPS5=0`), so KytyPS5 is correctly marked `skip-upstream` in this lock. When explicitly enabled, the Dockerfile checks a declared KytyPS5 tag/short commit before attempting compilation; that separate source-build path is not covered by the downloadable-asset lock and is not claimed as built by the current acceptance run.
+O lock não afirma que:
+- todo perfil tem binário instalado/compatível com Linux;
+- o binário abre ou executa jogos;
+- os firmwares/BIOS do usuário são válidos;
+- o sistema original inicializa;
+- a compilação é bit a bit idêntica em arquiteturas e builders diferentes.
 
-To refresh official assets, run the GitHub Actions workflow **Freeze official emulator release assets**. It starts with an empty, non-strict lock in the temporary runner workspace to discover current official releases, then exports a candidate, validates coverage and hashes, attempts a strict rebuild, and uploads the candidate as an artifact. Review the downloaded artifact before replacing the committed lock. Do not remove explicit `skip-upstream` reasons simply to make the catalog appear complete.
+O lock atual **não cobre uma compilação fonte do KytyPS5**. A geração do lock foi feita com o build opcional desativado (`BUILD_KYTYPS5=0`); qualquer validação daquele caminho deve ser registrada separadamente.
 
-The Debian base image digest is pinned, but Debian APT package versions remain time-dependent unless `APT_SNAPSHOT_TIMESTAMP` is set. The strict release lock is not a byte-for-byte reproducibility guarantee.
+## 🔄 Atualizar o lock manualmente via workflow
 
-## Remaining limits
+O workflow **Freeze official emulator release assets** é acionado manualmente por `workflow_dispatch`:
+1. inicia em workspace temporário com lock não estrito para descobrir assets disponíveis;
+2. constrói usando os downloads oficiais permitidos;
+3. exporta candidato com hashes dos assets realmente instalados;
+4. valida cobertura e integridade;
+5. tenta reconstruir em modo de lock estrito;
+6. publica o candidato como artifact do workflow, para revisão.
 
-This improves repeatability but does not promise byte-identical output across CPU architectures, Docker/BuildKit versions, build flags, or upstream build systems. Some builds are experimental and may fail. Run `scripts/validate-project.sh`, then build and run `scripts/runtime-acceptance.sh` on the target Docker host. The runtime acceptance test checks topology and API behavior, not all games/firmware boot.
+Não substitua `release-lock.json` sem conferir artifact, diff, hashes, fontes upstream, licenças e logs de build. Preserve entradas `skip-upstream` com razões honestas; não pinne binários não validados para fazer a tabela parecer completa. Passo a passo: [Releases e atualizações](RELEASE_AND_UPDATES.md).
+
+## 🧪 Sequência de validação sugerida
+
+```bash
+./scripts/validate-project.sh
+docker compose -f compose.yaml config --quiet
+./scripts/build-and-audit.sh
+./scripts/runtime-acceptance.sh
+```
+
+Para exportar lock candidato no próprio build quando isso for intencional:
+
+```bash
+FREEZE_RELEASE_LOCK=1 ./scripts/build-and-audit.sh
+```
+
+Antes de aceitar a mudança, valide o rebuild estrito, veja o relatório do asset e teste o runtime. Nunca use somente o nome de tag ou a resposta HTTP do upstream como verificação de integridade.
+
+## ⚠️ Limites de reprodutibilidade
+
+O digest da imagem base é pinado, mas APT continua temporal por padrão. Toolchain, arquitetura, Docker/BuildKit, flags, fonte upstream, build de dependências e backend gráfico influenciam o resultado. A política atual busca repetir assets conhecidos, não oferecer uma promessa de bit-for-bit reproducibility. Builds experimentais podem falhar e devem continuar assim identificados.

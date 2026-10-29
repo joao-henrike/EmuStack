@@ -1,8 +1,8 @@
-# Checklist de aceitação local — EmuStack 0.7.1
+# ✅ Checklist de aceitação no host
 
-Este guia separa os testes de código das provas que só podem ser feitas no host com Docker, sessão gráfica, drivers e arquivos de sistema autorizados.
+Este procedimento separa a validação automatizada de código do que só pode ser verificado na máquina-alvo. Marque os resultados com host, data, commit e versão do emulador. **Um teste não executado é desconhecido, não aprovado.**
 
-## 1. Validação básica do host
+## 🧾 1. Preparação e baseline
 
 ```bash
 python3 scripts/host-doctor.py
@@ -12,55 +12,99 @@ python3 scripts/host-doctor.py
 ./scripts/runtime-acceptance.sh
 ```
 
-`host-setup.sh` cria 20 raízes de dados privadas e os tokens locais. Não compartilhe `.env`. O build tenta detectar/instalar apenas os projetos compatíveis com os critérios de fonte/arquitetura da versão. Consulte `install-report.json`; um perfil no catálogo não prova que o binário foi instalado.
+Confirme que Docker/Compose funciona, o build termina e o dashboard abre em `http://127.0.0.1:8765`. Consulte `install-report.json`: perfil de catálogo e agente saudável não significam que o binário foi instalado.
 
-## 2. Requisitos opcionais de vídeo, áudio e GPU
+## 🧪 2. Critérios estruturais do runtime
 
-O `host-setup.sh` gera um `compose.override.yaml` para a sessão X11/XWayland e para o socket de áudio quando os encontra. Para que a checagem de aceitação exija essas integrações, execute no mesmo host/sessão gráfica:
+A aceitação de runtime verifica que:
+
+- os 20 agentes esperados iniciam e ficam saudáveis;
+- cada agente usa mounts e rede específicos;
+- o dashboard tem os mounts/rede de controle esperados;
+- a porta do host é publicada somente no loopback;
+- flags de hardening e IPs/allowlist correspondem ao modelo documentado;
+- cada agente tenta acessar endpoints protegidos do dashboard com cabeçalhos forjados; a solicitação de controle/metadados deve ser recusada;
+- health/capability endpoints respondem conforme seu contrato;
+- sistemas marcados não suportados continuam bloqueados.
+
+Se algum desses checks falhar, **não remova a validação de origem, token ou caminho para fazer o teste passar**. Guarde logs e corrija a causa.
+
+## 🖥️ 3. GUI, áudio, Vulkan e GPU
+
+Execute no mesmo host e sessão de desktop em que a stack será utilizada:
 
 ```bash
-EMUSTACK_REQUIRE_GUI=1 \
-EMUSTACK_REQUIRE_AUDIO=1 \
-EMUSTACK_REQUIRE_VULKAN=1 \
-EMUSTACK_REQUIRE_GPU=1 \
-./scripts/runtime-acceptance.sh
+EMUSTACK_REQUIRE_GUI=1 EMUSTACK_REQUIRE_AUDIO=1 EMUSTACK_REQUIRE_VULKAN=1 EMUSTACK_REQUIRE_GPU=1 ./scripts/runtime-acceptance.sh
 ```
 
-Para NVIDIA, instale e configure previamente o NVIDIA Container Toolkit no Debian; construa/inicie o projeto com `USE_NVIDIA=1` e passe a mesma variável à aceitação:
+Para NVIDIA, configure drivers e NVIDIA Container Toolkit primeiro:
 
 ```bash
 USE_NVIDIA=1 ./scripts/build-and-audit.sh
 USE_NVIDIA=1 EMUSTACK_REQUIRE_VULKAN=1 EMUSTACK_REQUIRE_GPU=1 ./scripts/runtime-acceptance.sh
 ```
 
-O probe Vulkan distingue um dispositivo que responde de um renderer de software como llvmpipe/lavapipe. Mesmo um probe de hardware aprovado não garante que cada emulador escolha o renderer ideal, que um jogo funcione, nem que a janela apresente corretamente a interface original.
+Interpretação:
 
-## 3. Encaminhar um controle (opt-in)
+| Probe | Significado | Não prova |
+|---|---|---|
+| GUI | O container consegue alcançar a infraestrutura gráfica detectada. | Janela correta ou boot completo. |
+| Áudio | O caminho/socket testado responde. | Som correto em todos os jogos. |
+| Vulkan | A API enumera/disponibiliza dispositivo esperado. | Escolha do backend ideal pelo emulador. |
+| GPU | O probe distingue hardware de renderers de software conhecidos. | Desempenho ou compatibilidade título a título. |
 
-Por segurança, nenhum dispositivo de input é mapeado por padrão. Para mapear um dispositivo já identificado como controle, especifique um único caminho `/dev/input/eventN` ou `/dev/input/jsN` e exatamente um ambiente:
+`llvmpipe`/`lavapipe` normalmente representam renderização de software no contexto do probe. Um runtime CI sem tela/GPU física não equivale à aceitação da sua máquina.
+
+## 🎮 4. Controle (opt-in e mínimo privilégio)
+
+Mapeie exatamente um controle para exatamente um ambiente. Confirme o node de dispositivo; não escolha teclado ou mouse.
 
 ```bash
-EMUSTACK_INPUT_DEVICE=/dev/input/jsN \
-EMUSTACK_INPUT_ENV=rpcs3 \
-./scripts/host-setup.sh
+EMUSTACK_INPUT_DEVICE=/dev/input/js0 EMUSTACK_INPUT_ENV=rpcs3 ./scripts/host-setup.sh
+EMUSTACK_REQUIRE_INPUT=1 ./scripts/runtime-acceptance.sh
 ```
 
-Troque o caminho por um dispositivo que realmente exista no host e o ambiente pelo ID definido em `environments.json`. O mapeamento é somente leitura e o runtime acceptance confirma presença/mapeamento/acesso, não lê botões nem valida a configuração de teclas. Só exija o teste com `EMUSTACK_REQUIRE_INPUT=1` depois de habilitar conscientemente esse mapeamento.
+O probe verifica presença/acesso e configuração de mapeamento; não executa uma validação completa de botões dentro de todos os emuladores. Faça um teste interativo adicional em cada perfil necessário.
 
-## 4. Relatório automático
+## 📄 5. Relatórios
 
-Após uma execução estruturalmente bem-sucedida, o script grava `data/runtime-acceptance.json` com timestamp, verificações, probes, warnings e falhas. Ele não inclui tokens nem captura eventos do controle. O relatório é local e deve ser revisado antes de compartilhar.
+A aceitação salva `data/runtime-acceptance.json`; o diagnóstico do host com `--write` grava `data/host-capabilities.json`. Esses relatórios podem registrar sistema operacional, arquitetura, GPU, paths e detalhes do ambiente. Revise antes de compartilhar e nunca compartilhe `.env`, conteúdo de firmware ou saves pessoais.
 
-## 5. Teste de bloqueio de requisições de agente ao dashboard
+## 🧱 6. Boot real por sistema/jogo
 
-O `runtime-acceptance.sh` tenta enviar uma requisição POST a partir de cada ambiente, forjando `Host` e `X-EmuStack-Request`. Cada tentativa precisa ser recusada com HTTP 403 devido ao IP TCP de origem `.2`. O script também confere gateways, IPs estáticos e a allowlist do dashboard.
+Para cada perfil que pretende usar, faça um teste com arquivos que você tem direito de utilizar. Registre o resultado de forma separada para:
 
-Se um probe falhar, não declare o isolamento aceito. Recolha `docker compose logs --tail=200 dashboard` e revise a faixa IPAM e a allowlist; não remova a checagem de origem para fazer o teste passar.
+1. executável detectado;
+2. janela do emulador abre;
+3. renderer/hardware observado;
+4. firmware/BIOS aceito quando necessário;
+5. sistema/menu original chega à tela esperada (quando essa função existe);
+6. jogo/homebrew chega ao estado jogável;
+7. áudio, entrada, controles, save/load e encerramento.
 
-## 6. Boot real de sistemas originais
+Uma rota implementada ou pré-requisitos detectados não são evidência de sucesso visual. Veja [Sistemas originais](ORIGINAL_SYSTEM_UI.md) e [Matriz](EMULATOR_MATRIX.md).
 
-O runtime acceptance não inicia automaticamente todo jogo, BIOS ou dashboard. Faça os testes de boot um por vez pela seção **Sistemas originais** e verifique a janela real e os logs do agente apropriado. As rotas de PS1/DuckStation, PS2/PCSX2, PS3/RPCS3, PSP/PPSSPP, Xbox original/xemu, Wii/Dolphin e Wii U/Cemu são condicionais ou experimentais; não confunda a presença de firmware ou uma rota CLI com boot comprovado.
+## 📋 Modelo de registro de aceitação
 
-O XMB do PPSSPP usa `--vsh` em builds compatíveis, mas o upstream declara a pesquisa de VSH como exploratória; exige dump de firmware em `assets/flash0/` e não é uma experiência garantida. Ver a documentação oficial: <https://www.ppsspp.org/docs/getting-started/how-to-run-the-vsh/> e <https://www.ppsspp.org/docs/reference/command-line/>.
+| Campo | Valor a registrar |
+|---|---|
+| Data, host e commit | |
+| Sistema operacional/kernel/arquitetura | |
+| Docker/Compose e método de build | |
+| Perfil + binário + versão/hash | |
+| Jogo/homebrew e hash (sem publicar o arquivo) | |
+| Renderização e driver | |
+| Boot / jogabilidade | |
+| GUI / áudio / controle / save-load | |
+| Falhas, warnings, logs sanitizados | |
 
-Sistemas para os quais o projeto declara `unsupported` permanecem bloqueados e não devem ser representados por uma interface HTML imitada. O EmuStack não inclui BIOS, firmware, NAND, chaves ou jogos proprietários.
+## 🔍 7. Diagnóstico quando falha
+
+```bash
+docker compose ps
+docker compose logs --tail=200 dashboard
+docker compose logs --tail=200 env-rpcs3
+curl -i http://127.0.0.1:8765/api/health
+```
+
+Troque `env-rpcs3` pelo agente relevante. Veja o [guia de troubleshooting](TROUBLESHOOTING.md). O resultado é válido apenas para a configuração e o hardware testados.
