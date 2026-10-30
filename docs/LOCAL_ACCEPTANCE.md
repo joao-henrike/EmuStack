@@ -1,5 +1,7 @@
 # Checklist de aceitação local — EmuStack 0.7.1
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 Este guia separa os testes de código das provas que só podem ser feitas no host com Docker, sessão gráfica, drivers e arquivos de sistema autorizados.
 
 ## 1. Validação básica do host

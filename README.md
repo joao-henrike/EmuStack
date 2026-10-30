@@ -1,174 +1,222 @@
-# EmuStack 0.7.1
+<p align="center">
+  <img src="assets/emustack-hero.svg" alt="EmuStack — laboratório de emulação multi-era" width="100%">
+</p>
 
-**EmuStack é um orquestrador local de ambientes de emulação**, com um agente e uma raiz de dados por perfil. Ele não é um emulador universal nem transforma um projeto experimental em um console funcional. O objetivo desta versão é tornar a separação de dados, a detecção de capacidades, o armazenamento, os diagnósticos e a aceitação em runtime explícitos e auditáveis.
+<p align="center">
+  <img alt="Version 0.7.1" src="https://img.shields.io/badge/version-0.7.1-58dfd0?style=for-the-badge&labelColor=101824">
+  <img alt="Linux" src="https://img.shields.io/badge/host-Linux-8fa6ff?style=for-the-badge&labelColor=101824">
+  <img alt="Docker Compose" src="https://img.shields.io/badge/runtime-Docker%20Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white">
+  <img alt="Local first" src="https://img.shields.io/badge/design-local--first-ff91c9?style=for-the-badge&labelColor=101824">
+</p>
 
-> **Limite essencial:** 20 perfis (e 21 alvos de interface/sistema documentados) não significam 20 consoles integralmente emulados. Um perfil pode representar emulação de jogos, boot parcial de BIOS/menu, um fluxo manual ou um ambiente deliberadamente bloqueado por não haver runner confiável. Não existe dashboard HTML que finja ser a interface original.
+<p align="center">
+  <strong>Várias gerações de jogos. Um laboratório local. Vinte perfis separados.</strong><br>
+  <sub>Uma camada de orquestração para emuladores — não um emulador universal nem uma promessa de compatibilidade.</sub>
+</p>
 
-## O que foi acrescentado nesta versão
+<p align="center">
+  <a href="#-comece-aqui">Começar</a> ·
+  <a href="#-escolha-sua-era">Catálogo</a> ·
+  <a href="#-como-o-emustack-funciona">Arquitetura</a> ·
+  <a href="#-documentação-de-campo">Documentação</a> ·
+  <a href="docs/ROADMAP-STATUS.md">Roadmap</a>
+</p>
 
-- 20 agentes/ambientes com tokens e redes internas distintos.
-- Catálogo atualizado, removendo perfis redundantes ou sem runner verificável e adicionando PlayStation 1 (DuckStation), PSP (PPSSPP) e PS Vita (Vita3K).
-- Xbox One e Xbox Series mantidos como perfis explícitos **não suportados/bloqueados**, sem tentativa de iniciar um binário aleatório.
-- Verificação de symlinks nas raízes de ambientes, validação do path de jogos e recusa de restaurações de snapshots de outro ambiente.
-- Ferramenta de inventário, backup e restore transacional de um ambiente, com manifesto e verificação SHA-256 por arquivo.
-- Criação opcional de discos `qcow2`/`raw` vazios dentro do ambiente escolhido. Um disco vazio **não** contém firmware, partições de console, sistema operacional ou dashboard.
-- Diagnóstico read-only do host (Docker/Compose, RAM, NVIDIA, Vulkan, display, áudio, controles e `qemu-img`).
-- Attestation do HDD do Xbox original vinculada ao seu SHA-256. Essa atestação registra a declaração explícita do operador; não é análise automática do conteúdo do HDD.
-- Digest da imagem base Debian fixado e opção de selecionar um snapshot APT datado. APT pode continuar seguindo os repositórios atuais por padrão para receber atualizações; o snapshot aumenta a reprodutibilidade mas congela também as correções de segurança nessa data. O lock upstream fixa hashes dos assets baixados quando o congelamento é executado. Isso ainda não promete build bit-a-bit em todas as arquiteturas/ambientes.
-- Teste de aceitação de runtime para conferir serviços, redes, mounts e capacidades opcionais de tela, áudio, Vulkan/GPU e controle no host.
+---
 
-## Matriz de perfis
+## 🎮 O que é o EmuStack?
 
-| ID | Plataforma | O que o perfil pretende fazer | Boot original integrado |
-|---|---|---|---|
-| `kytyps5` | PS5 | Projeto experimental, se um binário for construído | **Não suportado** |
-| `shadps4` | PS4 | Jogos compatíveis experimentais | **Não suportado** |
-| `rpcs3` | PS3 | Jogos; iniciar VSH/XMB quando firmware estiver instalado | Condicional, requer teste real |
-| `duckstation` | PS1 | Jogos; shell de BIOS com BIOS válido | Condicional, `-bios` |
-| `pcsx2` | PS2 | Jogos; Browser/System Configuration do BIOS | Condicional |
-| `ppsspp` | PSP | Jogos; tentativa experimental de VSH/XMB via `--vsh` | Experimental; requer firmware e binário compatível |
-| `vita3k` | PS Vita | Jogos/homebrew compatíveis quando disponíveis | **Não**: interface própria não é LiveArea autêntico |
-| `xbox-one` | Xbox One | Perfil de catálogo bloqueado | **Não suportado; sem runner completo** |
-| `xenia-canary` | Xbox 360 | Jogos compatíveis, sujeito ao binário e à camada de execução | **Não suportado** para dashboard retail |
-| `xbox-series` | Xbox Series S/X | Perfil de catálogo bloqueado | **Não suportado; sem runner completo** |
-| `xemu` | Xbox original | Emulação do hardware; HDD/BIOS fornecidos pelo usuário | Condicional; HDD é atestado por declaração, não inspecionado automaticamente |
-| `eden` | Nintendo Switch | Emulação de jogos experimental, se binário confiável existir | **Não suportado** para HOME Menu completo |
-| `cemu` | Wii U | Jogos; Wii U Menu se MLC/sistema estiver configurado | Condicional |
-| `dolphin` | Wii / GameCube | Jogos; Wii Menu condicionado ao NAND; IPL GameCube manual | Condicional/manual |
-| `azahar` | Nintendo 3DS/2DS | Jogos; fluxo do HOME Menu manual no emulador | Manual, não automático |
-| `melonds` | Nintendo DS | Jogos; menu de firmware depende da configuração | Manual/condicional |
-| `mgba` | GB/GBC/GBA | Sequência de inicialização e jogos | Não existe dashboard moderno equivalente |
-| `mupen64plus` | Nintendo 64 | Jogos | Não existe dashboard moderno equivalente |
-| `bsnes` | Super Nintendo | Jogos | Não existe dashboard moderno equivalente |
-| `mesen` | NES/sistemas clássicos | Jogos | Não existe dashboard moderno equivalente |
+O EmuStack organiza **20 perfis de ambientes de emulação** numa interface local. Cada perfil recebe um agente de controle, uma rede interna própria e diretórios persistentes separados. O painel reúne o catálogo, a descoberta de launchers, a biblioteca local, os logs, os diagnósticos e os fluxos condicionais de inicialização de sistemas.
 
-O catálogo não promete que cada binário está instalado. Confirme o relatório `install-report.json` gerado durante o build. Se um asset oficial não existir para Linux ou não corresponder ao padrão seguro de download, aquele perfil permanece indisponível até que exista um pacote confiável compatível. Não baixe executáveis de fontes aleatórias.
+A ideia central é simples: **cada sistema tem seu próprio slot**. Jogos e arquivos de sistema não ficam misturados numa pasta global; um agente não recebe acesso genérico ao shell; e o painel não se apresenta como o dashboard original de nenhum console.
 
-## Fontes de jogos e conteúdo autorizado
+### O que ele faz
 
-A aba **Fontes de jogos** agora inclui filtros por categoria e por cada um dos 20 perfis, usando `game-sources.json` e `platform_guidance`. Ela lista lojas oficiais (para suas versões suportadas), homebrew/demos publicados pelos autores e documentação de direitos/cópias pessoais. O catálogo explica quando uma fonte não oferece um arquivo para emulador.
+| Sistema | O que oferece |
+|---|---|
+| 🕹️ **Orquestração local** | Um dashboard em <code>127.0.0.1:8765</code> para consultar os perfis e as sessões. |
+| 🧩 **Ambientes separados** | 20 agentes, redes internas independentes e raízes de dados por perfil. |
+| 💾 **Persistência auditável** | Inventário, backup/restore com manifesto e SHA-256, além de criação de discos de dados vazios. |
+| 🔎 **Diagnóstico com evidência** | Inventário de host, relatório de instalação, verificações de Compose e probes opcionais de runtime. |
+| 🛡️ **Defaults defensivos** | Tokens distintos por agente, dashboard ligado ao loopback, mounts mínimos e sem socket Docker nos serviços da aplicação. |
+| 📚 **Descoberta responsável** | Fontes oficiais e homebrew/demos, com orientação por perfil e avisos de direitos/compatibilidade. |
 
-**Os repositórios de emuladores normalmente distribuem código, releases e binários do emulador; não puxam jogos comerciais.** EmuStack não baixa nem instala jogos automaticamente e não lista fontes de cópias comerciais não autorizadas. Confira licença, arquivo, formato e compatibilidade item por item. Compra de uma versão PC/console não entrega automaticamente um ROM/ISO.
+### O que ele não promete
 
-Fontes de descoberta incluídas: [PDRoms](https://pdroms.de/), [GameBrew](https://www.gamebrew.org/wiki/Main_Page), [itch.io homebrew](https://itch.io/games/tag-homebrew), [itch.io homebrew NES ROM](https://itch.io/games/free/tag-homebrew/tag-nes-rom), [guia oficial PPSSPP para demos/homebrew](https://www.ppsspp.org/docs/getting-started/how-to-get-demos-and-homebrew/) e [repositórios homebrew no GitHub](https://github.com/topics/homebrew-game). Essas são fontes de descoberta, não uma garantia de que cada item esteja licenciado ou seja compatível.
+- **20 perfis não significam 20 emuladores instalados.** Confira <code>install-report.json</code> após o build.
+- **Agente online não significa jogo funcional.** São camadas diferentes de validação.
+- **Uma rota de boot não comprova um boot real.** Firmware, configurações, runner e host podem impedir a inicialização.
+- **Não há build bit-a-bit garantido** em toda arquitetura ou ambiente, mesmo com hashes upstream fixados.
+- Xbox One e Xbox Series permanecem perfis bloqueados, sem runner completo suportado.
+- O projeto não baixa nem distribui ROMs, jogos comerciais, BIOS, firmware, chaves, NAND ou HDDs proprietários.
 
-## Requisitos
+## 🚀 Comece aqui
 
-- Linux com Docker Engine e plugin Docker Compose v2.
-- Espaço em disco para imagem, cache de build e jogos/sistemas fornecidos pelo usuário.
-- Para aplicações gráficas: uma sessão X11/XWayland configurável. Wayland puro, GPU NVIDIA, áudio e controles dependem da configuração de host; não são comprovados pela suíte unitária.
-- Para congelar assets upstream: conectividade com os repositórios oficiais e o conjunto de ferramentas de build esperado.
+### Requisitos
 
-## Instalar no Debian
+- Linux; o ambiente principal documentado é Debian 13.
+- Docker Engine e Docker Compose v2 funcionais para o usuário que executará o projeto.
+- Espaço em disco para a imagem, o cache do build e os jogos/arquivos de sistema fornecidos pelo usuário.
+- Uma sessão X11/XWayland se você precisar de janelas gráficas. NVIDIA, áudio e controles são integrações opcionais do host.
 
-Extraia o ZIP e entre na pasta `EmuStack-0.7.1`:
+### Instalação inicial
 
-```bash
-chmod +x scripts/host-setup.sh scripts/build-and-audit.sh \
-  scripts/validate-project.sh scripts/runtime-acceptance.sh
+No clone do repositório:
+
+<pre><code>chmod +x scripts/host-setup.sh scripts/validate-project.sh scripts/build-and-audit.sh scripts/runtime-acceptance.sh
 ./scripts/host-setup.sh
 ./scripts/validate-project.sh
-./scripts/build-and-audit.sh
-```
+./scripts/build-and-audit.sh</code></pre>
 
-Depois, abra `http://127.0.0.1:8765`. O dashboard está vinculado ao loopback local, não à rede LAN. `host-setup.sh` cria as pastas por perfil e 20 tokens únicos no `.env`; não compartilhe nem versione esse arquivo. O script recusa symlinks dentro da árvore de dados dos ambientes, pois eles poderiam quebrar a separação.
+Quando o build concluir, abra <strong><a href="http://127.0.0.1:8765">http://127.0.0.1:8765</a></strong>.
 
-Para NVIDIA, instale e teste o NVIDIA Container Toolkit no host e execute:
+O <code>host-setup.sh</code> cria as pastas por perfil e gera tokens locais distintos no arquivo <code>.env</code>. **Não publique nem compartilhe esse arquivo.** O endereço de loopback é intencional: o dashboard não foi projetado para ser exposto diretamente à LAN ou à internet.
 
-```bash
-USE_NVIDIA=1 ./scripts/build-and-audit.sh
-```
+### GPU NVIDIA (opcional)
 
-Isso apenas concede GPU aos agentes configurados. Não prova que um emulador específico, jogo, Vulkan, áudio ou sistema original funciona.
+Depois de configurar e testar o NVIDIA Container Toolkit no host:
 
-## Diagnóstico no host
+<pre><code>USE_NVIDIA=1 ./scripts/build-and-audit.sh
+USE_NVIDIA=1 ./scripts/runtime-acceptance.sh</code></pre>
 
-```bash
-python3 scripts/host-doctor.py
+Esses comandos não instalam drivers no host nem certificam Vulkan, áudio, controles, um emulador específico ou a compatibilidade de um jogo. Consulte o relatório de aceitação e os logs reais.
+
+### Primeiro diagnóstico
+
+<pre><code>python3 scripts/host-doctor.py
 python3 scripts/host-doctor.py --write
-```
-
-O primeiro comando imprime o inventário disponível. `--write` salva uma fotografia em `data/host-capabilities.json`. Ela contém detalhes locais do hardware/host; revise antes de compartilhar.
-
-## Armazenamento e snapshots por ambiente
-
-Inicialize e inspecione a estrutura:
-
-```bash
-python3 scripts/manage-storage.py init
-python3 scripts/manage-storage.py inspect
-python3 scripts/manage-storage.py inspect rpcs3
-```
-
-Faça backup e restauração com o ambiente parado:
-
-```bash
-python3 scripts/manage-storage.py backup rpcs3
-python3 scripts/manage-storage.py restore rpcs3 backups/rpcs3/ARQUIVO.tar.gz
-```
-
-O backup cria um arquivo TAR/GZIP com manifesto e SHA-256 dos arquivos. O restore rejeita symlinks, paths inseguros, arquivos não listados, hash incorreto e snapshot associado a outro ambiente; antes de substituir a raiz atual, mantém uma cópia de rollback. O script precisa conseguir consultar Docker para confirmar que o serviço está parado. Não use `--allow-running` a menos que aceite conscientemente o risco de snapshot inconsistente; sessões ativas podem estar alterando saves/configurações enquanto os arquivos são copiados.
-
-Criar um disco **vazio** de dados, dentro do ambiente selecionado:
-
-```bash
-python3 scripts/manage-storage.py create-disk xemu --size 8G --format qcow2
-```
-
-É necessário instalar `qemu-utils`/`qemu-img` no host. A imagem é criada em `home/disks/` dentro do ambiente, se não houver destino alternativo permitido. Ela não tem partições ou sistema de console e não faz um dashboard aparecer.
-
-## Sistema original do Xbox — requisito adicional de verificação
-
-O xemu exige arquivos de sistema e uma imagem de HDD apropriados. A presença de `xemu.toml` ou de um HDD **não** prova que ele contém o dashboard Microsoft original. O EmuStack exige uma confirmação do operador vinculada ao SHA-256 da imagem:
-
-```bash
-python3 scripts/attest-xemu-dashboard.py \
-  --hdd data/environments/xemu/saves/SEU-HDD-DUMP \
-  --confirm-original-microsoft-dashboard
-```
-
-O caminho deve corresponder à imagem de HDD configurada no `xemu.toml`. A declaração é vinculada ao hash da imagem e fica inválida se ela mudar. Isso previne confirmação acidental da imagem errada, mas **não é detecção criptográfica nem análise interna do dashboard**; confirme manualmente a procedência e o conteúdo. Siga os documentos oficiais do [xemu](https://xemu.app/docs/required-files/) e não distribua arquivos proprietários.
-
-## Testes e aceitação no host
-
-`validate-project.sh` executa testes unitários/de regressão, sintaxe Python, JavaScript e shell, e a checagem do release-lock. Para validar a composição no Docker, a imagem e os serviços no seu host:
-
-```bash
-./scripts/build-and-audit.sh
-./scripts/runtime-acceptance.sh
-```
-
-O acceptance espera que o dashboard e os 20 agentes estejam em execução e saudáveis. Ele verifica a topologia, os mounts, o isolamento do dashboard e o bloqueio de um boot não suportado. Também faz probes opcionais de display, áudio, Vulkan/GPU e controle. Para tornar cada requisito obrigatório, use `EMUSTACK_REQUIRE_GUI=1`, `EMUSTACK_REQUIRE_AUDIO=1`, `EMUSTACK_REQUIRE_VULKAN=1`, `EMUSTACK_REQUIRE_GPU=1` e/ou `EMUSTACK_REQUIRE_INPUT=1` antes de executar `./scripts/runtime-acceptance.sh`. A ferramenta salva um relatório sem tokens em `data/runtime-acceptance.json`. **Isso não é uma suíte de compatibilidade de jogos e não prova o boot de firmware.**
-
-Para congelar os hashes/versões dos assets oficiais obtidos e reconstruir com o lock estrito:
-
-```bash
-FREEZE_RELEASE_LOCK=1 ./scripts/build-and-audit.sh
-```
-
-Para também resolver pacotes Debian usando um snapshot fixo (exemplo: snapshot de 27 de outubro de 2026):
-
-```bash
-APT_SNAPSHOT_TIMESTAMP=20261027T000000Z FREEZE_RELEASE_LOCK=1 ./scripts/build-and-audit.sh
-```
-
-A referência da imagem base é fixada pelo digest oficial no Dockerfile. O modo de snapshot pode aumentar a reprodutibilidade da resolução APT, mas congela as correções de segurança no snapshot escolhido; atualize a data após revisar os patches. O congelamento upstream só é bem-sucedido quando o build consegue baixar e validar assets oficiais. Isso ainda não promete build bit-a-bit em todas as arquiteturas/ambientes; compilações experimentais podem falhar e devem continuar explicitamente reportadas.
-
-Diagnóstico comum:
-
-```bash
 docker compose ps
-docker compose logs --tail=200 dashboard
-docker compose logs --tail=200 env-rpcs3
-```
+docker compose logs --tail=200 dashboard</code></pre>
 
-## Segurança e limites
+A opção <code>--write</code> salva dados locais de hardware/host em <code>data/host-capabilities.json</code>; revise o conteúdo antes de compartilhá-lo.
 
-- Cada ambiente tem seus próprios `games/`, `bios/`, `saves/`, `home/` e `emulators/`. O dashboard não monta dados persistentes dos consoles nem o socket Docker.
-- Os agentes ficam em bridges internas independentes e não têm egress externo por padrão. Recursos gráficos/áudio/controladores do host são montados somente pela integração opcional e aumentam a superfície de ataque.
-- É isolamento por contêiner Linux, não 20 máquinas virtuais com kernels/hardware virtuais independentes. Os executáveis instalados durante o build ficam numa imagem de runtime compartilhada/imútavel; o estado persistente é isolado.
-- Não há migração automática das pastas compartilhadas de versões antigas. Faça backup e mova manualmente cada arquivo para o ambiente correto.
-- EmuStack não distribui ROMs, jogos, BIOS, firmware, chaves, NAND, MLC ou HDDs proprietários. Use arquivos obtidos e utilizados legalmente.
-- A suíte de testes automatizada comprova lógica/estrutura, não compatibilidade upstream de cada sistema. Uma conclusão de funcionamento exige build e teste real no host.
+## 🗂️ Escolha sua era
 
-Mais detalhes: `docs/EMULATOR_MATRIX.md`, `docs/ORIGINAL_SYSTEM_UI.md`, `docs/LOCAL_ACCEPTANCE.md`, `docs/ISOLATED_ENVIRONMENTS.md`, `docs/BUILD_REPRODUCIBILITY.md`, `docs/SECURITY.md`, `docs/TROUBLESHOOTING.md` e `docs/ROADMAP-STATUS.md` (estado das correções prioritárias), `save-paths.json` (contratos conservadores de persistência) e `scripts/audit-save-layout.py` (auditoria de saves somente de leitura).
+O catálogo está organizado por famílias. Os nomes abaixo são **IDs de perfil** usados em <code>environments.json</code>, no Compose e nos diretórios de dados.
+
+| Coleção | Perfis | Sistemas associados | Estado em uma frase |
+|---|---|---|---|
+| **PlayStation** | <code>duckstation</code>, <code>pcsx2</code>, <code>rpcs3</code>, <code>ppsspp</code>, <code>vita3k</code>, <code>shadps4</code>, <code>kytyps5</code> | PS1, PS2, PS3, PSP, PS Vita, PS4, PS5 | Runner, firmware e rotas de sistema variam: PS4/PS5 são experimentais e não há promessa de dashboard completo. |
+| **Xbox** | <code>xemu</code>, <code>xenia-canary</code>, <code>xbox-one</code>, <code>xbox-series</code> | Xbox original, Xbox 360, Xbox One, Xbox Series S/X | xemu/Xenia dependem de runner e configuração; One/Series ficam bloqueados sem runner completo. |
+| **Nintendo** | <code>dolphin</code>, <code>cemu</code>, <code>azahar</code>, <code>melonds</code>, <code>eden</code> | Wii/GameCube, Wii U, 3DS/2DS, DS, Switch | Jogos e menus exigem configurações diferentes; HOME Menu completo não é prometido em todos os perfis. |
+| **Clássicos** | <code>mesen</code>, <code>bsnes</code>, <code>mupen64plus</code>, <code>mgba</code> | NES e clássicos, SNES, Nintendo 64, GB/GBC/GBA | Perfis voltados a jogos; não existe dashboard moderno equivalente para esses sistemas. |
+
+### Uma nota sobre os “sistemas originais”
+
+A aba **Sistemas originais** tenta executar rotas específicas quando existem pré-requisitos, firmware e runner compatíveis. Alguns exemplos são o shell de BIOS do DuckStation, o Browser do PCSX2, VSH/XMB do RPCS3, a rota experimental do PPSSPP e menus condicionais do Dolphin/Cemu.
+
+Isso não transforma todos os perfis em consoles totalmente emulados. O estado do código, os pré-requisitos detectados, a tentativa de boot, o boot observado e o smoke test são conceitos distintos. Consulte [Matriz de emuladores](docs/EMULATOR_MATRIX.md) e [Sistemas originais](docs/ORIGINAL_SYSTEM_UI.md) para a matriz detalhada.
+
+## 🧱 Como o EmuStack funciona
+
+<p align="center">
+  <img src="assets/emustack-architecture.svg" alt="Diagrama da arquitetura lógica: dashboard local, redes independentes, agentes e dados persistentes separados" width="100%">
+</p>
+
+Cada ambiente tem seus próprios diretórios <code>games/</code>, <code>bios/</code>, <code>saves/</code>, <code>home/</code> e <code>emulators/</code>. Os jogos, BIOS e emuladores fornecidos pelo usuário são montados como somente leitura; saves e HOME persistente são graváveis pelo próprio agente. A topologia é baseada em contêineres Linux — **não** são 20 kernels ou máquinas virtuais completos.
+
+Os limites de CPU/memória são tetos, não reservas. Por padrão, o EmuStack permite no máximo dois ambientes ativos ao mesmo tempo para reduzir a pressão sobre a máquina.
+
+## 💾 Saves, snapshots e discos de dados
+
+Inspecione as raízes por ambiente:
+
+<pre><code>python3 scripts/manage-storage.py init
+python3 scripts/manage-storage.py inspect
+python3 scripts/manage-storage.py inspect rpcs3</code></pre>
+
+Faça backup e restaure com o ambiente parado:
+
+<pre><code>python3 scripts/manage-storage.py backup rpcs3
+python3 scripts/manage-storage.py restore rpcs3 backups/rpcs3/ARQUIVO.tar.gz</code></pre>
+
+O restore confere manifesto e hashes, recusa caminhos/symlinks inseguros e mantém rollback antes de substituir a raiz atual. O projeto não presume que todos os emuladores escrevam seus saves na mesma pasta: algumas configurações ficam no <code>home/</code> de cada perfil.
+
+Para criar um disco de dados **vazio**:
+
+<pre><code>python3 scripts/manage-storage.py create-disk xemu --size 8G --format qcow2</code></pre>
+
+É necessário ter <code>qemu-img</code> no host. O arquivo criado não possui sistema operacional, partições ou dashboard de console.
+
+## 🧪 Validação: da configuração ao jogo real
+
+<pre><code>./scripts/validate-project.sh
+./scripts/build-and-audit.sh
+./scripts/runtime-acceptance.sh</code></pre>
+
+Essas etapas têm objetivos diferentes:
+
+1. **Validação do projeto:** testes e verificações estáticas definidos pelo repositório.
+2. **Build e auditoria:** constrói a imagem, aplica verificações de configuração e gera relatório de instalação.
+3. **Runtime acceptance:** testa a topologia e os recursos opcionais detectáveis no host real.
+
+O acceptance não é benchmark nem suíte de compatibilidade de jogos. O teste real de jogo/firmware deve ser registrado separadamente por perfil. Execute o acceptance sem sessões de jogo ativas; a rotina de recuperação opt-in pode reiniciar um agente em condições controladas e deve ser tratada como um teste operacional.
+
+Para tornar vídeo, áudio, Vulkan e GPU requisitos obrigatórios:
+
+<pre><code>EMUSTACK_REQUIRE_GUI=1 EMUSTACK_REQUIRE_AUDIO=1 EMUSTACK_REQUIRE_VULKAN=1 EMUSTACK_REQUIRE_GPU=1 ./scripts/runtime-acceptance.sh</code></pre>
+
+Os resultados locais ficam em <code>data/runtime-acceptance.json</code>. Revise os relatórios antes de publicá-los, porque diagnósticos do host podem conter detalhes da máquina.
+
+## 🎮 Jogos e conteúdo autorizado
+
+O EmuStack **não é um site de ROMs e não baixa jogos automaticamente**. A aba Fontes de jogos agrega lojas oficiais, homebrew, demos e documentação de direitos. A presença de uma fonte é um ponto de descoberta, não uma garantia de que cada arquivo seja legal em todo contexto, compatível com o emulador ou distribuído no formato certo.
+
+- Não misture jogos de sistemas diferentes numa pasta global.
+- Use conteúdos que você tenha direito de utilizar e arquivos de sistema obtidos por meios legítimos.
+- Confira a licença, o formato e os requisitos de cada publicação.
+
+Mais detalhes: [Fontes de jogos e conteúdo autorizado](docs/GAME_SOURCES.md).
+
+## 📁 Mapa do projeto
+
+<pre><code>EmuStack/
+├── README.md                    # Visão geral e entrada no projeto
+├── assets/                      # Arte vetorial e diagramas da documentação
+├── catalog.json                 # Catálogo de projetos de emulação
+├── environments.json            # Perfis e capacidades declaradas
+├── console-systems.json         # Contratos de sistemas/boot
+├── game-sources.json            # Fontes autorizadas e orientações
+├── release-lock.json            # Hashes de assets upstream
+├── compose.yaml                 # Agentes isolados + dashboard
+├── compose.nvidia.yaml          # Integração NVIDIA opcional
+├── console_agent.py             # Agente de controle por ambiente
+├── webapp.py / web/             # Dashboard, estilos e interface
+├── scripts/                     # Setup, auditoria, storage e acceptance
+├── tests/                       # Testes de regressão
+└── docs/                        # Guias operacionais e de engenharia</code></pre>
+
+## 📚 Documentação de campo
+
+| Preciso de… | Leia |
+|---|---|
+| Instalar e preparar o host | [Guia de instalação](docs/INSTALLATION.md) |
+| Operar a interface e adicionar jogos | [Guia do usuário](docs/USER_GUIDE.md) |
+| Entender quais perfis realmente existem | [Matriz de emuladores](docs/EMULATOR_MATRIX.md) |
+| Entender boot e menus originais | [Sistemas originais](docs/ORIGINAL_SYSTEM_UI.md) |
+| Auditar redes, tokens e mounts | [Modelo de segurança](docs/SECURITY.md) |
+| Entender isolamento e armazenamento | [Ambientes isolados](docs/ISOLATED_ENVIRONMENTS.md) |
+| Executar testes reais no host | [Aceitação local](docs/LOCAL_ACCEPTANCE.md) |
+| Investigar erros e logs | [Solução de problemas](docs/TROUBLESHOOTING.md) |
+| Ver política de hashes e snapshots | [Reprodutibilidade do build](docs/BUILD_REPRODUCIBILITY.md) |
+| Consultar o estado das correções | [Roadmap e status](docs/ROADMAP-STATUS.md) |
+| Ver padrões gráficos e editoriais | [Identidade visual](docs/IDENTIDADE-VISUAL.md) |
+| Entender a arquitetura e os testes | [Arquitetura e testes](docs/ARCHITECTURE-AND-TESTS.md) |
+| Ver as mudanças por versão | [Changelog](CHANGELOG.md) |
+
+## 🛡️ Segurança, privacidade e limites
+
+- O dashboard fica vinculado a <code>127.0.0.1:8765</code>; não o exponha diretamente por reverse proxy.
+- Nunca compartilhe <code>.env</code>, tokens, dumps proprietários ou relatórios de host sem revisão.
+- Cada agente usa token e rede próprios; não há comunicação direta entre agentes irmãos.
+- O projeto não monta o socket Docker nos serviços da aplicação.
+- Não compartilhe imagens de BIOS, firmware, NAND, HDD ou jogos proprietários.
+- O isolamento por contêiner reduz a superfície de acesso, mas não equivale a máquinas virtuais com kernel independente.
+
+## 🧭 Filosofia do projeto
+
+O EmuStack prefere uma resposta honesta a um indicador verde artificial. Perfis indisponíveis permanecem identificados; hashes são verificados em vez de ignorados; os testes que dependem do hardware ficam separados dos testes unitários; e um menu não é considerado “real” só porque o código tentou abri-lo.
+
+**Explore. Preserve. Verifique. Jogue — com evidência.**
+
+<p align="center"><sub>EmuStack 0.7.1 · Gaming Lab / Local-first emulation orchestration</sub></p>

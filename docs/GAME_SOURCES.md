@@ -1,5 +1,7 @@
 # Fontes de jogos e conteúdo autorizado
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 EmuStack é um organizador e lançador; não é um site de ROMs. O projeto não baixa, inclui ou distribui jogos comerciais, ROMs, discos, BIOS, chaves ou firmware. A aba **Fontes de jogos** reúne lojas oficiais, índices de homebrew/demos e documentação. Ela permite filtrar as recomendações por console; isso não significa que um emulador ou repositório baixe jogos automaticamente.
 
 ## Lojas oficiais

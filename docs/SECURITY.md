@@ -1,5 +1,7 @@
 # Modelo de segurança — EmuStack 0.7.1
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 ## Defaults
 
 - Dashboard publicado somente em `127.0.0.1:8765`; não foi projetado para acesso remoto/LAN.

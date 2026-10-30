@@ -1,5 +1,7 @@
 # EmuStack — status da execução do roteiro
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 Este documento acompanha a execução incremental das correções prioritárias. O estado de integração da versão atual deve ser confirmado no [CI da branch/PR](https://github.com/joao-henrike/EmuStack/actions); não use uma execução antiga como prova de que o HEAD atual está validado.
 
 Última execução verde completa antes desta tranche de guardrails: [CI #110](https://github.com/joao-henrike/EmuStack/actions/runs/40947030747), SHA `36fa324de1bd6cae18122c4dcfd9b565541a9e64`. A alteração atual precisa de nova execução completa.

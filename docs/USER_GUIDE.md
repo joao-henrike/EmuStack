@@ -1,5 +1,7 @@
 # Guia do usuário — EmuStack 0.7.1
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 ## O painel
 
 - **Visão geral:** saúde do núcleo, arquivos encontrados e sessões.

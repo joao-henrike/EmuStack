@@ -1,5 +1,7 @@
 # Instalação — EmuStack 0.7.1
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 ## Pré-requisitos
 
 - Linux x86-64 (ambiente principal: Debian 13).

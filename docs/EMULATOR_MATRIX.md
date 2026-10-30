@@ -1,5 +1,7 @@
 # Matriz de runtime e boot — EmuStack 0.7.1
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 A matriz distingue quatro coisas que não devem ser confundidas: perfil listado, binário instalado, jogos que o upstream consegue executar e boot do sistema/menu original. O `install-report.json` gerado no host é a fonte para confirmar quais binários foram encontrados. Nenhum perfil é declarado plenamente funcional apenas por estar no catálogo.
 
 | Perfil | Plataforma | Alvo de emulação | Boot de sistema/menu original | Estado de confiança |

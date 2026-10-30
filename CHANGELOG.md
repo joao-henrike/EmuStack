@@ -1,5 +1,7 @@
 # Changelog
 
+> **EMUSTACK // GAMING LAB** · [Visão geral](README.md) · [Identidade visual](docs/IDENTIDADE-VISUAL.md) · [Documentação](docs/INSTALLATION.md) · [Roadmap](docs/ROADMAP-STATUS.md)
+
 ## 0.7.1 post-release hardening — 2026-10-28
 
 - Restrict dashboard GET/POST access from the 20 isolated agents using a TCP source allowlist and deterministic per-network IPAM.

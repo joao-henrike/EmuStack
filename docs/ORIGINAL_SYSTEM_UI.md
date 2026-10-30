@@ -1,5 +1,7 @@
 # Sistemas originais e menus reais
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 O EmuStack não recria o XMB, o Home Menu nem outros dashboards em HTML. Quando existe suporte real, ele invoca o emulador com os arquivos de sistema do usuário e a tela original vem desse código emulado. Quando não existe caminho comprovado, o perfil permanece manual/indisponível/não suportado.
 
 ## Onde ficam os arquivos

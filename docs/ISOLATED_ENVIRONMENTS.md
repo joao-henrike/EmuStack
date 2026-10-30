@@ -1,5 +1,7 @@
 # Arquitetura dos ambientes isolados — 0.7.1
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 ## Objetivo
 
 Cada perfil do catálogo tem um contêiner/agente próprio e uma raiz de dados exclusiva. O dashboard é um plano de controle; ele não monta as bibliotecas, BIOS, saves ou HOME dos consoles. O serviço `emustack` de CLI também não recebe os dados persistentes dos ambientes.

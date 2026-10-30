@@ -1,5 +1,7 @@
 # EmuStack 0.7.1 — Relatório de arquitetura, alterações e testes
 
+> **EMUSTACK // GAMING LAB** · [README](../README.md) · [Instalação](INSTALLATION.md) · [Guia do usuário](USER_GUIDE.md) · [Matriz de emuladores](EMULATOR_MATRIX.md) · [Segurança](SECURITY.md) · [Identidade visual](IDENTIDADE-VISUAL.md)
+
 **Data:** 29 de outubro de 2026  
 **Última validação remota confirmada na revisão:** o workflow GitHub Actions `EmuStack CI` passou no commit `f3b28fa435a5083def049f389cb8016c961b86ea` (run [#35](https://github.com/joao-henrike/EmuStack/actions/runs/40886953420)). Essa execução reportou 79 testes Python aprovados, lock estrito, validação de Compose, build e runtime acceptance. O build usou `INSTALL_UPSTREAM=0` e `BUILD_KYTYPS5=0`: portanto, não comprovou downloads/builds upstream nem suporte a KytyPS5. O runner reportou `llvmpipe`, logo não comprova aceleração por GPU física. CI verde não certifica todos os jogos, firmwares ou hosts.
 
