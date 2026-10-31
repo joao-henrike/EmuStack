@@ -1,0 +1,345 @@
+{
+  "schema_version": 1,
+  "strategy": "pinned-git-submodules",
+  "description": "Read-only source snapshots for all emulator-backed profiles, separate from binary release-lock.json. Submodules require explicit checkout.",
+  "sources": [
+    {
+      "id": "kytyps5",
+      "profile": "kytyps5",
+      "path": "third_party/kytyps5",
+      "url": "https://github.com/KytyPS5/KytyPS5.git",
+      "branch": "main",
+      "commit": "f12fc209c7ec85b8028f7ae277c92e432a5f490b"
+    },
+    {
+      "id": "shadps4",
+      "profile": "shadps4",
+      "path": "third_party/shadps4",
+      "url": "https://github.com/shadps4-emu/shadPS4.git",
+      "branch": "main",
+      "commit": "55a97e46955b2ece7c7ff8bddeb043ca57a506c6"
+    },
+    {
+      "id": "rpcs3",
+      "profile": "rpcs3",
+      "path": "third_party/rpcs3",
+      "url": "https://github.com/RPCS3/rpcs3.git",
+      "branch": "master",
+      "commit": "fab15ea00541808992ebe0d0363e0f1b1a01033a"
+    },
+    {
+      "id": "duckstation",
+      "profile": "duckstation",
+      "path": "third_party/duckstation",
+      "url": "https://github.com/stenzek/duckstation.git",
+      "branch": "master",
+      "commit": "4375f646bbac5a5bb931d2292f2b4f883c43aee5"
+    },
+    {
+      "id": "pcsx2",
+      "profile": "pcsx2",
+      "path": "third_party/pcsx2",
+      "url": "https://github.com/PCSX2/pcsx2.git",
+      "branch": "master",
+      "commit": "8d2ad89181db29d2994daaa5f1258f40c303230b"
+    },
+    {
+      "id": "ppsspp",
+      "profile": "ppsspp",
+      "path": "third_party/ppsspp",
+      "url": "https://github.com/hrydgard/ppsspp.git",
+      "branch": "master",
+      "commit": "fd42bb6dcbff8a2e55861bbd98bf35ac9dd283a8"
+    },
+    {
+      "id": "vita3k",
+      "profile": "vita3k",
+      "path": "third_party/vita3k",
+      "url": "https://github.com/Vita3K/Vita3K.git",
+      "branch": "master",
+      "commit": "55239f9c745a0f8d4e7ea5994fe82147ce241ef6"
+    },
+    {
+      "id": "xenia-canary",
+      "profile": "xenia-canary",
+      "path": "third_party/xenia-canary",
+      "url": "https://github.com/xenia-canary/xenia-canary.git",
+      "branch": "canary_experimental",
+      "commit": "44e6489cf87567b5dc9c982207765d722b71b966"
+    },
+    {
+      "id": "xemu",
+      "profile": "xemu",
+      "path": "third_party/xemu",
+      "url": "https://github.com/xemu-project/xemu.git",
+      "branch": "master",
+      "commit": "dc10b4cea96e403d30c17ed53551fdaf023bc17f"
+    },
+    {
+      "id": "cemu",
+      "profile": "cemu",
+      "path": "third_party/cemu",
+      "url": "https://github.com/cemu-project/Cemu.git",
+      "branch": "main",
+      "commit": "e7107612785946da857d9b6df4ec665844cb89bd"
+    },
+    {
+      "id": "dolphin",
+      "profile": "dolphin",
+      "path": "third_party/dolphin",
+      "url": "https://github.com/dolphin-emu/dolphin.git",
+      "branch": "master",
+      "commit": "613db73aeb2c086a816592df2fb193d73130101b"
+    },
+    {
+      "id": "azahar",
+      "profile": "azahar",
+      "path": "third_party/azahar",
+      "url": "https://github.com/azahar-emu/azahar.git",
+      "branch": "master",
+      "commit": "15983ee9bf93e069474a27caf679f17aa2b6f5c7"
+    },
+    {
+      "id": "melonds",
+      "profile": "melonds",
+      "path": "third_party/melonds",
+      "url": "https://github.com/melonDS-emu/melonDS.git",
+      "branch": "master",
+      "commit": "1e654443e4c0a54b40709c0208aa0eeba41e6142"
+    },
+    {
+      "id": "mgba",
+      "profile": "mgba",
+      "path": "third_party/mgba",
+      "url": "https://github.com/mgba-emu/mgba.git",
+      "branch": "master",
+      "commit": "52de910807c0178d6cfb088aa350952569e8f08f"
+    },
+    {
+      "id": "bsnes",
+      "profile": "bsnes",
+      "path": "third_party/bsnes",
+      "url": "https://github.com/bsnes-emu/bsnes.git",
+      "branch": "master",
+      "commit": "78474e5d39f58872dc21aca18cf9eb583b147fe7"
+    },
+    {
+      "id": "mesen",
+      "profile": "mesen",
+      "path": "third_party/mesen",
+      "url": "https://github.com/SourMesen/Mesen2.git",
+      "branch": "master",
+      "commit": "b9fa69ddc6d0a331fb103fdb5eef6904305703c2"
+    },
+    {
+      "id": "mupen64plus-core",
+      "profile": "mupen64plus",
+      "path": "third_party/mupen64plus-core",
+      "url": "https://github.com/mupen64plus/mupen64plus-core.git",
+      "branch": "master",
+      "commit": "dc1411a196b0e35745e9a5661a44e60809fad250"
+    },
+    {
+      "id": "mupen64plus-ui-console",
+      "profile": "mupen64plus",
+      "path": "third_party/mupen64plus-ui-console",
+      "url": "https://github.com/mupen64plus/mupen64plus-ui-console.git",
+      "branch": "master",
+      "commit": "c8ac4862a019d7885b24927d9b4db5dd3e42a528"
+    },
+    {
+      "id": "mupen64plus-audio-sdl",
+      "profile": "mupen64plus",
+      "path": "third_party/mupen64plus-audio-sdl",
+      "url": "https://github.com/mupen64plus/mupen64plus-audio-sdl.git",
+      "branch": "master",
+      "commit": "42a027b9b805e05abf662865d0cb765781dbd9f1"
+    },
+    {
+      "id": "mupen64plus-input-sdl",
+      "profile": "mupen64plus",
+      "path": "third_party/mupen64plus-input-sdl",
+      "url": "https://github.com/mupen64plus/mupen64plus-input-sdl.git",
+      "branch": "master",
+      "commit": "842c39e89749aa3a8d02202b2afddd20b29cdfdb"
+    },
+    {
+      "id": "mupen64plus-rsp-hle",
+      "profile": "mupen64plus",
+      "path": "third_party/mupen64plus-rsp-hle",
+      "url": "https://github.com/mupen64plus/mupen64plus-rsp-hle.git",
+      "branch": "master",
+      "commit": "8a7a472a7172eb2c8725b305eae26818ed7b51a2"
+    },
+    {
+      "id": "mupen64plus-video-rice",
+      "profile": "mupen64plus",
+      "path": "third_party/mupen64plus-video-rice",
+      "url": "https://github.com/mupen64plus/mupen64plus-video-rice.git",
+      "branch": "master",
+      "commit": "f0a7b9f391b0e9bc14962b114f7da1ba553060be"
+    },
+    {
+      "id": "mupen64plus-video-glide64mk2",
+      "profile": "mupen64plus",
+      "path": "third_party/mupen64plus-video-glide64mk2",
+      "url": "https://github.com/mupen64plus/mupen64plus-video-glide64mk2.git",
+      "branch": "master",
+      "commit": "b07cb0bc8f29d6ee43efdf0a4d5a1b878ba98393"
+    },
+    {
+      "id": "eden",
+      "profile": "eden",
+      "path": "third_party/eden",
+      "url": "https://git.eden-emu.dev/eden-emu/eden.git",
+      "branch": "master",
+      "commit": "943f1fc76087adcfc893fb1ca3aea507df15d004"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "kytyps5",
+      "components": [
+        "kytyps5"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "shadps4",
+      "components": [
+        "shadps4"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "rpcs3",
+      "components": [
+        "rpcs3"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "duckstation",
+      "components": [
+        "duckstation"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "pcsx2",
+      "components": [
+        "pcsx2"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "ppsspp",
+      "components": [
+        "ppsspp"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "vita3k",
+      "components": [
+        "vita3k"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "xbox-one",
+      "components": [],
+      "state": "unsupported-no-source",
+      "reason": "No supported full-system emulator runner is integrated for this console generation."
+    },
+    {
+      "id": "xenia-canary",
+      "components": [
+        "xenia-canary"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "xbox-series",
+      "components": [],
+      "state": "unsupported-no-source",
+      "reason": "No supported full-system emulator runner is integrated for this console generation."
+    },
+    {
+      "id": "xemu",
+      "components": [
+        "xemu"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "eden",
+      "components": [
+        "eden"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "cemu",
+      "components": [
+        "cemu"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "dolphin",
+      "components": [
+        "dolphin"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "azahar",
+      "components": [
+        "azahar"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "melonds",
+      "components": [
+        "melonds"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "mgba",
+      "components": [
+        "mgba"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "mupen64plus",
+      "components": [
+        "mupen64plus-core",
+        "mupen64plus-ui-console",
+        "mupen64plus-audio-sdl",
+        "mupen64plus-input-sdl",
+        "mupen64plus-rsp-hle",
+        "mupen64plus-video-rice",
+        "mupen64plus-video-glide64mk2"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "bsnes",
+      "components": [
+        "bsnes"
+      ],
+      "state": "source-pinned"
+    },
+    {
+      "id": "mesen",
+      "components": [
+        "mesen"
+      ],
+      "state": "source-pinned"
+    }
+  ]
+}
