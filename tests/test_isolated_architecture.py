@@ -33,8 +33,8 @@ class IsolatedArchitectureTests(unittest.TestCase):
         for env_id in EXPECTED_IDS:
             token_suffix = env_id.upper().replace("-", "_")
             self.assertIn(f"EMUSTACK_AGENT_TOKEN_{token_suffix}: ${{EMUSTACK_AGENT_TOKEN_{token_suffix}:-}}", dashboard_block)
-        dashboard_service = compose.split("  dashboard:", 1)[1].split("\\n  dashboard-proxy:", 1)[0]
-        proxy_service = compose.split("  dashboard-proxy:", 1)[1].split("\\nnetworks:", 1)[0]
+        dashboard_service = compose.split("  dashboard:", 1)[1].split("\n  dashboard-proxy:", 1)[0]
+        proxy_service = compose.split("  dashboard-proxy:", 1)[1].split("\nnetworks:", 1)[0]
         self.assertNotIn('127.0.0.1:8765:8765', dashboard_service)
         self.assertIn('127.0.0.1:8765:8765', proxy_service)
         self.assertNotIn("./data/environments", compose.split("  dashboard:", 1)[1].split("\nnetworks:", 1)[0])
