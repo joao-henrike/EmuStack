@@ -106,11 +106,11 @@ class IsolatedDashboardLogicTests(unittest.TestCase):
         def unexpected_status(_item):
             raise AssertionError("isolated summary must use agent health, not host binary discovery")
 
-        with patch.object(webapp, "ISOLATED_MODE", True), \\
-             patch.object(webapp, "MAX_ACTIVE_ENVIRONMENTS", 2), \\
-             patch.object(webapp, "environment_records", return_value=envs) as records, \\
-             patch.object(webapp, "_agent_processes", return_value=processes), \\
-             patch.object(webapp, "get_game_files", return_value=games), \\
+        with patch.object(webapp, "ISOLATED_MODE", True), \
+             patch.object(webapp, "MAX_ACTIVE_ENVIRONMENTS", 2), \
+             patch.object(webapp, "environment_records", return_value=envs) as records, \
+             patch.object(webapp, "_agent_processes", return_value=processes), \
+             patch.object(webapp, "get_game_files", return_value=games), \
              patch.object(webapp, "load_json", return_value={"items": {"rpcs3": {}, "pcsx2": {}}}):
             result = webapp.summarize(lambda: catalog, unexpected_status)
 
@@ -138,10 +138,10 @@ class IsolatedDashboardLogicTests(unittest.TestCase):
             "ppsspp": ("NOT INSTALLED", None),
             "xbox-one": ("NO STANDALONE RUNNER", None),
         }
-        with patch.object(webapp, "ISOLATED_MODE", False), \\
-             patch.object(webapp, "environment_records") as records, \\
-             patch.object(webapp, "_agent_processes", return_value=[{"status": "running"}, {"status": "exited"}]), \\
-             patch.object(webapp, "get_game_files", return_value=[]), \\
+        with patch.object(webapp, "ISOLATED_MODE", False), \
+             patch.object(webapp, "environment_records") as records, \
+             patch.object(webapp, "_agent_processes", return_value=[{"status": "running"}, {"status": "exited"}]), \
+             patch.object(webapp, "get_game_files", return_value=[]), \
              patch.object(webapp, "load_json", return_value={"items": "invalid"}):
             result = webapp.summarize(lambda: catalog, lambda item: status[item["id"]])
 
@@ -160,10 +160,10 @@ class IsolatedDashboardLogicTests(unittest.TestCase):
         envs = [
             {"id": "rpcs3", "online": False, "launch_available": False, "runtime_status": "AGENT_OFFLINE"},
         ]
-        with patch.object(webapp, "ISOLATED_MODE", True), \\
-             patch.object(webapp, "environment_records", return_value=envs), \\
-             patch.object(webapp, "_agent_processes", return_value=[]), \\
-             patch.object(webapp, "get_game_files", return_value=[]), \\
+        with patch.object(webapp, "ISOLATED_MODE", True), \
+             patch.object(webapp, "environment_records", return_value=envs), \
+             patch.object(webapp, "_agent_processes", return_value=[]), \
+             patch.object(webapp, "get_game_files", return_value=[]), \
              patch.object(webapp, "load_json", return_value={}):
             summary = webapp.summarize(lambda: {"emulators": [{"id": "rpcs3"}]}, lambda _: ("UNKNOWN", None))
         self.assertEqual(summary["environment_count"], 1)
