@@ -30,6 +30,18 @@ python3 scripts/upstream-manager.py audit --require-checkout
 
 Para atualizar commits com revisão e sem alterar silenciosamente todos os módulos, veja o [guia de códigos-fonte upstream](docs/UPSTREAM_SOURCES.md).
 
+## 🛠️ Fase 1 — Instalação e rollback por perfil
+
+A imagem Docker continua instalando assets oficiais pelo `release-lock.json` e pacotes APT. Adicionalmente, o **gerenciador de host** instala executáveis revisados em `data/environments/<id>/emulators/`, isolados por console, com SHA-256, versões anteriores, rollback e remoção controlada. Quatro receitas de build-fonte opt-in foram integradas: **shadPS4, PPSSPP, melonDS e bsnes**. A compilação e execução real ainda exigem validação no host; nada é declarado compatível apenas por existir um binário.
+
+```bash
+python3 scripts/emulator-manager.py status
+python3 scripts/emulator-manager.py deps ppsspp
+python3 scripts/emulator-manager.py history ppsspp
+```
+
+A instalação e o build são ações explícitas do operador no host, **nunca executadas pelo dashboard**. Não há download de jogos, firmware ou BIOS. Consulte [Gerenciamento de emuladores e builds](docs/EMULATOR_MANAGER.md) antes de usar importação ou compilação.
+
 ## ✨ Visão geral
 
 | Área | O que oferece |

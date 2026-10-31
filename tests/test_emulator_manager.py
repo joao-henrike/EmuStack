@@ -101,6 +101,16 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertIsNone(manager.active("ppsspp"))
         self.assertEqual(len(manager.history("ppsspp")), 3)
 
+    def test_rollback_after_uninstall_restores_last_managed_binary(self):
+        manager.install_artifact("melonds", self.input, "melonDS",
+                                 {"method": "test"}, self.digest)
+        manager.uninstall("melonds")
+        self.assertIsNone(manager.active("melonds"))
+        restored = manager.rollback("melonds")
+        self.assertEqual(restored["sha256"], self.digest)
+        self.assertTrue(manager.status("melonds")[0]["managed_hash_valid"])
+
+
     def test_modified_managed_binary_is_not_deleted(self):
         manager.install_artifact("ppsspp", self.input, "PPSSPPSDL",
                                  {"method": "test"}, self.digest)
@@ -118,14 +128,14 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertFalse(xbox["source_build"])
         self.assertEqual(xbox["runtime"], "unsupported")
 
-    def test_only_three_source_builds_have_recipes(self):
-        self.assertEqual(set(manager.RECIPES), {"ppsspp", "melonds", "bsnes"})
+    def test_only_four_source_builds_have_recipes(self):
+        self.assertEqual(set(manager.RECIPES), {"shadps4", "ppsspp", "melonds", "bsnes"})
         for identifier in manager.RECIPES:
             item = manager.dependencies(identifier)
             self.assertEqual(item["source_build"], "configured")
             self.assertEqual(len(item["source_commit"]), 40)
         with self.assertRaisesRegex(manager.ManagerError, "No reviewed"):
-            manager.build("shadps4", 2, yes=True)
+            manager.build("kytyps5", 2, yes=True)
 
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):

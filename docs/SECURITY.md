@@ -55,6 +55,10 @@ Não remova a allowlist para contornar erro. Se a rede local/VPN se sobrepõe à
 
 Para código ou arquivos de terceiros dos quais você não confia, prefira uma VM/host descartável com credenciais e dados separados e sem dispositivos do desktop mapeados.
 
+## 🧰 Ferramentas de host e builds de upstream
+
+`scripts/emulator-manager.py` opera no host como usuário normal, sem expor ações de instalar/desinstalar na API. Arquivos importados precisam ter nome permitido pelo catálogo e hash SHA-256 explícito; checksum não é assinatura de fornecedor. O gerenciador rejeita symlinks nos destinos e mantém cópias antigas fora dos mounts dos agentes. Builds de shadPS4, PPSSPP, melonDS e bsnes **executam código de terceiros no host** somente após sinalizador de aceite: revide a origem e prefira VM descartável para código não confiável. Nunca execute como root. Testes de fronteira Docker não certificam segurança de um build executado fora do contêiner.
+
 ## 🧪 Verificação operacional
 
 ```bash

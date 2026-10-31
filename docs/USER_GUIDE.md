@@ -100,6 +100,10 @@ curl -i http://127.0.0.1:8765/api/health
 
 O endpoint de saúde é apenas um sinal básico de vida; ele não expõe um relatório de auditoria completo. Para API de controle, use o dashboard local e não encaminhe a porta para a rede. Consulte [Solução de problemas](TROUBLESHOOTING.md).
 
+## 🛠️ Instalar ou reverter um executável por perfil
+
+Para administrar os executáveis extras de uma pasta privada, abra um terminal no host e consulte `python3 scripts/emulator-manager.py status`. Essa ação não fica exposta ao dashboard para preservar as fronteiras de segurança. O host pode compilar quatro projetos com receitas opt-in, importar um binário revisado por SHA-256, e reverter/remover uma instalação gerenciada. Veja [Guia de instalações e rollback](EMULATOR_MANAGER.md); pare a sessão antes de substituir um executável.
+
 ## 🧯 Encerrar uma sessão com segurança
 
 Use o painel para finalizar uma sessão iniciada ali e confira o estado antes de encerrar o contêiner. Para parar a stack, use o comando Compose correspondente à configuração com a qual ela foi iniciada; não remova volumes ou pastas de dados como primeira medida de diagnóstico.

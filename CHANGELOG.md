@@ -12,6 +12,12 @@ Todas as alterações relevantes do projeto são registradas aqui. Status de com
 - 🔄 Documentada a atualização manual do release-lock e a revisão de artifacts antes da incorporação.
 - ⚖️ Reforçadas as orientações de conteúdo legal, privacidade dos relatórios e ausência de ROMs/BIOS/firmware no projeto.
 
+### Fase 1 — Integração de instalação (branch de desenvolvimento)
+
+- Novo gerenciador de host por perfil com importação hash-verificada, backups por binário, histórico, rollback, remoção e status JSON; nenhum poder adicional para o dashboard Docker.
+- Receitas de build a partir dos checkouts pinados para shadPS4, PPSSPP, melonDS e bsnes, com dependências declaradas e execução opt-in. Testes de regressão cobrem SHA-256, caminhos, perfis bloqueados, instalação, remoção e rollback. Compilação real e validação de recursos auxiliares no Debian pendentes.
+- Documentação [Fase 1 — Gerenciador](docs/EMULATOR_MANAGER.md), sem alteração dos 11 assets fixados/9 skip do release lock.
+
 ### Post-release hardening
 - Integração inicial de todos os 18 projetos upstream via 24 submódulos Git pinados (Mupen64Plus inclui sete componentes); manifesto, gerenciador de sincronização/auditoria e fluxo de atualização revisável. Não altera o instalador de binários nem a disponibilidade de runners Xbox One/Series.
 - Dashboard no longer attempts direct host-port publication from internal-only bridges. A pinned, unprivileged Nginx proxy publishes `127.0.0.1:8765` while the application remains on internal networks.

@@ -35,6 +35,10 @@ git commit -m "chore(upstream): pin reviewed PPSSPP source commit"
 
 `plan` sem `--id` consulta o HEAD oficial de todos os 24 componentes. O comando apenas informa diferenças; não baixa nem atualiza por conta própria. O comando `pin` só opera em branch não principal, exige checkout limpo, busca o hash especificado na origem e **prepara** o diff para uma revisão/PR. Não há atualização automática silenciosa.
 
+## Integração com builds de host (Fase 1)
+
+Além do sincronizador de fontes, o `scripts/emulator-manager.py` permite construir **shadPS4, PPSSPP, melonDS e bsnes** a partir dos commits fixados, após revisar dependências e consentir explicitamente em executar código upstream. Saída privada em `data/environments/<id>/emulators/`, com backup e rollback controlados. **Não substitui** a instalação oficial em Docker por release lock, não compila automaticamente os outros 14 projetos e não prova que os quatro builds funcionem no host. Consulte [Gerenciador de emuladores](EMULATOR_MANAGER.md).
+
 ## Limites e licenças
 
 - As licenças e avisos de copyright pertencem a **cada upstream**. O MIT do EmuStack não se sobrepõe às licenças de `third_party`. Inspecione os avisos e requisitos dos 24 repositórios antes de redistribuir versões ou builds.
