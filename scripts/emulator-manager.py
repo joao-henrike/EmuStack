@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / "data" / "emulator-manager"
 SOURCE_LOCK = ROOT / "upstream" / "source-lock.json"
 CATALOG = ROOT / "catalog.json"
+RELEASE_LOCK = ROOT / "release-lock.json"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 
@@ -433,7 +434,7 @@ def inspect_binary(path: Path) -> dict:
 def status(identifier: str | None = None) -> list[dict]:
     result = []
     lock_modes = {key: value.get("mode") for key, value
-                  in load_json(ROOT / "release-lock.json").get("items", {}).items()}
+                  in load_json(RELEASE_LOCK).get("items", {}).items()}
     mapped = {s["profile"] for s in source_map().values()}
     for name, item in profiles().items():
         if identifier is not None and name != identifier:
