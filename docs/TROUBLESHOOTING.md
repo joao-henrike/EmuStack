@@ -4,13 +4,26 @@ Use a seção que corresponde ao sintoma. Preserve a saída útil e evite apagar
 
 ## 🌐 O dashboard não abre
 
+Comece incluindo contêineres parados na inspeção: `docker compose ps` normalmente mostra apenas os ativos.
+
 ```bash
-docker compose ps
+docker compose ps -a
 docker compose logs --tail=200 dashboard
-curl -i http://127.0.0.1:8765/api/health
+docker compose logs --tail=100 env-rpcs3
+CID="$(docker compose ps -aq dashboard)"
+if [ -n "$CID" ]; then
+  docker inspect "$CID" --format 'state={{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} error={{.State.Error}}'
+fi
+curl -i --max-time 5 http://127.0.0.1:8765/api/health
 ```
 
-Confirme que `host-setup.sh` foi executado, que a stack está saudável e que você está acessando a máquina local. O endereço publicado é `127.0.0.1:8765`; o projeto não oferece acesso remoto/LAN suportado. Se subiu a stack manualmente e precisa de GUI/áudio, inclua `-f compose.override.yaml` quando o arquivo existir.
+Use os mesmos arquivos `-f` e o mesmo projeto Compose usados na inicialização. Um contêiner em estado `created` ou `exited` não tem porta publicada ativa; `HostConfig.PortBindings` sozinho mostra apenas a configuração pretendida, não prova que há um listener no host. Consulte o estado, o código de saída e os logs dos serviços.
+
+O dashboard é iniciado depois que os contêineres dos agentes começam, mas não espera que todos passem no healthcheck. Assim, a interface pode abrir em modo degradado e mostrar agentes offline; a aceitação completa continua exigindo os 20 agentes saudáveis.
+
+**Não acrescente `compose.nvidia.yaml` incondicionalmente.** Esse overlay solicita `gpus: all` para todos os 20 agentes e depende do NVIDIA Container Toolkit no host. Para uma execução sem GPU NVIDIA, use apenas `compose.yaml` e, quando existir, `compose.override.yaml`. Para habilitar NVIDIA, configure o toolkit e use `USE_NVIDIA=1` nos scripts documentados.
+
+Confirme também que `host-setup.sh` foi executado e que você está acessando a máquina local. O endereço publicado é `127.0.0.1:8765`; o projeto não oferece acesso remoto/LAN suportado. Se subiu a stack manualmente e precisa de GUI/áudio, inclua `-f compose.override.yaml` quando o arquivo existir.
 
 ## 🧩 Agente offline ou token rejeitado
 
