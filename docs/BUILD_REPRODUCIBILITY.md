@@ -27,6 +27,8 @@ O serviço `dashboard-proxy` usa a imagem oficial `nginx:alpine` fixada pelo dig
 
 No padrão, o build utiliza repositórios Trixie atuais para receber atualizações; assim, as versões de pacotes podem mudar mesmo que a imagem base esteja pinada. Para selecionar um snapshot datado:
 
+A imagem inclui `/usr/games` no `PATH`: no Debian Trixie, os executáveis dos pacotes `dolphin-emu` e `mupen64plus-ui-console` ficam nesse diretório. Esses fallbacks são pacotes Debian, não assets upstream do `release-lock.json`; a versão depende dos repositórios/snapshot APT usados no build.
+
 ```bash
 APT_SNAPSHOT_TIMESTAMP=20261027T000000Z FREEZE_RELEASE_LOCK=1 ./scripts/build-and-audit.sh
 ```
@@ -36,6 +38,8 @@ O timestamp é ilustrativo: escolha uma data revisada. Snapshot melhora a estabi
 ## 🔐 Assets oficiais no release lock
 
 O `release-lock.json` atualmente é estrito e cobre os 20 IDs. O estado verificado consiste em **11 assets baixáveis oficiais com SHA-256** e **9 entradas `skip-upstream`** com razão explícita. Os modos `pinned` e `pinned-url` fixam referência/URL e hash do asset baixado; `skip-upstream` significa que o asset não é instalado pelo caminho upstream pinado nessa entrada.
+
+No lock atual, Vita3K usa o release versionado `Vita3K/Vita3K-builds@4246` e o asset `Vita3K-x86_64.AppImage`; DuckStation usa o asset `DuckStation-x64-SSE2.AppImage` do canal `preview`, com o SHA-256 atual fixado. Como `preview` é um canal móvel, a próxima substituição upstream deve falhar no hash até que o lock seja revisado deliberadamente.
 
 O lock não afirma que:
 - todo perfil tem binário instalado/compatível com Linux;
