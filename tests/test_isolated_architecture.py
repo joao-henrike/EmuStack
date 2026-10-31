@@ -33,7 +33,10 @@ class IsolatedArchitectureTests(unittest.TestCase):
         for env_id in EXPECTED_IDS:
             token_suffix = env_id.upper().replace("-", "_")
             self.assertIn(f"EMUSTACK_AGENT_TOKEN_{token_suffix}: ${{EMUSTACK_AGENT_TOKEN_{token_suffix}:-}}", dashboard_block)
-        self.assertIn('127.0.0.1:8765:8765', compose)
+        dashboard_service = compose.split("  dashboard:", 1)[1].split("\\n  dashboard-proxy:", 1)[0]
+        proxy_service = compose.split("  dashboard-proxy:", 1)[1].split("\\nnetworks:", 1)[0]
+        self.assertNotIn('127.0.0.1:8765:8765', dashboard_service)
+        self.assertIn('127.0.0.1:8765:8765', proxy_service)
         self.assertNotIn("./data/environments", compose.split("  dashboard:", 1)[1].split("\nnetworks:", 1)[0])
         for env_id in EXPECTED_IDS:
             block_match = re.search(rf"(?ms)^  env-{re.escape(env_id)}:\n(.*?)(?=^  [a-zA-Z0-9_-]+:\n|^networks:\n)", compose)
@@ -75,6 +78,45 @@ class IsolatedArchitectureTests(unittest.TestCase):
         webapp = (ROOT / "webapp.py").read_text(encoding="utf-8")
         self.assertIn("_is_trusted_dashboard_client(self.client_address[0])", webapp)
         self.assertIn("ipaddress.ip_address", webapp)
+
+    def test_dashboard_loopback_proxy_preserves_internal_dashboard_boundary(self):
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        dashboard = compose.split("  dashboard:", 1)[1].split("\\n  dashboard-proxy:", 1)[0]
+        proxy = compose.split("  dashboard-proxy:", 1)[1].split("\\nnetworks:", 1)[0]
+        self.assertNotIn('127.0.0.1:8765:8765', dashboard)
+        self.assertNotIn("dashboard-proxy-edge", dashboard)
+        self.assertIn("dashboard-proxy-backend:", dashboard)
+        self.assertIn("ipv4_address: 172.29.0.3", dashboard)
+        self.assertIn('image: nginx:alpine@sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606', proxy)
+        self.assertIn('127.0.0.1:8765:8765', proxy)
+        self.assertIn("ipv4_address: 172.29.0.2", proxy)
+        self.assertIn("./proxy/nginx.conf:/etc/nginx/nginx.conf:ro", proxy)
+        self.assertIn('user: "101:101"', proxy)
+        self.assertIn("no-new-privileges:true", proxy)
+        self.assertIn("cap_drop: [ALL]", proxy)
+
+        networks = compose.split("\\nnetworks:\\n", 1)[1]
+        backend = re.search(r"(?ms)^  dashboard-proxy-backend:\\n(.*?)(?=^  [^\\s].*:\\n|\\Z)", networks)
+        edge = re.search(r"(?ms)^  dashboard-proxy-edge:\\n(.*?)(?=^  [^\\s].*:\\n|\\Z)", networks)
+        self.assertIsNotNone(backend)
+        self.assertIsNotNone(edge)
+        self.assertIn("internal: true", backend.group(1))
+        self.assertNotIn("internal: true", edge.group(1))
+
+        nginx = (ROOT / "proxy" / "nginx.conf").read_text(encoding="utf-8")
+        self.assertIn("proxy_pass http://dashboard:8765;", nginx)
+        self.assertIn("proxy_set_header Host $http_host;", nginx)
+        self.assertIn("proxy_set_header Origin $http_origin;", nginx)
+        self.assertIn("proxy_set_header X-EmuStack-Request $http_x_emustack_request;", nginx)
+        self.assertNotIn("X-Forwarded-For", nginx)
+
+    def test_dashboard_proxy_source_is_allowlisted_without_trusting_agents(self):
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        dashboard = compose.split("  dashboard:", 1)[1].split("\\n  dashboard-proxy:", 1)[0]
+        self.assertIn("172.29.0.2", dashboard)
+        for index in range(1, 21):
+            self.assertIn(f"172.28.{index}.1", dashboard)
+            self.assertNotIn(f"172.28.{index}.2", dashboard)
 
     def test_dashboard_startup_does_not_wait_for_all_agents_to_be_healthy(self):
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
