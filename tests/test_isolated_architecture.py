@@ -121,7 +121,7 @@ class IsolatedArchitectureTests(unittest.TestCase):
             "scgi_temp_path",
         ):
             temp_paths = re.findall(
-                rf"(?m)^[ \\t]*{re.escape(directive)}[ \\t]+([^\\s;]+)[ \\t]*;[ \\t]*$",
+                rf"(?m)^[ \t]*{re.escape(directive)}[ \t]+([^\s;]+)[ \t]*;[ \t]*$",
                 nginx,
             )
             self.assertEqual(
