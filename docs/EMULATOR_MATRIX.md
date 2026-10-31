@@ -4,7 +4,7 @@ Esta matriz separa cinco perguntas: **o perfil está cadastrado? O asset upstrea
 
 ## 🔧 Integração de instalação por perfil — branch de desenvolvimento
 
-Existem quatro receitas de compilação pinada (shadPS4, PPSSPP, melonDS e bsnes), gerenciadas no host via `scripts/emulator-manager.py`. Os demais perfis continuam usando releases e pacotes do Docker ou importação de arquivo local revisado. O inventário host informa `official_release_lock`, `source_pinned`, `source_build`, `managed_hash_valid`, `binary_signature` e `execution_tested`. Um build só vira candidato a launcher após ser instalado; não implica compatibilidade ou menu original. Xbox One/Series continuam sem runner. Veja [Gerenciador de emuladores](EMULATOR_MANAGER.md).
+Existem cinco receitas de compilação pinada (KytyPS5, shadPS4, PPSSPP, melonDS e bsnes), gerenciadas no host via `scripts/emulator-manager.py`. Os demais perfis continuam usando releases e pacotes do Docker ou importação de arquivo local revisado. O inventário host informa `official_release_lock`, `source_pinned`, `source_build`, `managed_hash_valid`, `binary_signature` e `execution_tested`. Um build só vira candidato a launcher após ser instalado; não implica compatibilidade ou menu original. Xbox One/Series continuam sem runner. Veja [Gerenciador de emuladores](EMULATOR_MANAGER.md).
 
 ## 📌 Estados do release lock
 

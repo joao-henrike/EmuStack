@@ -158,14 +158,14 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertFalse(xbox["source_build"])
         self.assertEqual(xbox["runtime"], "unsupported")
 
-    def test_only_four_source_builds_have_recipes(self):
-        self.assertEqual(set(manager.RECIPES), {"shadps4", "ppsspp", "melonds", "bsnes"})
+    def test_only_five_source_builds_have_recipes(self):
+        self.assertEqual(set(manager.RECIPES), {"kytyps5", "shadps4", "ppsspp", "melonds", "bsnes"})
         for identifier in manager.RECIPES:
             item = manager.dependencies(identifier)
             self.assertEqual(item["source_build"], "configured")
             self.assertEqual(len(item["source_commit"]), 40)
         with self.assertRaisesRegex(manager.ManagerError, "No reviewed"):
-            manager.build("kytyps5", 2, yes=True)
+            manager.build("rpcs3", 2, yes=True)
 
     def test_binary_static_format_identification_never_runs_the_file(self):
         elf = self.root / "static.elf"

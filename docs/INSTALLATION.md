@@ -45,7 +45,7 @@ python3 scripts/emulator-manager.py deps melonds
 python3 scripts/emulator-manager.py history melonds
 ```
 
-O novo gerenciador oferece compilação revisável para shadPS4, PPSSPP, melonDS e bsnes, importação de binários por SHA-256, rollback e remoção. Ele **não substitui** a instalação padrão da imagem Docker nem eleva permissões; a UI continua sem acesso ao gerenciador de pacotes do host. Veja todos os comandos e avisos em [Gerenciador de emuladores](EMULATOR_MANAGER.md).
+O novo gerenciador oferece compilação revisável para KytyPS5, shadPS4, PPSSPP, melonDS e bsnes, importação de binários por SHA-256, rollback e remoção. Ele **não substitui** a instalação padrão da imagem Docker nem eleva permissões; a UI continua sem acesso ao gerenciador de pacotes do host. Veja todos os comandos e avisos em [Gerenciador de emuladores](EMULATOR_MANAGER.md).
 
 ## 🧭 Subir ou inspecionar manualmente
 

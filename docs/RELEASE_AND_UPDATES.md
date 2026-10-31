@@ -44,7 +44,7 @@ Cada atualização deve capturar: commit, referência upstream, asset/URL, SHA-2
 
 ## 🛠️ Binários locais e atualização por perfil (Fase 1)
 
-O `scripts/emulator-manager.py` gerencia somente binários extras na pasta privada `data/environments/<id>/emulators/`. Os comandos `status`, `deps`, `build`, `install-file`, `history`, `rollback` e `uninstall` não alteram hashes do Docker nem atualizam silenciosamente o upstream. Primeiro revise `python3 scripts/upstream-manager.py plan`, faça `pin` somente em branch de revisão, e depois compile explicitamente. Há quatro receitas de build de fonte Linux registradas; execução real exige aceitação no Debian. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md).
+O `scripts/emulator-manager.py` gerencia somente binários extras na pasta privada `data/environments/<id>/emulators/`. Os comandos `status`, `deps`, `build`, `install-file`, `history`, `rollback` e `uninstall` não alteram hashes do Docker nem atualizam silenciosamente o upstream. Primeiro revise `python3 scripts/upstream-manager.py plan`, faça `pin` somente em branch de revisão, e depois compile explicitamente. Há cinco receitas de build de fonte Linux registradas; execução real exige aceitação no Debian. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md).
 
 ## 🧯 Rollback
 

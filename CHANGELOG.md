@@ -15,7 +15,7 @@ Todas as alterações relevantes do projeto são registradas aqui. Status de com
 ### Fase 1 — Integração de instalação (branch de desenvolvimento)
 
 - Novo gerenciador de host por perfil com importação hash-verificada, backups por binário, histórico, rollback, remoção e status JSON; nenhum poder adicional para o dashboard Docker.
-- Receitas de build a partir dos checkouts pinados para shadPS4, PPSSPP, melonDS e bsnes, com dependências declaradas e execução opt-in. Testes de regressão cobrem SHA-256, caminhos, perfis bloqueados, instalação, remoção e rollback. Compilação real e validação de recursos auxiliares no Debian pendentes.
+- Receitas de build a partir dos checkouts pinados para KytyPS5, shadPS4, PPSSPP, melonDS e bsnes, com dependências declaradas e execução opt-in. Testes de regressão cobrem SHA-256, caminhos, perfis bloqueados, instalação, remoção e rollback. Compilação real e validação de recursos auxiliares no Debian pendentes.
 - Documentação [Fase 1 — Gerenciador](docs/EMULATOR_MANAGER.md), sem alteração dos 11 assets fixados/9 skip do release lock.
 
 ### Post-release hardening

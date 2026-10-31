@@ -9,12 +9,12 @@ O EmuStack possui **duas vias complementares de instalação**, que não devem s
 
 | Perfil | Situação de Fase 1 |
 |---|---|
-| shadPS4, PPSSPP, melonDS, bsnes | Receita de compilação Linux pinada, a partir do checkout de `third_party`, **não validada no host até executar o build**; importação revisada e rollback disponíveis |
+| KytyPS5, shadPS4, PPSSPP, melonDS, bsnes | Receita de compilação Linux pinada, a partir do checkout de `third_party`, **não validada no host até executar o build**; importação revisada e rollback disponíveis |
 | RPCS3, DuckStation, PCSX2, Vita3K, Xenia Canary, xemu, Eden, Cemu, Dolphin, Azahar, mGBA, Mupen64Plus e Mesen | Gerenciamento por release/apt existente, e importação manual auditável por perfil. Não recompilados automaticamente a partir dos submódulos |
-| KytyPS5 | Fonte oficial pinada e auditável; **sem receita Linux genérica revisada nesta etapa**. KytyPS5 ainda tem o builder experimental independente do Dockerfile; não há garantia de instalação |
+
 | Xbox One, Xbox Series | Sem runner suportado, instalação e execução **bloqueadas** |
 
-Os 24 submódulos são **fontes**, não 24 pacotes prontos para rodar. Os quatro builds novos são *best effort* e não são parte automática do build da imagem: requerem dependências instaladas no host e podem falhar devido a mudanças upstream, submódulos internos ou bibliotecas.
+Os 24 submódulos são **fontes**, não 24 pacotes prontos para rodar. Os cinco builds opcionais são *best effort* e não são parte automática do build da imagem: requerem dependências instaladas no host e podem falhar devido a mudanças upstream, submódulos internos ou bibliotecas.
 
 ## 1. Inspecionar antes de modificar
 
@@ -23,6 +23,7 @@ Sempre rode como usuário normal do Debian, na raiz do repositório, **sem sudo*
 ```bash
 python3 scripts/upstream-manager.py audit --require-checkout
 python3 scripts/emulator-manager.py status
+python3 scripts/emulator-manager.py deps kytyps5
 python3 scripts/emulator-manager.py deps shadps4
 python3 scripts/emulator-manager.py deps ppsspp
 python3 scripts/emulator-manager.py deps melonds
@@ -35,15 +36,18 @@ python3 scripts/emulator-manager.py deps bsnes
 
 ```bash
 # Compilar um perfil, apenas após revisar o projeto upstream e dependências:
+python3 scripts/emulator-manager.py build kytyps5 --jobs 2 --yes-run-upstream-code
 python3 scripts/emulator-manager.py build shadps4 --jobs 2 --yes-run-upstream-code
 python3 scripts/emulator-manager.py build ppsspp --jobs 2 --yes-run-upstream-code
 python3 scripts/emulator-manager.py build melonds --jobs 2 --yes-run-upstream-code
 python3 scripts/emulator-manager.py build bsnes --jobs 2 --yes-run-upstream-code
-# Opcional: tentar os quatro builds em sequência e obter resultado por perfil:
+# Opcional: tentar os cinco builds em sequência e obter resultado por perfil:
 python3 scripts/emulator-manager.py build-all --jobs 2 --yes-run-upstream-code
 ```
 
 `build-all` é best effort: continua nos demais perfis quando uma compilação falha, emite JSON com os resultados e retorna código de erro se qualquer build falhar. Não pule a revisão de cada upstream só para economizar comandos.
+
+O KytyPS5 pode baixar dependências de build durante a configuração CMake e exige bibliotecas auxiliares; o binário gerado sozinho não prova que o launcher será executável no contêiner. O build Docker experimental independente continua disponível, mas usa sua própria referência até ser reconciliado com o source lock.
 
 Esses comandos **executam o sistema de build de terceiros no host**, que não é uma sandbox. Se não confiar no código, compile numa VM/host descartável em vez de executar no computador principal. O gerenciador recusa execução como root, não faz downloads de firmware/jogos e executa comandos de build com lista fixa de argumentos (sem shell).
 

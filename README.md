@@ -32,7 +32,7 @@ Para atualizar commits com revisão e sem alterar silenciosamente todos os módu
 
 ## 🛠️ Fase 1 — Instalação e rollback por perfil
 
-A imagem Docker continua instalando assets oficiais pelo `release-lock.json` e pacotes APT. Adicionalmente, o **gerenciador de host** instala executáveis revisados em `data/environments/<id>/emulators/`, isolados por console, com SHA-256, versões anteriores, rollback e remoção controlada. Quatro receitas de build-fonte opt-in foram integradas: **shadPS4, PPSSPP, melonDS e bsnes**. A compilação e execução real ainda exigem validação no host; nada é declarado compatível apenas por existir um binário.
+A imagem Docker continua instalando assets oficiais pelo `release-lock.json` e pacotes APT. Adicionalmente, o **gerenciador de host** instala executáveis revisados em `data/environments/<id>/emulators/`, isolados por console, com SHA-256, versões anteriores, rollback e remoção controlada. Cinco receitas de build-fonte opt-in foram integradas: **KytyPS5, shadPS4, PPSSPP, melonDS e bsnes**. A compilação e execução real ainda exigem validação no host; nada é declarado compatível apenas por existir um binário.
 
 ```bash
 python3 scripts/emulator-manager.py status

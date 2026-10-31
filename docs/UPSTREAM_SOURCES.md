@@ -37,7 +37,7 @@ git commit -m "chore(upstream): pin reviewed PPSSPP source commit"
 
 ## Integração com builds de host (Fase 1)
 
-Além do sincronizador de fontes, o `scripts/emulator-manager.py` permite construir **shadPS4, PPSSPP, melonDS e bsnes** a partir dos commits fixados, após revisar dependências e consentir explicitamente em executar código upstream. Saída privada em `data/environments/<id>/emulators/`, com backup e rollback controlados. **Não substitui** a instalação oficial em Docker por release lock, não compila automaticamente os outros 14 projetos e não prova que os quatro builds funcionem no host. Consulte [Gerenciador de emuladores](EMULATOR_MANAGER.md).
+Além do sincronizador de fontes, o `scripts/emulator-manager.py` permite construir **KytyPS5, shadPS4, PPSSPP, melonDS e bsnes** a partir dos commits fixados, após revisar dependências e consentir explicitamente em executar código upstream. Saída privada em `data/environments/<id>/emulators/`, com backup e rollback controlados. **Não substitui** a instalação oficial em Docker por release lock, não compila automaticamente os outros 13 projetos e não prova que os quatro builds funcionem no host. Consulte [Gerenciador de emuladores](EMULATOR_MANAGER.md).
 
 ## Limites e licenças
 

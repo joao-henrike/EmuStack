@@ -80,6 +80,7 @@ Sem executar código upstream, valide o catálogo do host:
 
 ```bash
 python3 scripts/emulator-manager.py status
+python3 scripts/emulator-manager.py deps kytyps5
 python3 scripts/emulator-manager.py deps shadps4
 python3 scripts/emulator-manager.py deps ppsspp
 python3 scripts/emulator-manager.py deps melonds
