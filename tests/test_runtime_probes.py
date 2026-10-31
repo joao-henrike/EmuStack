@@ -30,13 +30,13 @@ class RuntimeProbeHelpersTests(unittest.TestCase):
         self.assertTrue(is_software_vulkan_renderer("deviceName = Mesa Lavapipe"))
         self.assertFalse(is_software_vulkan_renderer("deviceName = NVIDIA GeForce RTX 3060"))
         mixed_devices = (
-            "GPU0:\n deviceName = NVIDIA GeForce RTX 4050 Laptop GPU\\n"
-            "GPU1:\n deviceName = llvmpipe (LLVM 19.1.7, 256 bits)\\n"
+            "GPU0:\n deviceName = NVIDIA GeForce RTX 4050 Laptop GPU\n"
+            "GPU1:\n deviceName = llvmpipe (LLVM 19.1.7, 256 bits)\n"
         )
         self.assertFalse(is_software_vulkan_renderer(mixed_devices))
         software_devices = (
-            "GPU0:\n deviceName = llvmpipe (LLVM 19.1.7, 256 bits)\\n"
-            "GPU1:\n deviceName = Mesa Lavapipe\\n"
+            "GPU0:\n deviceName = llvmpipe (LLVM 19.1.7, 256 bits)\n"
+            "GPU1:\n deviceName = Mesa Lavapipe\n"
         )
         self.assertTrue(is_software_vulkan_renderer(software_devices))
 
