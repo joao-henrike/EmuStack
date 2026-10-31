@@ -8,6 +8,7 @@ an explicit opt-in and runs programs on the host; review upstream beforehand.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import hashlib
 import json
 import os
@@ -68,8 +69,9 @@ RECIPES = {
     "bsnes": {
         "source": "bsnes",
         "name": "bsnes",
-        "requires": ["git", "make", "c++"],
-        "packages": "build-essential libsdl2-dev libgtk-3-dev libgtksourceview-3.0-dev libao-dev libopenal-dev",
+        "requires": ["git", "make", "c++", "pkg-config"],
+        "pkg_config_required": ["gtk+-3.0", "sdl2"],
+        "packages": "build-essential pkg-config libsdl2-dev libgtk-3-dev libx11-dev libxext-dev libxrandr-dev libgtksourceview-3.0-dev libao-dev libopenal-dev",
         "reference": "https://github.com/bsnes-emu/bsnes/blob/master/docs/how-to/build-from-source.md",
         "artifacts": ["source/bsnes/out/bsnes", "source/bsnes/out/bsnes.bin"],
     },
@@ -305,10 +307,29 @@ def dependencies(identifier: str) -> dict:
         return {"id": identifier, "source_build": "not-integrated",
                 "binary_install": "official-release-lock-or-reviewed-local-file" if supported(item) else "unsupported"}
     missing = [command for command in recipe["requires"] if shutil.which(command) is None]
-    return {"id": identifier, "source_build": "configured", "missing_commands": missing,
-            "debian_build_packages": recipe["packages"], "upstream_build_reference": recipe["reference"],
-            "source_commit": source_map()[recipe["source"]]["commit"],
-            "note": "Native development packages are not installed automatically; examine upstream instructions."}
+    modules = recipe.get("pkg_config_required", [])
+    missing_modules = []
+    if modules:
+        pkg_config = shutil.which("pkg-config")
+        if pkg_config is None:
+            if "pkg-config" not in missing:
+                missing.append("pkg-config")
+            missing_modules = list(modules)
+        else:
+            for module in modules:
+                probe = subprocess.run([pkg_config, "--exists", module],
+                                       capture_output=True, timeout=10, check=False)
+                if probe.returncode:
+                    missing_modules.append(module)
+    return {
+        "id": identifier, "source_build": "configured",
+        "missing_commands": missing, "missing_pkg_config": missing_modules,
+        "debian_build_packages": recipe["packages"],
+        "upstream_build_reference": recipe["reference"],
+        "source_commit": source_map()[recipe["source"]]["commit"],
+        "note": "Command checks and selected pkg-config probes only; optional or undocumented "
+                "library dependencies may still be missing. Nothing is installed automatically.",
+    }
 
 
 def toolchain_info() -> dict:
@@ -335,7 +356,12 @@ def run_build(args: list[str], work: Path, log: Path, env: dict | None = None) -
         result = subprocess.run(args, cwd=work, stdout=stream, stderr=subprocess.STDOUT,
                                 env=env, timeout=3600, check=False)
         if result.returncode != 0:
-            raise ManagerError(f"Build command failed ({result.returncode}); inspect {log.relative_to(ROOT)}")
+            with log.open("r", encoding="utf-8", errors="replace") as output:
+                tail = "".join(deque(output, maxlen=18)).rstrip()[-3500:]
+            raise ManagerError(
+                f"Build command failed ({result.returncode}); log: "
+                f"{log.relative_to(ROOT)}\n--- last log lines ---\n{tail}"
+            )
 
 
 def build(identifier: str, jobs: int, yes: bool) -> dict:
@@ -348,8 +374,16 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
     if not 1 <= jobs <= 8:
         raise ManagerError("--jobs must be 1..8")
     report = dependencies(identifier)
-    if report["missing_commands"]:
-        raise ManagerError("Missing commands: " + ", ".join(report["missing_commands"]))
+    if report["missing_commands"] or report["missing_pkg_config"]:
+        problems = []
+        if report["missing_commands"]:
+            problems.append("commands: " + ", ".join(report["missing_commands"]))
+        if report["missing_pkg_config"]:
+            problems.append("pkg-config modules: " + ", ".join(report["missing_pkg_config"]))
+        raise ManagerError(
+            "Missing build dependencies for " + identifier + " (" + "; ".join(problems) + "). "
+            "Review required packages with: python3 scripts/emulator-manager.py deps " + identifier
+        )
     src, pin = verify_source(identifier)
     ensure_dir(STATE / "logs")
     ensure_dir(STATE / "work")

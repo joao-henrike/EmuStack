@@ -184,6 +184,40 @@ class EmulatorManagerTests(unittest.TestCase):
         self.input.write_bytes(b"MZ" + b"0" * 64)
         self.assertEqual(manager.inspect_binary(self.input)["format"], "possible-PE-Windows")
 
+    def test_bsnes_dependency_probes_detect_missing_pkgconfig_headers(self):
+        original = manager.RECIPES["bsnes"]
+        self.assertIn("gtk+-3.0", original["pkg_config_required"])
+        self.assertIn("sdl2", original["pkg_config_required"])
+        def command(name):
+            return "/usr/bin/" + name
+        with patch.object(manager.shutil, "which", side_effect=command), \
+             patch.object(manager.subprocess, "run") as probe:
+            probe.return_value.returncode = 1
+            report = manager.dependencies("bsnes")
+        self.assertEqual(report["missing_commands"], [])
+        self.assertEqual(report["missing_pkg_config"], ["gtk+-3.0", "sdl2"])
+        self.assertEqual(probe.call_count, 2)
+
+    def test_bsnes_build_refuses_missing_pkgconfig_before_compilation(self):
+        with patch.object(manager, "dependencies", return_value={
+            "missing_commands": [], "missing_pkg_config": ["gtk+-3.0"]
+        }), patch.object(manager, "verify_source") as verify:
+            with self.assertRaisesRegex(manager.ManagerError, "pkg-config modules: gtk"):
+                manager.build("bsnes", 2, True)
+        verify.assert_not_called()
+
+    def test_build_command_failure_exposes_bounded_tail_and_log_path(self):
+        work = self.root / "data" / "emulator-manager"
+        work.mkdir(parents=True)
+        log = work / "failed.log"
+        with patch.object(manager.subprocess, "run") as run:
+            run.return_value.returncode = 2
+            with self.assertRaises(manager.ManagerError) as failed:
+                manager.run_build(["make", "-C", "bsnes"], work, log)
+        self.assertIn("failed.log", str(failed.exception))
+        self.assertIn("last log lines", str(failed.exception))
+        self.assertIn("Build command failed (2)", str(failed.exception))
+
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
             manager.build("ppsspp", 1, yes=False)

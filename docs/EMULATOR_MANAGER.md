@@ -32,6 +32,8 @@ python3 scripts/emulator-manager.py deps bsnes
 
 `deps` informa comandos de build que faltam, lista sugerida de pacotes e manual oficial. **Não instala pacotes automaticamente**. Verifique a versão e a disponibilidade no Debian antes de instalar dependências no host. Alguns projetos usam submódulos Git aninhados; revise as fontes e inicialize os submódulos internos necessários antes de compilar. O gerenciador recusa checkouts com commit errado, alterações não commitadas ou submódulos internos ausentes/divergentes.
 
+**Diagnóstico de falha no Debian.** `ninja-build` fornece `ninja`, `clang` fornece `clang` e `clang++`, e `glslang-tools` fornece `glslangValidator`. Para bsnes, `make` e `g++` existentes não são suficientes: `deps bsnes` agora também verifica os módulos `pkg-config` `gtk+-3.0` e `sdl2`; o código não instala pacotes sozinho. A lista de pacotes impressa por `deps` é uma sugestão de manutenção, não um pedido para instalar tudo sem revisar. Se um build falhar, o erro mostra as últimas linhas do log e o arquivo completo permanece em `data/emulator-manager/logs/`. 
+
 ## 2. Compilação explícita a partir de fonte fixada
 
 ```bash
