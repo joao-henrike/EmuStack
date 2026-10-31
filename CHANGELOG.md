@@ -13,6 +13,8 @@ Todas as alterações relevantes do projeto são registradas aqui. Status de com
 - ⚖️ Reforçadas as orientações de conteúdo legal, privacidade dos relatórios e ausência de ROMs/BIOS/firmware no projeto.
 
 ### Post-release hardening
+- Dashboard no longer attempts direct host-port publication from internal-only bridges. A pinned, unprivileged Nginx proxy publishes `127.0.0.1:8765` while the application remains on internal networks.
+
 
 - Dashboard restringe requisições GET/POST operacionais por origem TCP confiável usando allowlist e IPAM previsível por perfil.
 - Aceitação de runtime tenta chamadas forjadas a partir dos 20 agentes.
