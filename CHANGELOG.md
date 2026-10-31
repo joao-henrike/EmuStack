@@ -13,6 +13,7 @@ Todas as alterações relevantes do projeto são registradas aqui. Status de com
 - ⚖️ Reforçadas as orientações de conteúdo legal, privacidade dos relatórios e ausência de ROMs/BIOS/firmware no projeto.
 
 ### Post-release hardening
+- Integração inicial de todos os 18 projetos upstream via 24 submódulos Git pinados (Mupen64Plus inclui sete componentes); manifesto, gerenciador de sincronização/auditoria e fluxo de atualização revisável. Não altera o instalador de binários nem a disponibilidade de runners Xbox One/Series.
 - Dashboard no longer attempts direct host-port publication from internal-only bridges. A pinned, unprivileged Nginx proxy publishes `127.0.0.1:8765` while the application remains on internal networks.
 - Os diretórios temporários de client body, proxy, FastCGI, uWSGI e SCGI do Nginx usam `/tmp` (`tmpfs`), mantendo a compatibilidade com o filesystem somente leitura.
 - O instalador extrai TARs com política explícita de arquivos/diretórios, sem symlinks, hardlinks ou special files; a implementação funciona no Python 3.11 e mantém testes contra path traversal.
