@@ -199,9 +199,10 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertEqual(probe.call_count, 2)
 
     def test_bsnes_build_refuses_missing_pkgconfig_before_compilation(self):
-        with patch.object(manager, "dependencies", return_value={
-            "missing_commands": [], "missing_pkg_config": ["gtk+-3.0"]
-        }), patch.object(manager, "verify_source") as verify:
+        with patch.object(manager.os, "geteuid", return_value=1000), \
+             patch.object(manager, "dependencies", return_value={
+                 "missing_commands": [], "missing_pkg_config": ["gtk+-3.0"]
+             }), patch.object(manager, "verify_source") as verify:
             with self.assertRaisesRegex(manager.ManagerError, "pkg-config modules: gtk"):
                 manager.build("bsnes", 2, True)
         verify.assert_not_called()
