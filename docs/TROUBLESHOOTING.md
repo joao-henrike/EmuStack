@@ -90,7 +90,7 @@ Esse teste confirma conectividade do caminho testado, não volume nem áudio de 
 
 ## 🎨 Vulkan/GPU mostra llvmpipe ou falha
 
-`llvmpipe`/`lavapipe` são renderizadores de software no contexto do probe. Para NVIDIA:
+`llvmpipe`/`lavapipe` são renderizadores de software no contexto do probe. O probe considera falha de aceleração somente quando todos os dispositivos Vulkan enumerados são renderizadores de software. Se a saída listar uma GPU NVIDIA/AMD/Intel e também `llvmpipe`, a presença do fallback não invalida a GPU física; isso confirma enumeração do hardware, mas ainda não prova que um emulador específico escolheu esse dispositivo. Para NVIDIA:
 ```bash
 nvidia-smi
 USE_NVIDIA=1 ./scripts/build-and-audit.sh
