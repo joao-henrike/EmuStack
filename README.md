@@ -18,6 +18,18 @@
 
 **EmuStack** é um painel de controle local com agentes isolados por perfil. O objetivo é tornar mais seguros e auditáveis a descoberta de binários, a organização de bibliotecas, a configuração, o armazenamento, os diagnósticos e a aceitação de runtime. A interface não imita o XMB, o Home Menu nem outros sistemas originais em HTML: quando há uma rota real, ela chama o emulador e depende do seu comportamento verdadeiro.
 
+## 📦 Códigos-fonte oficiais gerenciados
+
+O EmuStack agora mantém **24 referências Git fixadas** para os projetos que cobrem os **18 perfis com emuladores** (incluindo os sete módulos oficiais de Mupen64Plus); Xbox One e Xbox Series continuam sem runner suportado. As fontes aparecem em `third_party/` após uma sincronização explícita. **São submódulos, não cópias completas incluídas no histórico do EmuStack;** o build de binários permanece independente.
+
+```bash
+python3 scripts/upstream-manager.py audit
+python3 scripts/upstream-manager.py sync --jobs 4
+python3 scripts/upstream-manager.py audit --require-checkout
+```
+
+Para atualizar commits com revisão e sem alterar silenciosamente todos os módulos, veja o [guia de códigos-fonte upstream](docs/UPSTREAM_SOURCES.md).
+
 ## ✨ Visão geral
 
 | Área | O que oferece |
