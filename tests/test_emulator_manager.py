@@ -70,6 +70,11 @@ class EmulatorManagerTests(unittest.TestCase):
                                      {"method": "test"}, self.digest)
         self.assertEqual(victim.read_bytes(), b"keep me")
 
+    def test_traversal_through_managed_path_is_rejected(self):
+        crafted = self.root / "data" / ".." / ".." / "outside"
+        with self.assertRaisesRegex(manager.ManagerError, "unsafe traversal"):
+            manager.check_managed_path(crafted)
+
     def test_symlink_parent_cannot_redirect_install(self):
         parent = self.root / "data/environments/ppsspp"
         parent.mkdir(parents=True)
