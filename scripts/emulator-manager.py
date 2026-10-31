@@ -414,21 +414,53 @@ def uninstall(identifier: str) -> dict:
     return {"removed": identifier, "rollback_backup": str(backup.relative_to(ROOT))}
 
 
+def inspect_binary(path: Path) -> dict:
+    """Read file signatures and ELF machine without executing the executable."""
+    with path.open("rb") as stream:
+        prefix = stream.read(64)
+    if prefix.startswith(b"\x7fELF") and len(prefix) >= 20:
+        endian = "little" if prefix[5] == 1 else "big" if prefix[5] == 2 else None
+        machine = int.from_bytes(prefix[18:20], endian) if endian else 0
+        return {"format": "ELF", "elf_machine": machine,
+                "architecture_hint": {62: "x86_64", 183: "aarch64", 3: "i386"}.get(machine, "unknown")}
+    if prefix.startswith(b"MZ"):
+        return {"format": "possible-PE-Windows", "architecture_hint": "not-checked"}
+    if prefix.startswith(b"#!"):
+        return {"format": "script", "architecture_hint": "interpreted"}
+    return {"format": "unknown", "architecture_hint": "unknown"}
+
+
 def status(identifier: str | None = None) -> list[dict]:
     result = []
+    lock_modes = {key: value.get("mode") for key, value
+                  in load_json(ROOT / "release-lock.json").get("items", {}).items()}
+    mapped = {s["profile"] for s in source_map().values()}
     for name, item in profiles().items():
         if identifier is not None and name != identifier:
             continue
         current = active(name)
         checked = None
+        signature = None
         if current:
             target = destination(name, current["binary_name"])
-            checked = target.is_file() and not target.is_symlink() and hash_file(target) == current["sha256"]
-        result.append({"id": name, "runtime": item.get("runtime"),
-                       "source_pinned": bool(next((s for s in source_map().values() if s["profile"] == name), None)),
-                       "source_build": name in RECIPES, "managed_install": current,
-                       "managed_hash_valid": checked, "previous_versions": len(history(name)),
-                       "availability": "not-checked-in-host-runtime"})
+            if target.is_file() and not target.is_symlink():
+                checked = hash_file(target) == current["sha256"]
+                signature = inspect_binary(target)
+            else:
+                checked = False
+        result.append({
+            "id": name,
+            "runtime": item.get("runtime"),
+            "official_release_lock": lock_modes.get(name, "not-declared"),
+            "source_pinned": name in mapped,
+            "source_build": name in RECIPES,
+            "managed_install": current,
+            "managed_hash_valid": checked,
+            "binary_signature": signature,
+            "previous_versions": len(history(name)),
+            "availability": "not-checked-in-host-runtime",
+            "execution_tested": False,
+        })
     if identifier is not None and not result:
         raise ManagerError("Unknown emulator profile")
     return result
