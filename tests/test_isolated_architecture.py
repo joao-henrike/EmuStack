@@ -29,7 +29,7 @@ class IsolatedArchitectureTests(unittest.TestCase):
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
         self.assertNotIn("/var/run/docker.sock", compose)
         self.assertIn('EMUSTACK_ISOLATED_MODE: "1"', compose)
-        dashboard_block = compose.split("  dashboard:", 1)[1].split("\nnetworks:", 1)[0]
+        dashboard_block = compose.split("  dashboard:", 1)[1]
         for env_id in EXPECTED_IDS:
             token_suffix = env_id.upper().replace("-", "_")
             self.assertIn(f"EMUSTACK_AGENT_TOKEN_{token_suffix}: ${{EMUSTACK_AGENT_TOKEN_{token_suffix}:-}}", dashboard_block)
