@@ -117,8 +117,8 @@ def supported(item: dict) -> bool:
 def check_managed_path(path: Path) -> None:
     """Protect fixed project-owned writable roots from symlink redirection."""
     root = ROOT.resolve(strict=True)
-    if not path.is_relative_to(ROOT):
-        raise ManagerError(f"Outside project: {path}")
+    if not path.is_absolute() or ".." in path.parts or not path.resolve(strict=False).is_relative_to(root):
+        raise ManagerError(f"Outside project or unsafe traversal: {path}")
     current = path
     while current != ROOT:
         if current.is_symlink():
