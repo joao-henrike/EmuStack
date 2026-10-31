@@ -33,6 +33,14 @@ HEX40 = re.compile(r"^[0-9a-f]{40}$")
 # These are the only reviewed Linux build entrypoints. Other pinned sources
 # remain accessible for audit and manual research, not arbitrary execution.
 RECIPES = {
+    "kytyps5": {
+        "source": "kytyps5",
+        "name": "kyty_launcher",
+        "requires": ["git", "cmake", "ninja", "clang", "clang++", "glslangValidator"],
+        "packages": "clang lld cmake ninja-build git glslang-tools python3 pkg-config qt6-base-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev libxkbcommon-dev libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libwayland-dev wayland-protocols",
+        "reference": "https://github.com/KytyPS5/KytyPS5#building-on-linux",
+        "artifacts": ["package/kyty_launcher", "package/launcher", "build/kyty_launcher"],
+    },
     "shadps4": {
         "source": "shadps4",
         "name": "shadPS4",
@@ -364,8 +372,16 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
                     "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release"]
             if identifier == "melonds":
                 args.append("-DCMAKE_INSTALL_PREFIX=/usr")
+            if identifier == "kytyps5":
+                args.extend(["-DCMAKE_C_COMPILER=clang", "-DCMAKE_CXX_COMPILER=clang++"])
             run_build(args, work, log)
-            run_build(["cmake", "--build", str(work / "build"), "--parallel", str(jobs)], work, log)
+            command = ["cmake", "--build", str(work / "build"), "--parallel", str(jobs)]
+            if identifier == "kytyps5":
+                command.extend(["--target", "launcher"])
+            run_build(command, work, log)
+            if identifier == "kytyps5":
+                run_build(["cmake", "--install", str(work / "build"),
+                           "--prefix", str(work / "package")], work, log)
         candidates = [work / p for p in RECIPES[identifier]["artifacts"]]
         binary = next((p for p in candidates if p.is_file() and not p.is_symlink()), None)
         if binary is None:
