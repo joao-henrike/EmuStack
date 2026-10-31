@@ -76,6 +76,13 @@ class IsolatedArchitectureTests(unittest.TestCase):
         self.assertIn("_is_trusted_dashboard_client(self.client_address[0])", webapp)
         self.assertIn("ipaddress.ip_address", webapp)
 
+    def test_dashboard_startup_does_not_wait_for_all_agents_to_be_healthy(self):
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        dashboard_block = compose.split("  dashboard:", 1)[1].split("\\nnetworks:", 1)[0]
+        dependency_block = dashboard_block.split("    depends_on:", 1)[1].split("    command:", 1)[0]
+        self.assertEqual(dependency_block.count("condition: service_started"), len(EXPECTED_IDS))
+        self.assertNotIn("condition: service_healthy", dependency_block)
+
     def test_xemu_dashboard_is_not_advertised_as_verified_original_boot(self):
         payload = json.loads((ROOT / "environments.json").read_text(encoding="utf-8"))
         xemu = next(item for item in payload["environments"] if item["id"] == "xemu")
