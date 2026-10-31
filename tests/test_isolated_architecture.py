@@ -29,7 +29,7 @@ class IsolatedArchitectureTests(unittest.TestCase):
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
         self.assertNotIn("/var/run/docker.sock", compose)
         self.assertIn('EMUSTACK_ISOLATED_MODE: "1"', compose)
-        dashboard_block = compose.split("  dashboard:", 1)[1]
+        dashboard_block = compose.split("  dashboard:", 1)[1].split("\nnetworks:", 1)[0]
         for env_id in EXPECTED_IDS:
             token_suffix = env_id.upper().replace("-", "_")
             self.assertIn(f"EMUSTACK_AGENT_TOKEN_{token_suffix}: ${{EMUSTACK_AGENT_TOKEN_{token_suffix}:-}}", dashboard_block)
@@ -78,7 +78,7 @@ class IsolatedArchitectureTests(unittest.TestCase):
 
     def test_dashboard_startup_does_not_wait_for_all_agents_to_be_healthy(self):
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
-        dashboard_block = compose.split("  dashboard:", 1)[1].split("\\nnetworks:", 1)[0]
+        dashboard_block = compose.split("  dashboard:", 1)[1]
         dependency_block = dashboard_block.split("    depends_on:", 1)[1].split("    command:", 1)[0]
         self.assertEqual(dependency_block.count("condition: service_started"), len(EXPECTED_IDS))
         self.assertNotIn("condition: service_healthy", dependency_block)
