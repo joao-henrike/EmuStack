@@ -111,6 +111,36 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertTrue(manager.status("melonds")[0]["managed_hash_valid"])
 
 
+    def test_unmanaged_existing_binary_is_not_silently_replaced(self):
+        dest = self.root / "data/environments/ppsspp/emulators/PPSSPPSDL"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(b"unmanaged user file")
+        with self.assertRaisesRegex(manager.ManagerError, "unmanaged"):
+            manager.install_artifact("ppsspp", self.input, "PPSSPPSDL",
+                                     {"method": "test"}, self.digest)
+        self.assertEqual(dest.read_bytes(), b"unmanaged user file")
+
+    def test_metadata_write_failure_restores_the_previous_binary(self):
+        manager.install_artifact("ppsspp", self.input, "PPSSPPSDL",
+                                 {"method": "test"}, self.digest)
+        dest = self.root / "data/environments/ppsspp/emulators/PPSSPPSDL"
+        new = self.root / "new.bin"
+        new.write_bytes(b"second fake binary")
+        checksum = hashlib.sha256(new.read_bytes()).hexdigest()
+        with patch.object(manager, "write_record", side_effect=OSError("disk full")):
+            with self.assertRaisesRegex(OSError, "disk full"):
+                manager.install_artifact("ppsspp", new, "PPSSPPSDL",
+                                         {"method": "test"}, checksum)
+        self.assertEqual(dest.read_bytes(), self.input.read_bytes())
+        self.assertEqual(manager.active("ppsspp")["sha256"], self.digest)
+
+    def test_update_to_different_binary_name_requires_uninstall(self):
+        manager.install_artifact("ppsspp", self.input, "PPSSPPSDL",
+                                 {"method": "test"}, self.digest)
+        with self.assertRaisesRegex(manager.ManagerError, "uninstall"):
+            manager.install_artifact("ppsspp", self.input, "PPSSPPQt",
+                                     {"method": "test"}, self.digest)
+
     def test_modified_managed_binary_is_not_deleted(self):
         manager.install_artifact("ppsspp", self.input, "PPSSPPSDL",
                                  {"method": "test"}, self.digest)

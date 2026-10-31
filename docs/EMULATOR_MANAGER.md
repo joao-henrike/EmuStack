@@ -39,7 +39,11 @@ python3 scripts/emulator-manager.py build shadps4 --jobs 2 --yes-run-upstream-co
 python3 scripts/emulator-manager.py build ppsspp --jobs 2 --yes-run-upstream-code
 python3 scripts/emulator-manager.py build melonds --jobs 2 --yes-run-upstream-code
 python3 scripts/emulator-manager.py build bsnes --jobs 2 --yes-run-upstream-code
+# Opcional: tentar os quatro builds em sequência e obter resultado por perfil:
+python3 scripts/emulator-manager.py build-all --jobs 2 --yes-run-upstream-code
 \`\`\`
+
+`build-all` é best effort: continua nos demais perfis quando uma compilação falha, emite JSON com os resultados e retorna código de erro se qualquer build falhar. Não pule a revisão de cada upstream só para economizar comandos.
 
 Esses comandos **executam o sistema de build de terceiros no host**, que não é uma sandbox. Se não confiar no código, compile numa VM/host descartável em vez de executar no computador principal. O gerenciador recusa execução como root, não faz downloads de firmware/jogos e executa comandos de build com lista fixa de argumentos (sem shell).
 
