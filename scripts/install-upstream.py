@@ -35,7 +35,7 @@ GITHUB_SOURCES = {
         "binary_candidates": [], "prerelease": True,
     },
     "vita3k": {
-        "repos": ["Vita3K/Vita3K"],
+        "repos": ["Vita3K/Vita3K-builds", "Vita3K/Vita3K"],
         "pattern": r"(?i).*Vita3K.*(x86_64|linux).*\.(AppImage|zip|tar\.gz)$", "kind": "auto",
         "binary_candidates": ["Vita3K", "vita3k"], "prerelease": True,
     },
