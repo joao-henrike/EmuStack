@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import re
 import shutil
 import stat
@@ -302,6 +303,23 @@ def dependencies(identifier: str) -> dict:
             "note": "Native development packages are not installed automatically; examine upstream instructions."}
 
 
+def toolchain_info() -> dict:
+    """Capture tool versions without running untrusted emulator binaries."""
+    versions = {}
+    for executable in ("cmake", "ninja", "c++", "cc", "make"):
+        path = shutil.which(executable)
+        if path is None:
+            continue
+        try:
+            result = subprocess.run([path, "--version"], capture_output=True, text=True,
+                                    timeout=5, check=False)
+            if result.returncode == 0:
+                versions[executable] = result.stdout.splitlines()[0][:200]
+        except (OSError, subprocess.TimeoutExpired, IndexError):
+            continue
+    return versions
+
+
 def run_build(args: list[str], work: Path, log: Path, env: dict | None = None) -> None:
     with log.open("a", encoding="utf-8") as stream:
         stream.write(f"\n$ {json.dumps(args)}\n")
@@ -357,6 +375,9 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
         return install_artifact(identifier, binary, RECIPES[identifier]["name"], {
             "method": "pinned-source-build", "source": pin["url"],
             "commit": pin["commit"], "build_log": str(log.relative_to(ROOT)),
+            "host": {"os": platform.system(), "architecture": platform.machine(),
+                     "python": platform.python_version()},
+            "toolchain": toolchain_info(),
             "warning": "Binary existence is not proof of runtime compatibility; resources may still be required.",
         })
 
