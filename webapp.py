@@ -398,57 +398,6 @@ def _resolved_console_systems(catalog_fn: Callable[[], dict[str, Any]], status_f
     return resolved
 
 
-def summarize(catalog_fn: Callable[[], dict[str, Any]], status_fn: Callable[[dict[str, Any]], tuple[str, str | None]]) -> dict[str, Any]:
-    entries = catalog_fn().get("emulators", [])
-    if ISOLATED_MODE:
-        envs = environment_records(catalog_fn(), status_fn)
-        ready = sum(1 for env in envs if env.get("launch_available"))
-        needs_attention = sum(1 for env in envs if env.get("online") and env.get("runtime_status") not in ("AVAILABLE", "AVAILABLE VIA WINE"))
-        online_count = sum(1 for env in envs if env.get("online"))
-        processes = _agent_processes()
-        games = get_game_files()
-        return {
-            "project": "EmuStack", "version": "0.7.1", "emulator_count": len(entries),
-            "environment_count": len(envs), "environments_online": online_count,
-            "launchers_ready": ready, "needs_attention": needs_attention,
-            "game_count": len(games), "game_bytes": sum(g.get("size_bytes", 0) for g in games),
-            "game_bytes_label": format_size(sum(g.get("size_bytes", 0) for g in games)),
-            "install_report_present": bool(load_json(INSTALL_REPORT, {}).get("items", {})),
-            "install_report_count": len(load_json(INSTALL_REPORT, {}).get("items", {})),
-            "active_process_count": sum(1 for item in processes if item.get("status") == "running"),
-            "process_count": len(processes), "max_active_environments": MAX_ACTIVE_ENVIRONMENTS,
-            "games_limit_reached": len(games) >= MAX_GAMES,
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "security": {
-                "game_mount": "per-environment read-only bind mounts",
-                "cross_environment_storage": "denied by default",
-                "network_isolation": "one private bridge per environment; agents cannot reach sibling agents",
-                "docker_socket_mounted": False, "privileged": False,
-                "bind_address": "dashboard published only on 127.0.0.1",
-            },
-        }
-    ready = 0
-    needs_attention = 0
-    for item in entries:
-        status, _binary = status_fn(item)
-        if status in ("AVAILABLE", "AVAILABLE VIA WINE"):
-            ready += 1
-        elif status not in ("NO LINUX EMULATOR BIN", "NO STANDALONE RUNNER", "UNVERIFIED VARIANT"):
-            needs_attention += 1
-    games = get_game_files()
-    report = load_json(INSTALL_REPORT, {})
-    report_items = report.get("items", {}) if isinstance(report, dict) else {}
-    return {
-        "project": "EmuStack", "version": "0.7.1", "emulator_count": len(entries),
-        "launchers_ready": ready, "needs_attention": needs_attention,
-        "game_count": len(games), "game_bytes": sum(g.get("size_bytes", 0) for g in games),
-        "game_bytes_label": format_size(sum(g.get("size_bytes", 0) for g in games)),
-        "install_report_present": bool(report_items), "install_report_count": len(report_items),
-        "active_process_count": sum(1 for item in _process_snapshots() if item["status"] == "running"),
-        "process_count": len(_process_snapshots()), "games_limit_reached": len(games) >= MAX_GAMES,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "security": {"game_mount": "read-only", "bind_address": "loopback only on host", "privileged": False},
-    }
 
 def format_size(value: int) -> str:
     size = float(value)
@@ -460,35 +409,72 @@ def format_size(value: int) -> str:
 
 
 def summarize(catalog_fn: Callable[[], dict[str, Any]], status_fn: Callable[[dict[str, Any]], tuple[str, str | None]]) -> dict[str, Any]:
-    entries = catalog_fn().get("emulators", [])
-    ready = 0
-    needs_attention = 0
-    for item in entries:
-        status, _binary = status_fn(item)
-        if status in ("AVAILABLE", "AVAILABLE VIA WINE"):
-            ready += 1
-        elif status not in ("NO LINUX EMULATOR BIN", "NO STANDALONE RUNNER", "UNVERIFIED VARIANT"):
-            needs_attention += 1
+    """Report live isolated-agent state or host-native state, never both."""
+    catalog_payload = catalog_fn()
+    entries = catalog_payload.get("emulators", [])
+    if ISOLATED_MODE:
+        envs = environment_records(catalog_payload, status_fn)
+        ready = sum(1 for env in envs if env.get("launch_available"))
+        needs_attention = sum(
+            1 for env in envs
+            if env.get("online") and env.get("runtime_status") not in ("AVAILABLE", "AVAILABLE VIA WINE")
+        )
+        security = {
+            "game_mount": "per-environment read-only bind mounts",
+            "cross_environment_storage": "denied by default",
+            "network_isolation": "one private bridge per environment; agents cannot reach sibling agents",
+            "docker_socket_mounted": False,
+            "privileged": False,
+            "bind_address": "dashboard published only on 127.0.0.1",
+        }
+    else:
+        envs = None
+        ready = 0
+        needs_attention = 0
+        for item in entries:
+            status, _binary = status_fn(item)
+            if status in ("AVAILABLE", "AVAILABLE VIA WINE"):
+                ready += 1
+            elif status not in ("NO LINUX EMULATOR BIN", "NO STANDALONE RUNNER", "UNVERIFIED VARIANT"):
+                needs_attention += 1
+        security = {
+            "game_mount": "read-only",
+            "bind_address": "loopback only on host",
+            "privileged": False,
+        }
+
+    processes = _agent_processes()
     games = get_game_files()
+    game_bytes = sum(game.get("size_bytes", 0) for game in games)
     report = load_json(INSTALL_REPORT, {})
     report_items = report.get("items", {}) if isinstance(report, dict) else {}
-    return {
+    if not isinstance(report_items, (dict, list)):
+        report_items = {}
+
+    result = {
         "project": "EmuStack",
         "version": "0.7.1",
         "emulator_count": len(entries),
         "launchers_ready": ready,
         "needs_attention": needs_attention,
         "game_count": len(games),
-        "game_bytes": sum(g.get("size_bytes", 0) for g in games),
-        "game_bytes_label": format_size(sum(g.get("size_bytes", 0) for g in games)),
+        "game_bytes": game_bytes,
+        "game_bytes_label": format_size(game_bytes),
         "install_report_present": bool(report_items),
         "install_report_count": len(report_items),
-        "active_process_count": sum(1 for item in _process_snapshots() if item["status"] == "running"),
-        "process_count": len(_process_snapshots()),
+        "active_process_count": sum(1 for item in processes if item.get("status") == "running"),
+        "process_count": len(processes),
         "games_limit_reached": len(games) >= MAX_GAMES,
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "security": {"game_mount": "read-only", "bind_address": "loopback only on host", "privileged": False},
+        "security": security,
     }
+    if envs is not None:
+        result.update({
+            "environment_count": len(envs),
+            "environments_online": sum(1 for env in envs if env.get("online")),
+            "max_active_environments": MAX_ACTIVE_ENVIRONMENTS,
+        })
+    return result
 
 
 def _start_managed_process(args: list[str], emulator_id: str, emulator_name: str, game: str | None = None) -> tuple[int, dict[str, Any]]:

@@ -1,3 +1,4 @@
+import ast
 import unittest
 from unittest.mock import patch
 
@@ -82,6 +83,94 @@ class IsolatedDashboardLogicTests(unittest.TestCase):
         self.assertEqual({(game["environment_id"], game["path"]) for game in games}, {
             ("rpcs3", "same.iso"), ("pcsx2", "same.iso")
         })
+
+
+    def test_dashboard_summary_has_single_effective_implementation(self):
+        source = (webapp.ROOT / "webapp.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        summaries = [node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == "summarize"]
+        self.assertEqual(len(summaries), 1)
+
+    def test_isolated_summary_uses_live_agents_and_handles_offline_profile(self):
+        catalog = {"emulators": [{"id": "rpcs3"}, {"id": "pcsx2"}, {"id": "melonds"}]}
+        envs = [
+            {"id": "rpcs3", "online": True, "launch_available": True, "runtime_status": "AVAILABLE"},
+            {"id": "pcsx2", "online": True, "launch_available": False, "runtime_status": "NOT INSTALLED"},
+            {"id": "melonds", "online": False, "launch_available": False, "runtime_status": "AGENT_OFFLINE"},
+        ]
+        processes = [
+            {"environment_id": "rpcs3", "status": "running"},
+            {"environment_id": "rpcs3", "status": "exited"},
+        ]
+        games = [{"path": "homebrew.iso", "size_bytes": 2048}]
+        def unexpected_status(_item):
+            raise AssertionError("isolated summary must use agent health, not host binary discovery")
+
+        with patch.object(webapp, "ISOLATED_MODE", True), \\
+             patch.object(webapp, "MAX_ACTIVE_ENVIRONMENTS", 2), \\
+             patch.object(webapp, "environment_records", return_value=envs) as records, \\
+             patch.object(webapp, "_agent_processes", return_value=processes), \\
+             patch.object(webapp, "get_game_files", return_value=games), \\
+             patch.object(webapp, "load_json", return_value={"items": {"rpcs3": {}, "pcsx2": {}}}):
+            result = webapp.summarize(lambda: catalog, unexpected_status)
+
+        records.assert_called_once_with(catalog, unexpected_status)
+        self.assertEqual(result["emulator_count"], 3)
+        self.assertEqual(result["environment_count"], 3)
+        self.assertEqual(result["environments_online"], 2)
+        self.assertEqual(result["launchers_ready"], 1)
+        self.assertEqual(result["needs_attention"], 1)
+        self.assertEqual(result["active_process_count"], 1)
+        self.assertEqual(result["process_count"], 2)
+        self.assertEqual(result["game_bytes"], 2048)
+        self.assertEqual(result["install_report_count"], 2)
+        self.assertEqual(result["max_active_environments"], 2)
+        self.assertFalse(result["security"]["docker_socket_mounted"])
+        self.assertIn("network_isolation", result["security"])
+        self.assertIn("generated_at", result)
+
+    def test_native_summary_still_reports_local_processes_and_missing_assets(self):
+        catalog = {"emulators": [
+            {"id": "rpcs3"}, {"id": "ppsspp"}, {"id": "xbox-one"},
+        ]}
+        status = {
+            "rpcs3": ("AVAILABLE", "/bin/rpcs3"),
+            "ppsspp": ("NOT INSTALLED", None),
+            "xbox-one": ("NO STANDALONE RUNNER", None),
+        }
+        with patch.object(webapp, "ISOLATED_MODE", False), \\
+             patch.object(webapp, "environment_records") as records, \\
+             patch.object(webapp, "_agent_processes", return_value=[{"status": "running"}, {"status": "exited"}]), \\
+             patch.object(webapp, "get_game_files", return_value=[]), \\
+             patch.object(webapp, "load_json", return_value={"items": "invalid"}):
+            result = webapp.summarize(lambda: catalog, lambda item: status[item["id"]])
+
+        records.assert_not_called()
+        self.assertEqual(result["emulator_count"], 3)
+        self.assertEqual(result["launchers_ready"], 1)
+        self.assertEqual(result["needs_attention"], 1)
+        self.assertEqual(result["active_process_count"], 1)
+        self.assertEqual(result["process_count"], 2)
+        self.assertEqual(result["install_report_count"], 0)
+        self.assertNotIn("environment_count", result)
+        self.assertNotIn("environments_online", result)
+        self.assertFalse(result["security"]["privileged"])
+
+    def test_isolated_summary_all_agents_offline_is_degraded_not_failed(self):
+        envs = [
+            {"id": "rpcs3", "online": False, "launch_available": False, "runtime_status": "AGENT_OFFLINE"},
+        ]
+        with patch.object(webapp, "ISOLATED_MODE", True), \\
+             patch.object(webapp, "environment_records", return_value=envs), \\
+             patch.object(webapp, "_agent_processes", return_value=[]), \\
+             patch.object(webapp, "get_game_files", return_value=[]), \\
+             patch.object(webapp, "load_json", return_value={}):
+            summary = webapp.summarize(lambda: {"emulators": [{"id": "rpcs3"}]}, lambda _: ("UNKNOWN", None))
+        self.assertEqual(summary["environment_count"], 1)
+        self.assertEqual(summary["environments_online"], 0)
+        self.assertEqual(summary["launchers_ready"], 0)
+        self.assertEqual(summary["process_count"], 0)
+        self.assertEqual(summary["install_report_count"], 0)
 
 
 if __name__ == "__main__":
