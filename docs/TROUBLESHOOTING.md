@@ -9,21 +9,22 @@ Comece incluindo contêineres parados na inspeção: `docker compose ps` normalm
 ```bash
 docker compose ps -a
 docker compose logs --tail=200 dashboard
+docker compose logs --tail=200 dashboard-proxy
 docker compose logs --tail=100 env-rpcs3
-CID="$(docker compose ps -aq dashboard)"
+CID="$(docker compose ps -aq dashboard-proxy)"
 if [ -n "$CID" ]; then
   docker inspect "$CID" --format 'state={{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} error={{.State.Error}}'
 fi
 curl -i --max-time 5 http://127.0.0.1:8765/api/health
 ```
 
-Use os mesmos arquivos `-f` e o mesmo projeto Compose usados na inicialização. Um contêiner em estado `created` ou `exited` não tem porta publicada ativa; `HostConfig.PortBindings` sozinho mostra apenas a configuração pretendida, não prova que há um listener no host. Consulte o estado, o código de saída e os logs dos serviços.
+Use os mesmos arquivos `-f` e o mesmo projeto Compose usados na inicialização. A porta pertence a `dashboard-proxy`, não ao serviço `dashboard`: o dashboard fica somente em redes internas e não publica a porta diretamente. Um contêiner em estado `created` ou `exited` não tem porta publicada ativa; `HostConfig.PortBindings` sozinho mostra apenas a configuração pretendida. Confirme também `NetworkSettings.Ports` no contêiner `dashboard-proxy`.
 
-O dashboard é iniciado depois que os contêineres dos agentes começam, mas não espera que todos passem no healthcheck. Assim, a interface pode abrir em modo degradado e mostrar agentes offline; a aceitação completa continua exigindo os 20 agentes saudáveis.
+O dashboard é iniciado depois que os contêineres dos agentes começam, mas não espera que todos passem no healthcheck. Assim, a interface pode abrir em modo degradado e mostrar agentes offline; a aceitação completa continua exigindo os 20 agentes saudáveis. O proxy aguarda o dashboard iniciar e publica a interface somente no loopback.
 
 **Não acrescente `compose.nvidia.yaml` incondicionalmente.** Esse overlay solicita `gpus: all` para todos os 20 agentes e depende do NVIDIA Container Toolkit no host. Para uma execução sem GPU NVIDIA, use apenas `compose.yaml` e, quando existir, `compose.override.yaml`. Para habilitar NVIDIA, configure o toolkit e use `USE_NVIDIA=1` nos scripts documentados.
 
-Confirme também que `host-setup.sh` foi executado e que você está acessando a máquina local. O endereço publicado é `127.0.0.1:8765`; o projeto não oferece acesso remoto/LAN suportado. Se subiu a stack manualmente e precisa de GUI/áudio, inclua `-f compose.override.yaml` quando o arquivo existir.
+Confirme também que `host-setup.sh` foi executado e que você está acessando a máquina local. O endereço publicado pelo proxy é `127.0.0.1:8765`; o projeto não oferece acesso remoto/LAN suportado. Se subiu a stack manualmente e precisa de GUI/áudio, inclua `-f compose.override.yaml` quando o arquivo existir.
 
 ## 🧩 Agente offline ou token rejeitado
 
