@@ -59,6 +59,21 @@ class InstallerTests(unittest.TestCase):
             urlopen_mock.assert_not_called()
             self.assertFalse(destination.exists())
 
+    def test_vita3k_uses_a_versioned_official_build_release(self):
+        spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        self.assertIn("Vita3K/Vita3K-builds", module.GITHUB_SOURCES["vita3k"]["repos"])
+        lock = json.loads((PROJECT / "release-lock.json").read_text(encoding="utf-8"))
+        self.assertEqual(lock["items"]["vita3k"]["repo"], "Vita3K/Vita3K-builds")
+        self.assertEqual(lock["items"]["vita3k"]["tag"], "4246")
+        self.assertEqual(lock["items"]["vita3k"]["asset"], "Vita3K-x86_64.AppImage")
+        self.assertEqual(
+            lock["items"]["vita3k"]["sha256"],
+            "a1c543b2870300739386835dca32bad0c26e8464b45059c8246a8db60e7604ca",
+        )
+
     def test_official_sources_are_allowlisted(self):
         spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)
         module = importlib.util.module_from_spec(spec)
