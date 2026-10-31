@@ -24,7 +24,7 @@ O dashboard é iniciado depois que os contêineres dos agentes começam, mas nã
 
 **Não acrescente `compose.nvidia.yaml` incondicionalmente.** Esse overlay solicita `gpus: all` para todos os 20 agentes e depende do NVIDIA Container Toolkit no host. Para uma execução sem GPU NVIDIA, use apenas `compose.yaml` e, quando existir, `compose.override.yaml`. Para habilitar NVIDIA, configure o toolkit e use `USE_NVIDIA=1` nos scripts documentados.
 
-Confirme também que `host-setup.sh` foi executado e que você está acessando a máquina local. O endereço publicado pelo proxy é `127.0.0.1:8765`; o projeto não oferece acesso remoto/LAN suportado. Se subiu a stack manualmente e precisa de GUI/áudio, inclua `-f compose.override.yaml` quando o arquivo existir.
+Confirme também que `host-setup.sh` foi executado e que você está acessando a máquina local. O endereço publicado pelo proxy é `127.0.0.1:8765`; o projeto não oferece acesso remoto/LAN suportado. Se subiu a stack manualmente e precisa de GUI/áudio, inclua `-f compose.override.yaml` quando o arquivo existir. O proxy está em `read_only: true`; todos os diretórios temporários do Nginx (client body, proxy, FastCGI, uWSGI e SCGI) precisam usar `/tmp`, fornecido pelo `tmpfs`. Se o log mencionar `/var/cache/nginx`, confira as diretivas `*_temp_path` de `proxy/nginx.conf`.
 
 ## 🧩 Agente offline ou token rejeitado
 
