@@ -31,6 +31,14 @@ HEX40 = re.compile(r"^[0-9a-f]{40}$")
 # These are the only reviewed Linux build entrypoints. Other pinned sources
 # remain accessible for audit and manual research, not arbitrary execution.
 RECIPES = {
+    "shadps4": {
+        "source": "shadps4",
+        "name": "shadPS4",
+        "requires": ["git", "cmake", "ninja", "c", "c++"],
+        "packages": "build-essential cmake ninja-build libx11-dev libxext-dev libwayland-dev libxkbcommon-dev libxcursor-dev libxi-dev libxss-dev libxtst-dev libxrandr-dev libxfixes-dev libudev-dev libevdev-dev libasound2-dev libpulse-dev libopenal-dev libssl-dev libvulkan-dev libpng-dev",
+        "reference": "https://github.com/shadps4-emu/shadPS4/blob/main/documents/building-linux.md",
+        "artifacts": ["build/shadps4"],
+    },
     "ppsspp": {
         "source": "ppsspp",
         "name": "PPSSPPSDL",
