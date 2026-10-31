@@ -52,12 +52,23 @@ jobs:
           compose = yaml.safe_load((root / "compose.yaml").read_text())
           dashboard = compose["services"]["dashboard"]
           trusted = set(dashboard["environment"]["EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS"].split(","))
+          proxy = compose["services"]["dashboard-proxy"]
+          backend = compose["networks"]["dashboard-proxy-backend"]
+          edge = compose["networks"]["dashboard-proxy-edge"]
           expected_gateways = set()
           assert len(ids) == 20
+          assert not dashboard.get("ports"), "dashboard application must not publish directly to the host"
+          assert dashboard["networks"]["dashboard-proxy-backend"]["ipv4_address"] == "172.29.0.3"
+          assert set(proxy["networks"]) == {"dashboard-proxy-backend", "dashboard-proxy-edge"}
+          assert proxy["networks"]["dashboard-proxy-backend"]["ipv4_address"] == "172.29.0.2"
+          assert proxy["ports"] == ["127.0.0.1:8765:8765"], "only the proxy may publish loopback UI port"
+          assert backend.get("internal") is True and edge.get("internal", False) is False
+          assert proxy["image"].endswith("@sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606")
           for index, env_id in enumerate(ids, 1):
               network_name = f"env-{env_id}-net"
               service = compose["services"][f"env-{env_id}"]
               network = compose["networks"][network_name]
+              assert set(service["networks"]) == {network_name}, env_id
               assert service["networks"][network_name]["ipv4_address"] == f"172.28.{index}.2", env_id
               assert dashboard["networks"][network_name]["ipv4_address"] == f"172.28.{index}.3", env_id
               ipam = network["ipam"]["config"][0]
@@ -65,8 +76,8 @@ jobs:
               assert ipam["gateway"] == f"172.28.{index}.1", env_id
               assert network.get("internal") is True, env_id
               expected_gateways.add(f"172.28.{index}.1")
-          assert trusted == expected_gateways, "control client allowlist must match isolated network gateways"
-          print("dashboard/agent source-address boundary: 20 isolated static networks validated")
+          assert trusted == expected_gateways | {"172.29.0.2"}, "allowlist must contain only agent gateways and the fixed proxy source"
+          print("dashboard/agent source-address boundary: 20 isolated networks and one dedicated proxy validated")
           PY
       - name: Prepare isolated runtime secrets and directories
         env:
@@ -85,7 +96,7 @@ jobs:
       - name: Build runtime image without optional upstream downloads
         run: docker compose -f compose.yaml build --build-arg BUILD_KYTYPS5=0 --build-arg INSTALL_UPSTREAM=0 dashboard
       - name: Start isolated agents and dashboard
-        run: docker compose -f compose.yaml up -d --no-build dashboard
+        run: docker compose -f compose.yaml up -d --no-build dashboard-proxy
       - name: Run Docker runtime acceptance and inter-agent boundary probes
         run: ./scripts/runtime-acceptance.sh
       - name: Show service logs if a preceding runtime step failed
