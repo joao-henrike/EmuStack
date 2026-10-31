@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 import subprocess
 import sys
@@ -128,14 +129,38 @@ class InstallerTests(unittest.TestCase):
             root = Path(td)
             archive = root / "links.tar"
             with tarfile.open(archive, "w") as tf:
+                payload = b"safe payload"
+                regular = tarfile.TarInfo("safe.txt")
+                regular.size = len(payload)
+                tf.addfile(regular, io.BytesIO(payload))
+
                 link = tarfile.TarInfo("outside-link")
                 link.type = tarfile.SYMTYPE
                 link.linkname = "../../escape"
                 tf.addfile(link)
             destination = root / "out"
             module.safe_extract(archive, destination)
+            self.assertEqual((destination / "safe.txt").read_bytes(), b"safe payload")
             self.assertFalse((destination / "outside-link").exists())
             self.assertFalse((root.parent / "escape").exists())
+
+    def test_tar_path_traversal_is_rejected(self):
+        spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            archive = root / "unsafe.tar"
+            with tarfile.open(archive, "w") as tf:
+                payload = b"outside"
+                member = tarfile.TarInfo("../escape.txt")
+                member.size = len(payload)
+                tf.addfile(member, io.BytesIO(payload))
+            destination = root / "out"
+            with self.assertRaises(ValueError):
+                module.safe_extract(archive, destination)
+            self.assertFalse((root / "escape.txt").exists())
 
     def test_zip_path_traversal_is_rejected(self):
         spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)
