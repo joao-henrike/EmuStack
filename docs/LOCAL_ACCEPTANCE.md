@@ -29,6 +29,9 @@ A aceitação de runtime verifica que:
 
 Se algum desses checks falhar, **não remova a validação de origem, token ou caminho para fazer o teste passar**. Guarde logs e corrija a causa.
 
+O ciclo de vida do dashboard é deliberadamente independente do resultado dos healthchecks: ele aguarda os contêineres dos agentes iniciarem, mas pode ficar disponível enquanto um ou mais agentes ainda estão offline. Isso permite consultar o painel e diagnosticar falhas parciais. Essa disponibilidade degradada **não** aprova o ambiente: esta etapa de aceitação continua exigindo os 20 agentes saudáveis e todas as verificações de isolamento aprovadas.
+
+
 ## 🖥️ 3. GUI, áudio, Vulkan e GPU
 
 Execute no mesmo host e sessão de desktop em que a stack será utilizada:
