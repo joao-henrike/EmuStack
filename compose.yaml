@@ -530,45 +530,45 @@ services:
         ipv4_address: 172.28.20.3
     depends_on:
       env-kytyps5:
-        condition: service_healthy
+        condition: service_started
       env-duckstation:
-        condition: service_healthy
+        condition: service_started
       env-ppsspp:
-        condition: service_healthy
+        condition: service_started
       env-shadps4:
-        condition: service_healthy
+        condition: service_started
       env-rpcs3:
-        condition: service_healthy
+        condition: service_started
       env-pcsx2:
-        condition: service_healthy
+        condition: service_started
       env-vita3k:
-        condition: service_healthy
+        condition: service_started
       env-xbox-one:
-        condition: service_healthy
+        condition: service_started
       env-xenia-canary:
-        condition: service_healthy
+        condition: service_started
       env-xbox-series:
-        condition: service_healthy
+        condition: service_started
       env-xemu:
-        condition: service_healthy
+        condition: service_started
       env-eden:
-        condition: service_healthy
+        condition: service_started
       env-cemu:
-        condition: service_healthy
+        condition: service_started
       env-dolphin:
-        condition: service_healthy
+        condition: service_started
       env-azahar:
-        condition: service_healthy
+        condition: service_started
       env-melonds:
-        condition: service_healthy
+        condition: service_started
       env-mgba:
-        condition: service_healthy
+        condition: service_started
       env-mupen64plus:
-        condition: service_healthy
+        condition: service_started
       env-bsnes:
-        condition: service_healthy
+        condition: service_started
       env-mesen:
-        condition: service_healthy
+        condition: service_started
     command: ["web", "--host", "0.0.0.0", "--port", "8765"]
     healthcheck:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/api/health', timeout=3).read()"]
