@@ -14,6 +14,7 @@ Todas as alterações relevantes do projeto são registradas aqui. Status de com
 
 ### Post-release hardening
 - Dashboard no longer attempts direct host-port publication from internal-only bridges. A pinned, unprivileged Nginx proxy publishes `127.0.0.1:8765` while the application remains on internal networks.
+- Os diretórios temporários de client body, proxy, FastCGI, uWSGI e SCGI do Nginx usam `/tmp` (`tmpfs`), mantendo a compatibilidade com o filesystem somente leitura.
 
 
 - Dashboard restringe requisições GET/POST operacionais por origem TCP confiável usando allowlist e IPAM previsível por perfil.
