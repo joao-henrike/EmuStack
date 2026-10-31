@@ -34,7 +34,7 @@ RECIPES = {
     "shadps4": {
         "source": "shadps4",
         "name": "shadPS4",
-        "requires": ["git", "cmake", "ninja", "c", "c++"],
+        "requires": ["git", "cmake", "ninja", "cc", "c++"],
         "packages": "build-essential cmake ninja-build libx11-dev libxext-dev libwayland-dev libxkbcommon-dev libxcursor-dev libxi-dev libxss-dev libxtst-dev libxrandr-dev libxfixes-dev libudev-dev libevdev-dev libasound2-dev libpulse-dev libopenal-dev libssl-dev libvulkan-dev libpng-dev",
         "reference": "https://github.com/shadps4-emu/shadPS4/blob/main/documents/building-linux.md",
         "artifacts": ["build/shadps4"],
