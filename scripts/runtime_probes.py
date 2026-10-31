@@ -40,7 +40,16 @@ def parse_env_file(path: str | Path) -> dict[str, str]:
 
 
 def is_software_vulkan_renderer(output: str) -> bool:
-    return bool(_SOFTWARE_VULKAN.search(output or ""))
+    """Return True only when Vulkan enumerates software devices and no hardware device.
+
+    Vulkan installations can expose both a real GPU and a software fallback such
+    as llvmpipe. The presence of the fallback alone must not hide usable hardware.
+    """
+    source = output or ""
+    device_names = re.findall(r"(?im)^\\s*deviceName\\s*=\\s*(.+?)\\s*$", source)
+    if device_names:
+        return all(_SOFTWARE_VULKAN.search(name) is not None for name in device_names)
+    return bool(_SOFTWARE_VULKAN.search(source))
 
 
 def is_allowed_input_device(path: str) -> bool:
