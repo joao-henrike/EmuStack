@@ -478,8 +478,13 @@ def main() -> int:
         print(f"  PASS  {item}")
     for probe in probes:
         print(f"  {probe['status']:4}  {probe['name']}: {probe['detail']}")
+    probe_warning_lines = {
+        f"{item['name']}: {item['detail']}"
+        for item in probes if item["status"] == "WARN"
+    }
     for warning in warnings:
-        print(f"  WARN  {warning}")
+        if warning not in probe_warning_lines:
+            print(f"  WARN  {warning}")
     for error in errors:
         print(f"  FAIL  {error}")
     print(f"  REPORT {report_path.relative_to(ROOT)}")
