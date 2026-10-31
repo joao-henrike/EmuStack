@@ -88,8 +88,9 @@ O arquivo `release-lock.json` atual é estrito e abrange os 20 IDs: **11 assets 
 ```mermaid
 flowchart TB
     Browser["Navegador local"]
-    Dashboard["Dashboard :8765<br/>127.0.0.1 apenas"]
-    Browser --> Dashboard
+    Proxy["Proxy Nginx :8765<br/>127.0.0.1 apenas"]
+    Dashboard["Dashboard/API<br/>sem porta publicada"]
+    Browser --> Proxy --> Dashboard
     Dashboard -->|"token individual + IP de gateway permitido"| A1["Agente / perfil A"]
     Dashboard -->|"token individual + IP de gateway permitido"| A2["Agente / perfil B"]
     Dashboard -->|"token individual + IP de gateway permitido"| AN["... 20 perfis"]
@@ -100,6 +101,8 @@ flowchart TB
     A2 -. "rede interna exclusiva" .- N2["net B"]
     AN -. "rede interna exclusiva" .- NN["net N"]
 ```
+
+O navegador entra por um proxy Nginx mínimo fixado por digest e publicado somente em `127.0.0.1:8765`. O dashboard permanece sem porta publicada e conectado apenas às bridges internas dos agentes e a uma rede backend interna exclusiva do proxy. O proxy não compartilha redes com os agentes e preserva `Host`, `Origin` e `X-EmuStack-Request`; a origem confiável é o IP TCP fixo do proxy, não headers encaminhados.
 
 Cada agente compartilha o kernel Linux do host e a imagem de programas do runtime; **não** é uma VM independente. O dashboard é um orquestrador privilegiado, não deve ser exposto remotamente. Leia o [modelo de segurança](docs/SECURITY.md) e a [arquitetura detalhada](docs/ARCHITECTURE-AND-TESTS.md).
 
