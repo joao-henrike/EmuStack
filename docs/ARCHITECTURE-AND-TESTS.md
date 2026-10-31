@@ -1,8 +1,9 @@
 # 🧱 Arquitetura, validação e relatório de testes
 
 **Versão documentada:** EmuStack 0.7.1  
-**Relatório atualizado:** 29 de outubro de 2026  
-**Evidência CI de referência:** [EmuStack CI — run 40798086510](https://github.com/joao-henrike/EmuStack/actions/runs/40798086510)
+**Relatório atualizado:** 31 de outubro de 2026  
+**Evidência CI histórica (commit 07e57c8):** [EmuStack CI — run 40798086510](https://github.com/joao-henrike/EmuStack/actions/runs/40798086510)  
+**Aceitação local relatada em 31/10/2026:** stack e hardware aprovados no Debian; os commits posteriores de correção do backend exigem revalidação.
 
 > [!IMPORTANT]
 > A CI acima passou pelo pipeline automatizado, incluindo build da imagem, inicialização do runtime isolado, testes de fronteira entre agentes e contratos da UI. Isso é evidência válida para aquele commit e ambiente CI; não certifica todos os jogos, firmwares, GPUs, controles ou desktops físicos.
@@ -46,7 +47,7 @@ A imagem de runtime contém os programas que foram obtidos/instalados durante o 
 
 | Arquivo/componente | Responsabilidade |
 |---|---|
-| `web/app.js`, `web/index.html`, `web/styles.css` | Interface do navegador, navegação e chamadas ao dashboard. |
+| `web/app.js`, `web/index.html`, `web/app.css` | Interface do navegador, navegação e chamadas ao dashboard. |
 | `webapp.py` | API HTTP local, políticas de origem, orquestração e validação dos pedidos do dashboard. |
 | `proxy/nginx.conf` / `dashboard-proxy` | Proxy HTTP local fixado por digest; publica a UI no loopback e alcança apenas o dashboard pela bridge backend dedicada. |
 | `emustack.py` | CLI, detecção de launchers, diagnóstico, relatório de instalação, lock e tentativas de launch/boot. |
@@ -140,6 +141,21 @@ O workflow **EmuStack CI** do commit `07e57c816da7742a8c3b071b6c7e7c825a111f5a` 
 Os relatórios de engenharia anteriores também registram 79 testes Python, 13 testes JavaScript de recomendações de lançamento e 11 assertions estáticas da UI. Os totais dependem da revisão/escopo dos testes, portanto consulte o log do run vinculado antes de usar o número em release notes.
 
 **Limite da execução:** o build de CI desliga downloads upstream opcionais. O resultado não prova que cada binário possível esteja instalado e nem executa todos os jogos ou firmwares. A configuração de CI também não representa sua GPU, desktop, áudio ou controle físico.
+
+
+## 💻 Aceitação no Debian relatada em 31 de outubro de 2026
+
+Na saída de build/diagnóstico apresentada pelo operador (sem SHA de checkout registrado no trecho), observou-se:
+
+- **24/24 submódulos upstream:** checkouts com commits correspondentes ao source lock. Essa verificação não compila os projetos.
+- **13/20 launchers encontrados:** RPCS3, DuckStation, PCSX2, Vita3K, Xenia Canary (via Wine), xemu, Eden, Cemu, Dolphin, Azahar, mGBA, Mupen64Plus e Mesen. O relatório de instalação informou 11 entradas baixadas/instaladas; os fallbacks APT também podem disponibilizar launchers.
+- **5 sem launcher:** KytyPS5, shadPS4, PPSSPP, melonDS e bsnes. **2 sem emulador suportado:** Xbox One e Xbox Series. Serviços Docker iniciados não significam executáveis disponíveis nesses perfis.
+- **Aceitação de runtime: PASS:** 20 agentes saudáveis, mounts separados, redes internas, proxy somente em loopback, controle de acesso e probes de GUI/áudio/Vulkan/GPU aprovados com NVIDIA GeForce RTX 4050 Laptop GPU.
+- O contêiner auxiliar de diagnóstico apresentou `DISPLAY` ausente, mas o probe de runtime dos 20 agentes confirmou X11/XWayland. Os escopos são diferentes e não devem ser confundidos.
+- Nenhum controle foi mapeado por padrão. Boot original, execução de títulos, desempenho, áudio e controles em jogos reais continuam **não comprovados** por esse relatório.
+
+**Estado posterior:** a branch de desenvolvimento recebeu correções dos testes de Nginx e da duplicidade de `summarize()`, junto a testes de regressão. A aceitação acima é uma evidência histórica do host, **não é aprovação automática dos novos commits**. Execute novamente `./scripts/validate-project.sh`, o build e a aceitação de runtime após atualizar o checkout. O GitHub Actions pode falhar antes da atribuição de runner; uma execução sem etapas não prova erro nem aprovação do código.
+
 
 ## 📊 Matriz de evidência
 
