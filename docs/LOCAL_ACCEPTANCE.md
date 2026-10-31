@@ -74,6 +74,21 @@ O probe verifica presença/acesso e configuração de mapeamento; não executa u
 
 A aceitação salva `data/runtime-acceptance.json`; o diagnóstico do host com `--write` grava `data/host-capabilities.json`. Esses relatórios podem registrar sistema operacional, arquitetura, GPU, paths e detalhes do ambiente. Revise antes de compartilhar e nunca compartilhe `.env`, conteúdo de firmware ou saves pessoais.
 
+## 🛠️ 5.1 Validação do gerenciamento de executáveis (Fase 1)
+
+Sem executar código upstream, valide o catálogo do host:
+
+```bash
+python3 scripts/emulator-manager.py status
+python3 scripts/emulator-manager.py deps shadps4
+python3 scripts/emulator-manager.py deps ppsspp
+python3 scripts/emulator-manager.py deps melonds
+python3 scripts/emulator-manager.py deps bsnes
+python3 -m unittest discover -s tests -p 'test_emulator_manager.py' -v
+```
+
+O gerenciador **não certifica** a execução apenas pelo hash: `binary_signature` é uma pista estática de formato, `managed_hash_valid` prova integridade perante seu estado registrado e `execution_tested` permanece falso até um teste real. Para cada receita registre compilador, dependências, commit, log e SHA-256. Repita instalação e rollback com o emulador encerrado. Veja [Fase 1](EMULATOR_MANAGER.md).
+
 ## 🧱 6. Boot real por sistema/jogo
 
 Para cada perfil que pretende usar, faça um teste com arquivos que você tem direito de utilizar. Registre o resultado de forma separada para:

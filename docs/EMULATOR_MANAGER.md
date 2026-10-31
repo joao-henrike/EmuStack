@@ -87,6 +87,9 @@ python3 scripts/emulator-manager.py uninstall melonds
 
 ## 5. Estado e segurança
 
+O inventário `status` inclui `official_release_lock` para a origem da imagem e `binary_signature` para leitura estática dos bytes ELF/possível PE/script. Nenhum dos dois comprova execução real.
+
+
 \`\`\`bash
 python3 scripts/emulator-manager.py status ppsspp
 python3 scripts/emulator-manager.py history ppsspp

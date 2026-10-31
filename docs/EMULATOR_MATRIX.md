@@ -2,6 +2,10 @@
 
 Esta matriz separa cinco perguntas: **o perfil está cadastrado? O asset upstream está fixado? O binário foi instalado nesta build? Há suporte upstream para o alvo? O sistema/menu realmente inicializou?** As respostas não são intercambiáveis.
 
+## 🔧 Integração de instalação por perfil — branch de desenvolvimento
+
+Existem quatro receitas de compilação pinada (shadPS4, PPSSPP, melonDS e bsnes), gerenciadas no host via `scripts/emulator-manager.py`. Os demais perfis continuam usando releases e pacotes do Docker ou importação de arquivo local revisado. O inventário host informa `official_release_lock`, `source_pinned`, `source_build`, `managed_hash_valid`, `binary_signature` e `execution_tested`. Um build só vira candidato a launcher após ser instalado; não implica compatibilidade ou menu original. Xbox One/Series continuam sem runner. Veja [Gerenciador de emuladores](EMULATOR_MANAGER.md).
+
 ## 📌 Estados do release lock
 
 No `release-lock.json` estrito atual: 20 IDs são representados; 11 usam um asset oficial com hash SHA-256 (`pinned` ou `pinned-url`) e 9 estão explicitamente em `skip-upstream`. O modo lock não é classificação de maturidade nem garantia de execução. O relatório de build (`install-report.json`) é que deve ser usado para inspecionar o que ocorreu naquele build.

@@ -167,6 +167,18 @@ class EmulatorManagerTests(unittest.TestCase):
         with self.assertRaisesRegex(manager.ManagerError, "No reviewed"):
             manager.build("kytyps5", 2, yes=True)
 
+    def test_binary_static_format_identification_never_runs_the_file(self):
+        elf = self.root / "static.elf"
+        contents = bytearray(64)
+        contents[:4] = b"\x7fELF"
+        contents[4] = 2
+        contents[5] = 1
+        contents[18:20] = (62).to_bytes(2, "little")
+        elf.write_bytes(bytes(contents))
+        self.assertEqual(manager.inspect_binary(elf)["architecture_hint"], "x86_64")
+        self.input.write_bytes(b"MZ" + b"0" * 64)
+        self.assertEqual(manager.inspect_binary(self.input)["format"], "possible-PE-Windows")
+
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
             manager.build("ppsspp", 1, yes=False)

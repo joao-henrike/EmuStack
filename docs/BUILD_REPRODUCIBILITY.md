@@ -79,6 +79,12 @@ FREEZE_RELEASE_LOCK=1 ./scripts/build-and-audit.sh
 
 Antes de aceitar a mudança, valide o rebuild estrito, veja o relatório do asset e teste o runtime. Nunca use somente o nome de tag ou a resposta HTTP do upstream como verificação de integridade.
 
+## 🧰 Builds locais de fonte pinada — gerenciador de host
+
+O gerenciador `scripts/emulator-manager.py` possui receitas explícitas para shadPS4, PPSSPP, melonDS e bsnes. Para essas quatro integrações, ele confere commit do submódulo, gitlink no índice, ausência de modificações e submódulos internos consistentes antes do build. Compila em cópia temporária, registra log e SHA-256 do executável e mantém rollback do binário anterior por perfil.
+
+Isso **não** torna o build bit a bit reproduzível: toolchain, bibliotecas, flags, sistema e dependências aninhadas ainda variam conforme o host. Os outros 14 projetos pinados não têm receita genérica de compilação nesta etapa, embora 11 assets binários do Docker estejam fixados pelo release lock e fallbacks Debian sejam utilizados. Consulte [Gerenciador de emuladores](EMULATOR_MANAGER.md).
+
 ## ⚠️ Limites de reprodutibilidade
 
 O digest da imagem base é pinado, mas APT continua temporal por padrão. Toolchain, arquitetura, Docker/BuildKit, flags, fonte upstream, build de dependências e backend gráfico influenciam o resultado. A política atual busca repetir assets conhecidos, não oferecer uma promessa de bit-for-bit reproducibility. Builds experimentais podem falhar e devem continuar assim identificados.
