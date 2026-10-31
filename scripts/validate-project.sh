@@ -7,6 +7,8 @@ python3 -m unittest discover -s tests -v
 printf '\n== Python syntax ==\n'
 python3 -m compileall -q emustack.py webapp.py console_modes.py console_agent.py scripts tests
 python3 scripts/check-release-lock.py release-lock.json
+printf '\n== Auditoria dos 24 fontes upstream ==\n'
+python3 scripts/upstream-manager.py audit
 printf 'Python syntax OK.\n'
 if command -v node >/dev/null 2>&1; then
   printf '\n== JavaScript syntax and launch recommendation tests ==\n'
