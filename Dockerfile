@@ -93,7 +93,7 @@ RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
     && rm -f /tmp/install-available-apt.sh \
     && rm -rf /var/lib/apt/lists/*
 USER ${PUID}:${PGID}
-ENV PATH="/opt/emustack/installed/kytyps5:/opt/emustack/installed:/home/emu/.local/bin:/usr/local/bin:/usr/bin:/bin" \
+ENV PATH="/usr/games:/opt/emustack/installed/kytyps5:/opt/emustack/installed:/home/emu/.local/bin:/usr/local/bin:/usr/bin:/bin" \
     EMUSTACK_WEB_DOCS_DIR=/opt/emustack/docs \
     EMUSTACK_SOURCES_PATH=/opt/emustack/game-sources.json \
     XDG_CONFIG_HOME=/home/emu/.config \
