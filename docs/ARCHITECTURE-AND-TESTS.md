@@ -48,6 +48,7 @@ A imagem de runtime contém os programas que foram obtidos/instalados durante o 
 |---|---|
 | `web/app.js`, `web/index.html`, `web/styles.css` | Interface do navegador, navegação e chamadas ao dashboard. |
 | `webapp.py` | API HTTP local, políticas de origem, orquestração e validação dos pedidos do dashboard. |
+| `proxy/nginx.conf` / `dashboard-proxy` | Proxy HTTP local fixado por digest; publica a UI no loopback e alcança apenas o dashboard pela bridge backend dedicada. |
 | `emustack.py` | CLI, detecção de launchers, diagnóstico, relatório de instalação, lock e tentativas de launch/boot. |
 | `console_agent.py` | API interna de cada ambiente, autorização por token e sessões do agente. |
 | `console_modes.py` | Estratégias de launch, verificação de pré-requisitos e estados dos sistemas/menu originais. |
