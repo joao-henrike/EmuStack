@@ -120,7 +120,15 @@ class IsolatedArchitectureTests(unittest.TestCase):
             "uwsgi_temp_path",
             "scgi_temp_path",
         ):
-            self.assertRegex(nginx, rf"(?m)^{directive} /tmp/[a-z_]+;$")
+            temp_paths = re.findall(
+                rf"(?m)^[ \\t]*{re.escape(directive)}[ \\t]+([^\\s;]+)[ \\t]*;[ \\t]*$",
+                nginx,
+            )
+            self.assertEqual(
+                temp_paths,
+                [f"/tmp/{directive.removesuffix('_path')}"],
+                f"{directive} must occur exactly once and point to its expected /tmp directory",
+            )
 
     def test_dashboard_proxy_source_is_allowlisted_without_trusting_agents(self):
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
