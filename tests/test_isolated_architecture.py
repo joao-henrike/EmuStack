@@ -109,6 +109,14 @@ class IsolatedArchitectureTests(unittest.TestCase):
         self.assertIn("proxy_set_header Origin $http_origin;", nginx)
         self.assertIn("proxy_set_header X-EmuStack-Request $http_x_emustack_request;", nginx)
         self.assertNotIn("X-Forwarded-For", nginx)
+        for directive in (
+            "client_body_temp_path",
+            "proxy_temp_path",
+            "fastcgi_temp_path",
+            "uwsgi_temp_path",
+            "scgi_temp_path",
+        ):
+            self.assertRegex(nginx, rf"(?m)^{directive} /tmp/[a-z_]+;$")
 
     def test_dashboard_proxy_source_is_allowlisted_without_trusting_agents(self):
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
