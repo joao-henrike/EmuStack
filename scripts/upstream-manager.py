@@ -29,6 +29,35 @@ EXPECTED_PROFILES = {
 }
 
 
+EXPECTED_REMOTES = {
+    "kytyps5": "https://github.com/KytyPS5/KytyPS5.git",
+    "shadps4": "https://github.com/shadps4-emu/shadPS4.git",
+    "rpcs3": "https://github.com/RPCS3/rpcs3.git",
+    "duckstation": "https://github.com/stenzek/duckstation.git",
+    "pcsx2": "https://github.com/PCSX2/pcsx2.git",
+    "ppsspp": "https://github.com/hrydgard/ppsspp.git",
+    "vita3k": "https://github.com/Vita3K/Vita3K.git",
+    "xenia-canary": "https://github.com/xenia-canary/xenia-canary.git",
+    "xemu": "https://github.com/xemu-project/xemu.git",
+    "cemu": "https://github.com/cemu-project/Cemu.git",
+    "dolphin": "https://github.com/dolphin-emu/dolphin.git",
+    "azahar": "https://github.com/azahar-emu/azahar.git",
+    "melonds": "https://github.com/melonDS-emu/melonDS.git",
+    "mgba": "https://github.com/mgba-emu/mgba.git",
+    "bsnes": "https://github.com/bsnes-emu/bsnes.git",
+    "mesen": "https://github.com/SourMesen/Mesen2.git",
+    "mupen64plus-core": "https://github.com/mupen64plus/mupen64plus-core.git",
+    "mupen64plus-ui-console": "https://github.com/mupen64plus/mupen64plus-ui-console.git",
+    "mupen64plus-audio-sdl": "https://github.com/mupen64plus/mupen64plus-audio-sdl.git",
+    "mupen64plus-input-sdl": "https://github.com/mupen64plus/mupen64plus-input-sdl.git",
+    "mupen64plus-rsp-hle": "https://github.com/mupen64plus/mupen64plus-rsp-hle.git",
+    "mupen64plus-video-rice": "https://github.com/mupen64plus/mupen64plus-video-rice.git",
+    "mupen64plus-video-glide64mk2": "https://github.com/mupen64plus/mupen64plus-video-glide64mk2.git",
+    "eden": "https://git.eden-emu.dev/eden-emu/eden.git",
+}
+
+
+
 def git(*args: str, cwd: Path = ROOT, timeout: int = 180) -> str:
     result = subprocess.run(
         ["git", "-C", str(cwd), *args],
@@ -71,6 +100,8 @@ def validate() -> tuple[dict, list[dict]]:
             raise ValueError(f"Invalid source path/profile: {identifier}")
         if not SHA.fullmatch(commit):
             raise ValueError(f"Invalid 40-hex SHA: {identifier}")
+        if url != EXPECTED_REMOTES.get(identifier):
+            raise ValueError(f"Unknown or changed official origin: {identifier}")
         parsed = urlsplit(url)
         if (parsed.scheme != "https" or parsed.username or parsed.password or
                 parsed.port or parsed.query or parsed.fragment or
@@ -88,6 +119,9 @@ def validate() -> tuple[dict, list[dict]]:
         for key, expected in {"path": path, "url": url, "branch": branch}.items():
             if cfg.get(section, key, fallback=None) != expected:
                 raise ValueError(f".gitmodules mismatch: {path}.{key}")
+
+    if ids != set(EXPECTED_REMOTES):
+        raise ValueError("Official upstream source allowlist differs from the lock")
 
     for profile in profiles:
         expected = [s["id"] for s in sources if s["profile"] == profile["id"]]
@@ -185,7 +219,7 @@ def pin(identifier: str, commit: str) -> None:
     path = ROOT / target["path"]
     if checkout_state(target) != "ok":
         raise ValueError("Initialize and clean the submodule before changing its pin")
-    git("fetch", "--no-tags", "origin", commit, cwd=path, timeout=900)
+    git("fetch", "--no-tags", "--", target["url"], commit, cwd=path, timeout=900)
     if git("cat-file", "-t", commit, cwd=path) != "commit":
         raise ValueError("The fetched hash is not a commit")
     git("checkout", "--detach", commit, cwd=path)
