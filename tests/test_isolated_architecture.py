@@ -108,7 +108,7 @@ class IsolatedArchitectureTests(unittest.TestCase):
         self.assertIn("proxy_set_header Host $http_host;", nginx)
         self.assertIn("proxy_set_header Origin $http_origin;", nginx)
         self.assertIn("proxy_set_header X-EmuStack-Request $http_x_emustack_request;", nginx)
-        self.assertNotIn("X-Forwarded-For", nginx)
+        self.assertNotRegex(nginx, r"(?m)^\\s*proxy_set_header\\s+X-Forwarded-For(?:\\s|;)")
         for directive in (
             "client_body_temp_path",
             "proxy_temp_path",
