@@ -282,17 +282,44 @@ def safe_extract(archive_path: Path, destination: Path) -> None:
         with tarfile.open(archive_path, "r:*") as tf:
             members = []
             for member in tf.getmembers():
-                name = member.name
-                if name.startswith("/") or ".." in PurePosixPath(name).parts or member.issym() or member.islnk():
-                    if member.isdir() is False and member.isfile() is False:
-                        continue
-                    if name.startswith("/") or ".." in PurePosixPath(name).parts:
-                        raise ValueError(f"Chemin dangereux dans TAR: {name}")
-                target = (destination / name).resolve()
+                # Normalize separators before validating so Windows-style traversal
+                # is rejected even when the installer runs on POSIX.
+                name = member.name.replace("\\", "/")
+                relative = PurePosixPath(name)
+                if (
+                    not name
+                    or "\\x00" in name
+                    or name.startswith("/")
+                    or re.match(r"^[A-Za-z]:", name)
+                    or ".." in relative.parts
+                ):
+                    raise ValueError(f"Chemin dangereux dans TAR: {member.name}")
+
+                # Never materialize symlinks, hardlinks, devices, FIFOs, or other
+                # special entries. The source archives only need regular files
+                # and directories, which also keeps extraction compatible with
+                # Python 3.11 (TarFile.extractall(filter=...) is Python 3.12+).
+                if not (member.isdir() or member.isfile()):
+                    continue
+
+                normalized_name = relative.as_posix()
+                member.name = normalized_name
+                target = (destination / Path(*relative.parts)).resolve()
                 if root not in target.parents and target != root:
-                    raise ValueError(f"Chemin TAR hors destination: {name}")
+                    raise ValueError(f"Chemin TAR hors destination: {member.name}")
+
+                # Apply the security properties of the "data" filter on older
+                # Python versions: no ownership restoration and no special bits.
+                member.mode = (member.mode or 0) & 0o755
+                member.uid = None
+                member.gid = None
+                member.uname = None
+                member.gname = None
                 members.append(member)
-            tf.extractall(destination, members=members, filter="data")
+
+            # Do not pass the Python 3.12-only "filter" keyword. All accepted
+            # members have already been normalized and reduced to files/dirs.
+            tf.extractall(path=destination, members=members)
         return
     raise ValueError(f"Format d'archive non supporté: {archive_path.name}")
 
