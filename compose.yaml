@@ -475,12 +475,10 @@ services:
       EMUSTACK_AGENT_TOKEN_BSNES: ${EMUSTACK_AGENT_TOKEN_BSNES:-}
       EMUSTACK_AGENT_TOKEN_MESEN: ${EMUSTACK_AGENT_TOKEN_MESEN:-}
       EMUSTACK_MAX_ACTIVE_ENVIRONMENTS: ${EMUSTACK_MAX_ACTIVE_ENVIRONMENTS:-2}
-      EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS: "172.28.1.1,172.28.2.1,172.28.3.1,172.28.4.1,172.28.5.1,172.28.6.1,172.28.7.1,172.28.8.1,172.28.9.1,172.28.10.1,172.28.11.1,172.28.12.1,172.28.13.1,172.28.14.1,172.28.15.1,172.28.16.1,172.28.17.1,172.28.18.1,172.28.19.1,172.28.20.1"
+      EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS: "172.28.1.1,172.28.2.1,172.28.3.1,172.28.4.1,172.28.5.1,172.28.6.1,172.28.7.1,172.28.8.1,172.28.9.1,172.28.10.1,172.28.11.1,172.28.12.1,172.28.13.1,172.28.14.1,172.28.15.1,172.28.16.1,172.28.17.1,172.28.18.1,172.28.19.1,172.28.20.1,172.29.0.2"
       EMUSTACK_AGENT_PORT: "8877"
       EMUSTACK_WEB_DOCS_DIR: /opt/emustack/docs
       EMUSTACK_SOURCES_PATH: /opt/emustack/game-sources.json
-    ports:
-      - "127.0.0.1:8765:8765"
     read_only: true
     tmpfs:
       - /tmp:rw,nosuid,nodev,size=256m
@@ -528,6 +526,8 @@ services:
         ipv4_address: 172.28.19.3
       env-mesen-net:
         ipv4_address: 172.28.20.3
+      dashboard-proxy-backend:
+        ipv4_address: 172.29.0.3
     depends_on:
       env-kytyps5:
         condition: service_started
@@ -577,9 +577,54 @@ services:
       retries: 3
       start_period: 10s
 
+  # The dashboard remains on internal networks only. This fixed reverse proxy
+  # is the sole service allowed to publish the loopback UI port.
+  dashboard-proxy:
+    image: nginx:alpine@sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606
+    init: true
+    restart: unless-stopped
+    user: "101:101"
+    cpus: ${EMUSTACK_PROXY_CPU_LIMIT:-0.50}
+    mem_limit: ${EMUSTACK_PROXY_MEMORY_LIMIT:-128m}
+    pids_limit: ${EMUSTACK_PROXY_PIDS_LIMIT:-64}
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=32m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    entrypoint: ["/usr/sbin/nginx"]
+    command: ["-g", "daemon off;"]
+    ports:
+      - "127.0.0.1:8765:8765"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      dashboard-proxy-backend:
+        ipv4_address: 172.29.0.2
+      dashboard-proxy-edge: {}
+    depends_on:
+      dashboard:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8765/api/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
 networks:
   management:
     internal: true
+  dashboard-proxy-backend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24
+          gateway: 172.29.0.1
+  dashboard-proxy-edge:
+    driver: bridge
   env-kytyps5-net:
     driver: bridge
     internal: true
