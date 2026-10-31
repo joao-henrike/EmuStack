@@ -330,8 +330,13 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
     with tempfile.TemporaryDirectory(prefix=f"{identifier}-", dir=STATE / "work") as scratch:
         work = Path(scratch)
         # Building only in a disposable copy avoids dirtying pinned submodules.
-        shutil.copytree(src, work / "source", ignore=shutil.ignore_patterns(".git"))
+        shutil.copytree(src, work / "source", symlinks=True,
+                        ignore=shutil.ignore_patterns(".git"))
         cloned = work / "source"
+        for link in cloned.rglob("*"):
+            if link.is_symlink() and not link.resolve(strict=False).is_relative_to(cloned):
+                raise ManagerError("Upstream symlink points outside the staged source: "
+                                   + str(link.relative_to(cloned)))
         if identifier == "bsnes":
             run_build(["make", "-C", str(cloned / "bsnes"), "build=release",
                        "local=false", f"-j{jobs}"], work, log)
