@@ -20,6 +20,9 @@ sha256:89c1ea91e897f0fe0a3731595330bc45b8bdef4047464a07116f891a94054b31
 
 A revisão futura deve conferir o digest oficial, origem e estado de segurança antes de atualizá-lo. Referência: [tags oficiais da imagem Debian](https://hub.docker.com/_/debian/tags/).
 
+## 🌐 Proxy local do dashboard
+
+O serviço `dashboard-proxy` usa a imagem oficial `nginx:alpine` fixada pelo digest multi-plataforma `sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606`. O digest foi conferido no manifesto oficial em 21 de outubro de 2026. Consulte o [manifesto de tags e digests do Nginx oficial](https://github.com/docker-library/repo-info/blob/master/repos/nginx/remote/alpine.md) antes de qualquer atualização. O proxy não faz parte do release lock dos emuladores.
 ## 🗃️ Repositórios APT
 
 No padrão, o build utiliza repositórios Trixie atuais para receber atualizações; assim, as versões de pacotes podem mudar mesmo que a imagem base esteja pinada. Para selecionar um snapshot datado:
