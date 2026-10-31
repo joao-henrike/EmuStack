@@ -40,7 +40,7 @@ Troque o nome pelo ID afetado. Confira o `.env` local: cada um dos 20 `EMUSTACK_
 
 “Agente saudável” só informa que o controlador responde. Consulte `install-report.json` e `release-lock.json`. O build pode indicar asset indisponível, formato incompatível, erro de download ou build falho. Em particular, as entradas `skip-upstream` não representam binários instalados pelo lock atual. Não baixe executáveis de fontes aleatórias para preencher o catálogo.
 
-Um override em `data/environments/<id>/emulators/` só será útil quando o binário for reconhecido pelo catálogo e compatível com o runner configurado.
+Um override em `data/environments/<id>/emulators/` só será útil quando o binário for reconhecido pelo catálogo e compatível com o runner configurado. Para Dolphin e Mupen64Plus instalados pelos pacotes Debian, confira `command -v dolphin-emu` e `command -v mupen64plus`; os pacotes Trixie instalam esses executáveis em `/usr/games`, diretório incluído no `PATH` da imagem. Depois de atualizar a imagem, recrie os serviços para que a detecção seja refeita.
 
 ## 🎮 Jogo ausente na biblioteca
 
