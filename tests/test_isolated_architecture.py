@@ -108,7 +108,7 @@ class IsolatedArchitectureTests(unittest.TestCase):
         self.assertIn("proxy_set_header Host $http_host;", nginx)
         self.assertIn("proxy_set_header Origin $http_origin;", nginx)
         self.assertIn("proxy_set_header X-EmuStack-Request $http_x_emustack_request;", nginx)
-        self.assertNotRegex(nginx, r"(?m)^\\s*proxy_set_header\\s+X-Forwarded-For(?:\\s|;)")
+        self.assertFalse(any(len(tokens := line.strip().split()) >= 2 and tokens[0] == "proxy_set_header" and tokens[1] == "X-Forwarded-For" for line in nginx.splitlines()), "the proxy must not create a trusted X-Forwarded-For directive")
         for directive in (
             "client_body_temp_path",
             "proxy_temp_path",
