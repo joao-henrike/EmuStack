@@ -196,6 +196,15 @@ def install_artifact(identifier: str, file: Path, name: str, origin: dict,
                      expected_sha: str | None = None) -> dict:
     """Atomically deploy an allowlisted filename, retaining the old binary."""
     dest = destination(identifier, name)
+    current = active(identifier)
+    if current and current.get("binary_name") != name:
+        raise ManagerError(
+            f"Profile {identifier} already manages {current['binary_name']}; "
+            "uninstall that installation before changing executable names"
+        )
+    if dest.is_file():
+        if not current or current.get("sha256") != hash_file(dest):
+            raise ManagerError("Existing executable is unmanaged or modified; refusing to overwrite")
     if file.is_symlink() or not file.is_file():
         raise ManagerError(f"Input must be a regular file, not a link: {file}")
     src = file.resolve(strict=True)
@@ -231,7 +240,15 @@ def install_artifact(identifier: str, file: Path, name: str, origin: dict,
             "sha256": actual, "installed_at": now(), "origin": origin,
             "validation": "file-hash-only", "runtime_tested": False,
         }
-        write_record(identifier, record)
+        try:
+            write_record(identifier, record)
+        except BaseException:
+            # The previous active metadata remains intact if state persistence fails.
+            if backup is not None:
+                os.replace(backup, dest)
+            else:
+                dest.unlink(missing_ok=True)
+            raise
         tombstone_file(identifier).unlink(missing_ok=True)
         return {"installed": str(dest.relative_to(ROOT)), "sha256": actual,
                 "previous_backup": str(backup.relative_to(ROOT)) if backup else None,
@@ -418,10 +435,13 @@ def main() -> int:
     for action in ("status", "deps", "history", "rollback", "uninstall"):
         p = sub.add_parser(action)
         p.add_argument("id", nargs="?" if action == "status" else None)
-    p = sub.add_parser("build", help="compile one of three reviewed source recipes")
+    p = sub.add_parser("build", help="compile one reviewed source recipe")
     p.add_argument("id", choices=sorted(RECIPES))
     p.add_argument("--jobs", type=int, default=2)
     p.add_argument("--yes-run-upstream-code", action="store_true")
+    all_parser = sub.add_parser("build-all", help="try all reviewed builds independently; report every failure")
+    all_parser.add_argument("--jobs", type=int, default=2)
+    all_parser.add_argument("--yes-run-upstream-code", action="store_true")
     p = sub.add_parser("install-file", help="import reviewed binary into private emulator profile")
     p.add_argument("id")
     p.add_argument("file", type=Path)
@@ -437,6 +457,17 @@ def main() -> int:
             data = history(args.id)
         elif args.action == "build":
             data = build(args.id, args.jobs, args.yes_run_upstream_code)
+        elif args.action == "build-all":
+            if not args.yes_run_upstream_code:
+                raise ManagerError("Review all upstream sources and pass --yes-run-upstream-code")
+            results = {}
+            for identifier in RECIPES:
+                try:
+                    results[identifier] = {"status": "installed", "result": build(identifier, args.jobs, True)}
+                except (ManagerError, OSError, subprocess.SubprocessError) as exc:
+                    results[identifier] = {"status": "failed", "error": str(exc)}
+            print(json.dumps(results, ensure_ascii=False, indent=2))
+            return 1 if any(item["status"] != "installed" for item in results.values()) else 0
         elif args.action == "install-file":
             data = install_artifact(args.id, args.file, args.binary_name,
                                     {"method": "reviewed-local-file", "input_name": args.file.name},
