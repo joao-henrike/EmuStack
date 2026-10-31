@@ -25,7 +25,7 @@ python3 scripts/host-doctor.py
 ./scripts/runtime-acceptance.sh
 ```
 
-Abra **http://127.0.0.1:8765** na mesma máquina. Se o `host-setup.sh` detectar uma sessão X11/XWayland ou áudio compatível, ele pode gerar `compose.override.yaml` com a integração opt-in. O script de build usa esse override explicitamente quando existe.
+Abra **http://127.0.0.1:8765** na mesma máquina. A porta é publicada pelo `dashboard-proxy`; o dashboard permanece sem porta de host e nas redes internas. Se o `host-setup.sh` detectar uma sessão X11/XWayland ou áudio compatível, ele pode gerar `compose.override.yaml` com a integração opt-in. O script de build usa esse override explicitamente quando existe.
 
 ### O que cada comando faz
 
@@ -43,6 +43,7 @@ Se o host setup gerou um override, inclua-o em cada comando manual que precise d
 docker compose -f compose.yaml -f compose.override.yaml config --quiet
 docker compose -f compose.yaml -f compose.override.yaml ps
 docker compose -f compose.yaml -f compose.override.yaml logs --tail=200 dashboard
+docker compose -f compose.yaml -f compose.override.yaml logs --tail=200 dashboard-proxy
 ```
 
 Sem override, use apenas `-f compose.yaml`. Os caminhos explícitos `-f` impedem que o Compose descubra automaticamente arquivos não incluídos na invocação.
