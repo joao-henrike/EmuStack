@@ -20,8 +20,9 @@ A aceitação de runtime verifica que:
 
 - os 20 agentes esperados iniciam e ficam saudáveis;
 - cada agente usa mounts e rede específicos;
-- o dashboard tem os mounts/rede de controle esperados;
-- a porta do host é publicada somente no loopback;
+- o dashboard tem os mounts/rede de controle esperados e não publica portas diretamente;
+- `dashboard-proxy` está saudável, com filesystem read-only, sem capabilities e com somente duas redes dedicadas;
+- a publicação aparece ativa em `NetworkSettings.Ports` e está vinculada somente a `127.0.0.1:8765` no proxy;
 - flags de hardening e IPs/allowlist correspondem ao modelo documentado;
 - cada agente tenta acessar endpoints protegidos do dashboard com cabeçalhos forjados; a solicitação de controle/metadados deve ser recusada;
 - health/capability endpoints respondem conforme seu contrato;
