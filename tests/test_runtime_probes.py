@@ -25,10 +25,20 @@ class RuntimeProbeHelpersTests(unittest.TestCase):
         self.assertEqual(values["TOKEN"], "$(touch /tmp/should-not-exist)")
         self.assertNotIn("BAD-KEY", values)
 
-    def test_software_vulkan_renderer_is_distinguished_from_hardware(self):
+    def test_software_only_vulkan_is_distinguished_from_hardware_and_mixed_devices(self):
         self.assertTrue(is_software_vulkan_renderer("deviceName = llvmpipe (LLVM 18.1)"))
         self.assertTrue(is_software_vulkan_renderer("deviceName = Mesa Lavapipe"))
         self.assertFalse(is_software_vulkan_renderer("deviceName = NVIDIA GeForce RTX 3060"))
+        mixed_devices = (
+            "GPU0:\\n deviceName = NVIDIA GeForce RTX 4050 Laptop GPU\\n"
+            "GPU1:\\n deviceName = llvmpipe (LLVM 19.1.7, 256 bits)\\n"
+        )
+        self.assertFalse(is_software_vulkan_renderer(mixed_devices))
+        software_devices = (
+            "GPU0:\\n deviceName = llvmpipe (LLVM 19.1.7, 256 bits)\\n"
+            "GPU1:\\n deviceName = Mesa Lavapipe\\n"
+        )
+        self.assertTrue(is_software_vulkan_renderer(software_devices))
 
     def test_input_device_paths_are_restricted_to_device_nodes(self):
         self.assertTrue(is_allowed_input_device("/dev/input/event4"))
