@@ -224,6 +224,7 @@ def install_artifact(identifier: str, file: Path, name: str, origin: dict,
             "validation": "file-hash-only", "runtime_tested": False,
         }
         write_record(identifier, record)
+        tombstone_file(identifier).unlink(missing_ok=True)
         return {"installed": str(dest.relative_to(ROOT)), "sha256": actual,
                 "previous_backup": str(backup.relative_to(ROOT)) if backup else None,
                 "runtime_tested": False}
@@ -253,6 +254,12 @@ def verify_source(identifier: str) -> tuple[Path, dict]:
         raise ManagerError(f"Source/index does not match immutable pin for {identifier}")
     if git("status", "--porcelain"):
         raise ManagerError(f"Dirty upstream source: {identifier}; clean or resync before building")
+    nested = git("submodule", "status", "--recursive")
+    if any(line and line[0] in "-+U" for line in nested.splitlines()):
+        raise ManagerError(
+            f"Nested dependencies missing/mismatched in {identifier}; review the upstream "
+            "dependencies and initialize required submodules explicitly before building"
+        )
     return src, item
 
 
@@ -337,8 +344,19 @@ def history(identifier: str) -> list[dict]:
     return records
 
 
+def tombstone_file(identifier: str) -> Path:
+    profile(identifier)
+    path = STATE / "removed" / f"{identifier}.json"
+    check_managed_path(path)
+    return path
+
+
 def rollback(identifier: str) -> dict:
     record = active(identifier)
+    if not record:
+        tombstone = tombstone_file(identifier)
+        if tombstone.is_file():
+            record = load_json(tombstone)
     if not record:
         raise ManagerError(f"No manager-controlled installation to roll back: {identifier}")
     versions = history(identifier)
@@ -358,6 +376,10 @@ def uninstall(identifier: str) -> dict:
     if dest.is_symlink() or not dest.is_file() or hash_file(dest) != record["sha256"]:
         raise ManagerError("Managed executable modified or missing; refusing to delete it")
     backup = backup_current(identifier, dest)
+    tombstone = tombstone_file(identifier)
+    ensure_dir(tombstone.parent)
+    # A removal record allows rollback even after uninstall; active stays absent.
+    tombstone.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     write_record(identifier, None)
     return {"removed": identifier, "rollback_backup": str(backup.relative_to(ROOT))}
 
