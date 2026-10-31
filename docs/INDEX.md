@@ -17,6 +17,7 @@ Bem-vindo à central de documentação do EmuStack. Os guias são organizados po
 | Testar GUI, áudio, Vulkan, GPU ou controle | [Aceitação local](LOCAL_ACCEPTANCE.md) | [Solução de problemas](TROUBLESHOOTING.md) |
 | Revisar segurança | [Segurança](SECURITY.md) | [Arquitetura](ARCHITECTURE-AND-TESTS.md) |
 | Atualizar hashes oficiais | [Releases e atualizações](RELEASE_AND_UPDATES.md) | [Build e reprodutibilidade](BUILD_REPRODUCIBILITY.md) |
+| Sincronizar/atualizar 24 fontes upstream | [Códigos-fonte upstream](UPSTREAM_SOURCES.md) | [Releases e atualizações](RELEASE_AND_UPDATES.md) |
 | Consultar API ou CLI | [Referência de API/CLI](API_REFERENCE.md) | [Arquitetura e testes](ARCHITECTURE-AND-TESTS.md) |
 | Contribuir com código | [Desenvolvimento](DEVELOPMENT.md) | [Arquitetura e testes](ARCHITECTURE-AND-TESTS.md) |
 
