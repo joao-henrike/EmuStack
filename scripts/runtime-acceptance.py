@@ -317,33 +317,109 @@ def main() -> int:
     dashboard_ids = compose("ps", "-q", "dashboard").stdout.split()
     if len(dashboard_ids) != 1:
         raise RuntimeError("Dashboard container is not running")
+    proxy_ids = compose("ps", "-q", "dashboard-proxy").stdout.split()
+    if len(proxy_ids) != 1:
+        raise RuntimeError("Dashboard loopback proxy is not running")
+
     global DASHBOARD_CONTAINER_ID
     DASHBOARD_CONTAINER_ID = dashboard_ids[0]
     dashboard = json.loads(run(["docker", "inspect", dashboard_ids[0]]).stdout)[0]
-    published = dashboard.get("HostConfig", {}).get("PortBindings", {}).get("8765/tcp") or []
-    if len(published) != 1 or published[0].get("HostIp") != "127.0.0.1" or published[0].get("HostPort") != "8765":
-        raise RuntimeError(f"Dashboard port must be published only on 127.0.0.1:8765; got {published}")
-    checks.append("dashboard port published only on host loopback 127.0.0.1:8765")
+    proxy = json.loads(run(["docker", "inspect", proxy_ids[0]]).stdout)[0]
+
+    dashboard_bindings = dashboard.get("HostConfig", {}).get("PortBindings", {}) or {}
+    if dashboard_bindings.get("8765/tcp"):
+        raise RuntimeError("Dashboard must not publish its application port directly on the host")
+
+    proxy_bindings = proxy.get("HostConfig", {}).get("PortBindings", {}).get("8765/tcp") or []
+    if len(proxy_bindings) != 1 or proxy_bindings[0].get("HostIp") != "127.0.0.1" or proxy_bindings[0].get("HostPort") != "8765":
+        raise RuntimeError(f"Dashboard proxy must publish only 127.0.0.1:8765; got {proxy_bindings}")
+    active_proxy_ports = proxy.get("NetworkSettings", {}).get("Ports", {}).get("8765/tcp") or []
+    if len(active_proxy_ports) != 1 or active_proxy_ports[0].get("HostIp") != "127.0.0.1" or active_proxy_ports[0].get("HostPort") != "8765":
+        raise RuntimeError(f"Dashboard proxy requested port binding is not active: {active_proxy_ports}")
+    if proxy.get("State", {}).get("Status") != "running" or proxy.get("State", {}).get("Health", {}).get("Status") != "healthy":
+        raise RuntimeError("Dashboard loopback proxy is not running and healthy")
+    proxy_host_config = proxy.get("HostConfig", {})
+    if not proxy_host_config.get("ReadonlyRootfs"):
+        raise RuntimeError("Dashboard proxy root filesystem is not read-only")
+    if "ALL" not in [x.upper() for x in proxy_host_config.get("CapDrop", [])]:
+        raise RuntimeError("Dashboard proxy did not drop all Linux capabilities")
+    if not any("no-new-privileges:true" in x for x in proxy_host_config.get("SecurityOpt", []) or []):
+        raise RuntimeError("Dashboard proxy lacks no-new-privileges")
+    if proxy_host_config.get("Privileged"):
+        raise RuntimeError("Dashboard proxy must not run privileged")
+    if proxy.get("Config", {}).get("User") != "101:101":
+        raise RuntimeError("Dashboard proxy must run as the unprivileged nginx UID/GID 101:101")
+    proxy_mounts = proxy.get("Mounts", [])
+    if any("/var/run/docker.sock" in m.get("Destination", "") for m in proxy_mounts):
+        raise RuntimeError("Dashboard proxy has the Docker socket mounted")
+    proxy_config_mounts = [
+        m for m in proxy_mounts
+        if m.get("Type") == "bind" and m.get("Destination") == "/etc/nginx/nginx.conf" and not m.get("RW", True)
+    ]
+    proxy_bind_mounts = [m for m in proxy_mounts if m.get("Type") == "bind"]
+    if len(proxy_config_mounts) != 1 or len(proxy_bind_mounts) != 1:
+        raise RuntimeError("Dashboard proxy must mount only the read-only Nginx configuration")
+
+    proxy_networks = proxy.get("NetworkSettings", {}).get("Networks", {})
+    if len(proxy_networks) != 2:
+        raise RuntimeError(f"Dashboard proxy network count {len(proxy_networks)}, expected exactly two")
+    proxy_backend = next(
+        ((name, endpoint) for name, endpoint in proxy_networks.items()
+         if endpoint.get("NetworkID") and
+         json.loads(run(["docker", "network", "inspect", name]).stdout)[0].get("Labels", {}).get("com.docker.compose.network") == "dashboard-proxy-backend"),
+        None,
+    )
+    proxy_edge = next(
+        ((name, endpoint) for name, endpoint in proxy_networks.items()
+         if endpoint.get("NetworkID") and
+         json.loads(run(["docker", "network", "inspect", name]).stdout)[0].get("Labels", {}).get("com.docker.compose.network") == "dashboard-proxy-edge"),
+        None,
+    )
+    if proxy_backend is None or proxy_edge is None:
+        raise RuntimeError("Dashboard proxy must join only its dedicated backend and edge networks")
+    backend_name, backend_endpoint = proxy_backend
+    edge_name, _edge_endpoint = proxy_edge
+    backend_network = json.loads(run(["docker", "network", "inspect", backend_name]).stdout)[0]
+    edge_network = json.loads(run(["docker", "network", "inspect", edge_name]).stdout)[0]
+    if not backend_network.get("Internal") or edge_network.get("Internal"):
+        raise RuntimeError("Dashboard proxy requires one internal backend network and one non-internal publication network")
+    if backend_endpoint.get("IPAddress") != "172.29.0.2":
+        raise RuntimeError("Dashboard proxy does not have reserved backend IP 172.29.0.2")
+    backend_ipam = (backend_network.get("IPAM", {}).get("Config") or [{}])[0]
+    if backend_ipam.get("Subnet") != "172.29.0.0/24" or backend_ipam.get("Gateway") != "172.29.0.1":
+        raise RuntimeError("Dashboard proxy backend network has unexpected IPAM configuration")
+    backend_members = set((backend_network.get("Containers") or {}).keys())
+    if backend_members != {dashboard_ids[0], proxy_ids[0]}:
+        raise RuntimeError("Dashboard proxy backend network must contain only dashboard and dashboard-proxy")
+    edge_members = set((edge_network.get("Containers") or {}).keys())
+    if edge_members != {proxy_ids[0]}:
+        raise RuntimeError("Dashboard proxy edge network must contain only dashboard-proxy")
+
     dmounts = dashboard.get("Mounts", [])
     if any("/var/run/docker.sock" in m.get("Destination", "") or "/data/environments" in m.get("Source", "") for m in dmounts):
         raise RuntimeError("Dashboard mounts Docker socket or environment data")
     dnetworks = dashboard.get("NetworkSettings", {}).get("Networks", {})
-    if len(dnetworks) != len(profiles):
-        raise RuntimeError(f"Dashboard network count {len(dnetworks)}, expected {len(profiles)}")
+    if len(dnetworks) != len(profiles) + 1:
+        raise RuntimeError(f"Dashboard network count {len(dnetworks)}, expected {len(profiles) + 1}")
     dashboard_network_ids = {value.get("NetworkID") for value in dnetworks.values()}
-    if dashboard_network_ids != network_ids:
-        raise RuntimeError("Dashboard does not join exactly the set of unique per-agent networks")
-    checks.append("dashboard has orchestrator-only mounts and all agent networks")
+    if dashboard_network_ids != network_ids | {backend_network.get("Id")}:
+        raise RuntimeError("Dashboard must join exactly the 20 agent networks plus its private proxy backend")
+    checks.append("dashboard has orchestrator-only mounts, 20 agent networks and one private proxy backend")
     for index, env_id in enumerate(env_ids, 1):
         endpoint = next((entry for entry in dnetworks.values() if entry.get("IPAddress") == f"172.28.{index}.3"), None)
         if endpoint is None:
             raise RuntimeError(f"Dashboard does not have reserved IP 172.28.{index}.3 for {env_id}")
+    backend_dashboard_endpoint = dnetworks.get(backend_name)
+    if not backend_dashboard_endpoint or backend_dashboard_endpoint.get("IPAddress") != "172.29.0.3":
+        raise RuntimeError("Dashboard does not have reserved backend IP 172.29.0.3")
     trusted_env = next((entry for entry in dashboard.get("Config", {}).get("Env", []) if entry.startswith("EMUSTACK_CONTROL_TRUSTED_CLIENT_IPS=")), None)
     expected_gateways = {f"172.28.{index}.1" for index in range(1, len(env_ids) + 1)}
-    actual_gateways = set(trusted_env.split("=", 1)[1].split(",")) if trusted_env else set()
-    if actual_gateways != expected_gateways:
-        raise RuntimeError("Dashboard trusted-client IP allowlist does not exactly match isolated-network gateways")
-    checks.append("dashboard uses gateway IP allowlist; agent addresses are not trusted")
+    expected_trusted_clients = expected_gateways | {"172.29.0.2"}
+    actual_trusted_clients = set(trusted_env.split("=", 1)[1].split(",")) if trusted_env else set()
+    if actual_trusted_clients != expected_trusted_clients:
+        raise RuntimeError("Dashboard trusted-client allowlist must contain exactly the 20 agent-network gateways and the dedicated proxy IP")
+    checks.append("dashboard trusts only the 20 network gateways and the fixed proxy source; agent IPs remain untrusted")
+    checks.append("dashboard port is actively published by the unprivileged proxy on host loopback only")
 
     # Emulate a compromised agent forging every HTTP header currently used by the UI.
     # The TCP source address must still be rejected before any state-changing route runs.
