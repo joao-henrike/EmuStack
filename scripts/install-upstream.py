@@ -288,7 +288,7 @@ def safe_extract(archive_path: Path, destination: Path) -> None:
                 relative = PurePosixPath(name)
                 if (
                     not name
-                    or "\\x00" in name
+                    or "\x00" in name
                     or name.startswith("/")
                     or re.match(r"^[A-Za-z]:", name)
                     or ".." in relative.parts
