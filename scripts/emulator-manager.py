@@ -720,6 +720,17 @@ def _build_package(identifier: str, work: Path, source: Path, binary: Path) -> t
         if not installed.is_dir():
             raise ManagerError("KytyPS5 did not create its installed Qt/runtime package")
         shutil.copytree(installed, folder, dirs_exist_ok=True)
+        # Upstream's Linux installer may omit its helper target even though
+        # launcher depends on it. The helper is needed for game execution.
+        if not (folder / "kyty_emulator").is_file():
+            candidates = [
+                path for path in (work / "build").rglob("kyty_emulator")
+                if path.is_file() and not path.is_symlink()
+            ]
+            if len(candidates) != 1:
+                raise ManagerError("Expected exactly one kyty_emulator runtime helper; "
+                                   "refusing incomplete launcher bundle")
+            shutil.copy2(candidates[0], folder / "kyty_emulator")
     else:
         shutil.copy2(binary, folder / executable)
         if identifier == "ppsspp":
