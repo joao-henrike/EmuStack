@@ -11,6 +11,14 @@ Usage:
   bash scripts/phase1.sh deps {kytyps5|shadps4|ppsspp|melonds|bsnes}
   bash scripts/phase1.sh test                 # focused regression tests
   bash scripts/phase1.sh validate             # full static validation
+  bash scripts/phase1.sh plan-deps <profile>
+  bash scripts/phase1.sh sync-deps <profile> --yes-download-submodules [--jobs 1..4]
+  bash scripts/phase1.sh history <profile>
+  bash scripts/phase1.sh rollback <profile>
+  bash scripts/phase1.sh uninstall <profile>
+  bash scripts/phase1.sh logs <profile>
+  bash scripts/phase1.sh install-file <profile> <data/imports/filename> <sha256> <allowlisted-binary-name>
+  bash scripts/phase1.sh build-all --yes-run-upstream-code [--jobs 1..4]
   bash scripts/phase1.sh build {kytyps5|shadps4|ppsspp|melonds|bsnes} --yes-run-upstream-code [--jobs 1..4]
 
 Builds run upstream code inside a nonprivileged Debian Trixie container.
@@ -22,7 +30,7 @@ USAGE
 [[ $# -ge 1 ]] || usage
 action="$1"
 shift
-case "$action" in status|deps|test|validate|build) ;; *) usage ;; esac
+case "$action" in status|deps|test|validate|build|build-all|plan-deps|sync-deps|history|rollback|uninstall|install-file|logs) ;; *) usage ;; esac
 
 valid_id() {
   case "$1" in kytyps5|shadps4|ppsspp|melonds|bsnes) return 0 ;; *) return 1 ;; esac
@@ -30,8 +38,49 @@ valid_id() {
 
 jobs=2
 id=""
+filename=""
+sha=""
+binary_name=""
 case "$action" in
   test|validate) [[ $# -eq 0 ]] || usage ;;
+  build-all)
+    [[ $# -ge 1 && "$1" == "--yes-run-upstream-code" ]] || usage
+    shift
+    if [[ $# -gt 0 ]]; then
+      [[ $# -eq 2 && "$1" == "--jobs" && "$2" =~ ^[1-4]$ ]] || usage
+      jobs="$2"
+    fi
+    ;;
+  plan-deps|sync-deps)
+    [[ $# -ge 1 ]] || usage
+    valid_id "$1" || usage
+    id="$1"
+    shift
+    if [[ "$action" == "sync-deps" ]]; then
+      [[ $# -ge 1 && "$1" == "--yes-download-submodules" ]] || usage
+      shift
+      if [[ $# -gt 0 ]]; then
+        [[ $# -eq 2 && "$1" == "--jobs" && "$2" =~ ^[1-4]$ ]] || usage
+        jobs="$2"
+      fi
+    else
+      [[ $# -eq 0 ]] || usage
+    fi
+    ;;
+  history|rollback|uninstall|logs)
+    [[ $# -eq 1 ]] || usage
+    id="$1"
+    ;;
+  install-file)
+    [[ $# -eq 4 ]] || usage
+    id="$1"
+    filename="$2"
+    sha="$3"
+    binary_name="$4"
+    [[ "$filename" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || usage
+    [[ "$sha" =~ ^[a-f0-9]{64}$ ]] || usage
+    [[ "$binary_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || usage
+    ;;
   status)
     [[ $# -le 1 ]] || usage
     if [[ $# -eq 1 ]]; then
@@ -60,6 +109,15 @@ case "$action" in
     ;;
 esac
 
+# Commands accepting profile IDs are never forwarded unchecked to the container.
+case "$action" in
+  history|rollback|uninstall|logs|install-file)
+    case "$id" in
+      kytyps5|shadps4|ppsspp|melonds|bsnes|rpcs3|duckstation|pcsx2|vita3k|xbox-one|xenia-canary|xbox-series|xemu|eden|cemu|dolphin|azahar|mgba|mupen64plus|mesen) ;;
+      *) usage ;;
+    esac ;;
+esac
+
 [[ "$(id -u)" -ne 0 ]] || { echo "ERRO: não execute como root/sudo." >&2; exit 1; }
 command -v docker >/dev/null || { echo "ERRO: precisa de Docker CLI no host." >&2; exit 127; }
 docker info >/dev/null 2>&1 || { echo "ERRO: daemon Docker indisponível ou sem permissão." >&2; exit 1; }
@@ -76,7 +134,7 @@ docker build --file "$ROOT/scripts/phase1-builder/Dockerfile" \
   --tag "$tag" "$ROOT/scripts/phase1-builder"
 
 network=none
-[[ "$action" == "build" ]] && network=bridge
+[[ "$action" == "build" || "$action" == "build-all" || "$action" == "sync-deps" ]] && network=bridge
 docker_args=(
   run --rm --init
   --user "$(id -u):$(id -g)"
@@ -99,6 +157,21 @@ docker_args=(
   "$tag"
 )
 
+# Source sync is the only explicit exception to read-only checkout.
+# It must write pinned submodule Git metadata and files on the host via scoped mounts.
+if [[ "$action" == "sync-deps" ]]; then
+  [[ -d "$ROOT/.git" && ! -L "$ROOT/.git" ]] || {
+    echo "ERRO: sync-deps exige checkout Git normal (não worktree)." >&2; exit 1;
+  }
+  [[ -d "$ROOT/third_party" && ! -L "$ROOT/third_party" ]] || {
+    echo "ERRO: third_party/ ausente ou symlink." >&2; exit 1;
+  }
+  docker_args+=(
+    --mount "type=bind,src=$ROOT/.git,dst=/workspace/.git"
+    --mount "type=bind,src=$ROOT/third_party,dst=/workspace/third_party"
+  )
+fi
+
 case "$action" in
   build)
     echo "== BUILD ISOLADO: $id (fontes pinadas; rede temporária de build) =="
@@ -118,5 +191,30 @@ case "$action" in
     ;;
   validate)
     docker "${docker_args[@]}" bash scripts/validate-project.sh
+    ;;
+  build-all)
+    docker "${docker_args[@]}" python3 scripts/emulator-manager.py \
+      build-all --jobs "$jobs" --yes-run-upstream-code
+    ;;
+  plan-deps)
+    docker "${docker_args[@]}" python3 scripts/emulator-manager.py plan-deps "$id"
+    ;;
+  sync-deps)
+    docker "${docker_args[@]}" python3 scripts/emulator-manager.py \
+      sync-deps "$id" --jobs "$jobs" --yes-download-submodules
+    ;;
+  history|rollback|uninstall)
+    docker "${docker_args[@]}" python3 scripts/emulator-manager.py "$action" "$id"
+    ;;
+  install-file)
+    [[ -f "$ROOT/data/imports/$filename" && ! -L "$ROOT/data/imports/$filename" ]] || {
+      echo "ERRO: copie o arquivo revisado para data/imports/ antes de importar." >&2; exit 1;
+    }
+    docker "${docker_args[@]}" python3 scripts/emulator-manager.py \
+      install-file "$id" "/workspace/data/imports/$filename" \
+      --sha256 "$sha" --binary-name "$binary_name"
+    ;;
+  logs)
+    docker "${docker_args[@]}" python3 scripts/phase1-logs.py "$id"
     ;;
 esac
