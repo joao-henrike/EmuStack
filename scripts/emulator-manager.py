@@ -489,7 +489,7 @@ def dependencies(identifier: str) -> dict:
         try:
             probe = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=False)
             raw = (probe.stdout or "").strip()
-            match = re.search(r"([0-9]+)\\.([0-9]+)(?:\\.([0-9]+))?", raw)
+            match = re.search(r"([0-9]+)\.([0-9]+)(?:\.([0-9]+))?", raw)
             req = tuple(int(x) for x in (required.split(".") + ["0", "0"])[:3])
             found = tuple(int(x or 0) for x in match.groups()) if match and probe.returncode == 0 else None
             if found is None or found < req:
