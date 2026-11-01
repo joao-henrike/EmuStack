@@ -8,6 +8,7 @@ an explicit opt-in and runs programs on the host; review upstream beforehand.
 from __future__ import annotations
 
 import argparse
+import configparser
 from collections import deque
 import hashlib
 import json
@@ -22,6 +23,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / "data" / "emulator-manager"
@@ -30,6 +32,7 @@ CATALOG = ROOT / "catalog.json"
 RELEASE_LOCK = ROOT / "release-lock.json"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
+TRUSTED_SUBMODULE_HOSTS = frozenset({"github.com", "android.googlesource.com"})
 
 # These are the only reviewed Linux build entrypoints. Other pinned sources
 # remain accessible for audit and manual research, not arbitrary execution.
@@ -61,8 +64,9 @@ RECIPES = {
     "melonds": {
         "source": "melonds",
         "name": "melonDS",
-        "requires": ["git", "cmake", "ninja", "c++"],
-        "packages": "cmake ninja-build build-essential extra-cmake-modules libsdl2-dev libarchive-dev libenet-dev libzstd-dev libfaad-dev libpcap0.8-dev qt6-base-dev qt6-base-private-dev qt6-multimedia-dev libqt6svg6-dev",
+        "requires": ["git", "cmake", "ninja", "c++", "pkg-config"],
+        "pkg_config_required": ["Qt6Core", "Qt6Widgets", "Qt6Multimedia", "Qt6Svg", "sdl2", "libarchive", "libzstd", "faad2"],
+        "packages": "cmake ninja-build build-essential pkg-config extra-cmake-modules libsdl2-dev libarchive-dev libenet-dev libzstd-dev libfaad-dev libpcap0.8-dev libcurl4-gnutls-dev qt6-base-dev qt6-base-private-dev qt6-multimedia-dev libqt6svg6-dev libwayland-dev",
         "reference": "https://github.com/melonDS-emu/melonDS/blob/master/BUILD.md",
         "artifacts": ["build/melonDS", "build/src/melonDS"],
     },
@@ -269,7 +273,7 @@ def install_artifact(identifier: str, file: Path, name: str, origin: dict,
         temp.unlink(missing_ok=True)
 
 
-def verify_source(identifier: str) -> tuple[Path, dict]:
+def verify_source(identifier: str, *, require_nested: bool = True) -> tuple[Path, dict]:
     recipe = RECIPES[identifier]
     item = source_map().get(recipe["source"])
     if not item or not HEX40.fullmatch(item.get("commit", "")):
@@ -291,13 +295,126 @@ def verify_source(identifier: str) -> tuple[Path, dict]:
         raise ManagerError(f"Source/index does not match immutable pin for {identifier}")
     if git("status", "--porcelain"):
         raise ManagerError(f"Dirty upstream source: {identifier}; clean or resync before building")
-    nested = git("submodule", "status", "--recursive")
-    if any(line and line[0] in "-+U" for line in nested.splitlines()):
-        raise ManagerError(
-            f"Nested dependencies missing/mismatched in {identifier}; review the upstream "
-            "dependencies and initialize required submodules explicitly before building"
-        )
+    if require_nested:
+        nested = git("submodule", "status", "--recursive")
+        problems = [
+            line[:220] for line in nested.splitlines() if line and line[0] in "-+U"
+        ]
+        if problems:
+            raise ManagerError(
+                f"Nested dependencies missing/mismatched in {identifier}: "
+                + " | ".join(problems[:5])
+                + ". Run: python3 scripts/emulator-manager.py sync-deps "
+                + identifier + " --yes-download-submodules"
+            )
     return src, item
+
+
+
+def submodule_entries(repo_dir: Path) -> list[tuple[str, str]]:
+    """Audit .gitmodules paths, URLs and index gitlinks before any network access."""
+    manifest = repo_dir / ".gitmodules"
+    if not manifest.exists():
+        return []
+    if manifest.is_symlink():
+        raise ManagerError("Refusing symlinked .gitmodules file")
+    config = configparser.ConfigParser(interpolation=None, strict=True)
+    config.read(manifest, encoding="utf-8")
+    entries = []
+    for section in config.sections():
+        if not section.startswith('submodule "') or not section.endswith('"'):
+            raise ManagerError("Unexpected .gitmodules section: " + section)
+        path = config.get(section, "path", fallback="")
+        url = config.get(section, "url", fallback="")
+        parts = Path(path)
+        if (not path or parts.is_absolute() or
+                any(part in ("", ".", "..") for part in parts.parts) or
+                not re.fullmatch(r"[A-Za-z0-9_./-]+", path) or
+                "\\" in path):
+            raise ManagerError("Unsafe submodule path: " + repr(path))
+        parsed = urlsplit(url)
+        if (parsed.scheme != "https" or parsed.hostname not in TRUSTED_SUBMODULE_HOSTS or
+                parsed.username or parsed.password or parsed.port or parsed.query or
+                parsed.fragment or not parsed.path.startswith("/") or not parsed.path.strip("/")):
+            raise ManagerError("Unreviewed submodule origin: " + repr(url))
+        staged = subprocess.run(
+            ["git", "-C", str(repo_dir), "ls-files", "--stage", "--", path],
+            capture_output=True, text=True, timeout=30, check=True
+        ).stdout.strip()
+        if not re.fullmatch(r"160000 [0-9a-f]{40} 0\t" + re.escape(path), staged):
+            raise ManagerError("Missing pinned gitlink for submodule: " + path)
+        entries.append((path, url))
+    return entries
+
+
+def sync_deps(identifier: str, jobs: int, allow_download: bool) -> dict:
+    """Explicit, bounded walk of upstream-pinned submodules; never chase HEAD."""
+    if identifier not in RECIPES:
+        raise ManagerError("No reviewed source-build recipe for " + identifier)
+    if not allow_download:
+        raise ManagerError("Review nested upstream origins; pass --yes-download-submodules to fetch pinned dependencies")
+    if os.geteuid() == 0:
+        raise ManagerError("Do not download upstream source as root")
+    if not 1 <= jobs <= 4:
+        raise ManagerError("--jobs must be between 1 and 4 for nested source synchronization")
+    root, parent_lock = verify_source(identifier, require_nested=False)
+    queue = deque([(root, 0)])
+    fetched = 0
+    inspected = 0
+    while queue:
+        repo_dir, depth = queue.popleft()
+        # Fail closed before touching new unreviewed nested repositories.
+        entries = submodule_entries(repo_dir)
+        if not entries:
+            continue
+        if depth >= 4 or inspected + len(entries) > 160:
+            raise ManagerError("Nested source depth/count limit reached; inspect repositories manually")
+        inspected += len(entries)
+        paths = [path for path, url in entries]
+        # Synchronize local config to the already-audited .gitmodules URLs.
+        # Disable non-HTTPS protocols even if a user config enabled them.
+        commands = [
+            ["git", "-c", "protocol.file.allow=never",
+             "-c", "protocol.ext.allow=never", "-c", "protocol.ssh.allow=never",
+             "-c", "protocol.git.allow=never", "-C", str(repo_dir),
+             "submodule", "sync", "--", *paths],
+            ["git", "-c", "protocol.file.allow=never",
+             "-c", "protocol.ext.allow=never", "-c", "protocol.ssh.allow=never",
+             "-c", "protocol.git.allow=never", "-C", str(repo_dir),
+             "submodule", "update", "--init", f"--jobs={jobs}", "--", *paths],
+        ]
+        for command in commands:
+            result = subprocess.run(command, capture_output=True, text=True,
+                                    timeout=7200, check=False)
+            if result.returncode:
+                error_tail = (result.stderr or result.stdout).strip()[-1200:]
+                raise ManagerError("Nested sync failed at " + str(repo_dir.relative_to(ROOT))
+                                   + ": " + error_tail)
+        for path, _url in entries:
+            child = repo_dir / path
+            if child.is_symlink() or not child.is_dir():
+                raise ManagerError("Missing or symlinked nested checkout: " + path)
+            # A checkout must have the exact index-locked gitlink commit.
+            expect = subprocess.run(
+                ["git", "-C", str(repo_dir), "ls-files", "--stage", "--", path],
+                capture_output=True, text=True, timeout=30, check=True
+            ).stdout.strip().split()[1]
+            actual = subprocess.run(
+                ["git", "-C", str(child), "rev-parse", "HEAD"],
+                capture_output=True, text=True, timeout=30, check=True
+            ).stdout.strip()
+            if actual != expect:
+                raise ManagerError("Unexpected nested commit for " + path)
+            queue.append((child, depth + 1))
+            fetched += 1
+    verify_source(identifier)
+    return {
+        "profile": identifier, "parent_commit": parent_lock["commit"],
+        "nested_checkouts_verified": fetched,
+        "gitlinks_audited": inspected,
+        "status": "pinned-nested-source-ready",
+        "note": "Only audited HTTPS remotes and index-pinned gitlink commits used; no build performed",
+    }
 
 
 def dependencies(identifier: str) -> dict:
@@ -544,6 +661,10 @@ def main() -> int:
     for action in ("status", "deps", "history", "rollback", "uninstall"):
         p = sub.add_parser(action)
         p.add_argument("id", nargs="?" if action == "status" else None)
+    sync = sub.add_parser("sync-deps", help="audit and download index-pinned nested source checkouts")
+    sync.add_argument("id", choices=sorted(RECIPES))
+    sync.add_argument("--jobs", type=int, default=2)
+    sync.add_argument("--yes-download-submodules", action="store_true")
     p = sub.add_parser("build", help="compile one reviewed source recipe")
     p.add_argument("id", choices=sorted(RECIPES))
     p.add_argument("--jobs", type=int, default=2)
@@ -564,6 +685,8 @@ def main() -> int:
             data = dependencies(args.id)
         elif args.action == "history":
             data = history(args.id)
+        elif args.action == "sync-deps":
+            data = sync_deps(args.id, args.jobs, args.yes_download_submodules)
         elif args.action == "build":
             data = build(args.id, args.jobs, args.yes_run_upstream_code)
         elif args.action == "build-all":

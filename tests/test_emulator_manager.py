@@ -219,6 +219,53 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertIn("last log lines", str(failed.exception))
         self.assertIn("Build command failed (2)", str(failed.exception))
 
+
+    def test_melonds_pkg_config_preflight_includes_qt6_components(self):
+        modules = manager.RECIPES["melonds"]["pkg_config_required"]
+        for module in ("Qt6Core", "Qt6Widgets", "Qt6Multimedia", "Qt6Svg"):
+            self.assertIn(module, modules)
+        with patch.object(manager.shutil, "which", side_effect=lambda name: "/usr/bin/" + name), \
+             patch.object(manager.subprocess, "run") as mock_run:
+            mock_run.return_value.returncode = 1
+            report = manager.dependencies("melonds")
+        self.assertIn("Qt6Core", report["missing_pkg_config"])
+
+    def test_nested_sync_requires_explicit_operator_consent(self):
+        with self.assertRaisesRegex(manager.ManagerError, "yes-download-submodules"):
+            manager.sync_deps("ppsspp", jobs=2, allow_download=False)
+
+    def test_nested_sync_rejects_root_and_unsupported_recipes(self):
+        with self.assertRaisesRegex(manager.ManagerError, "No reviewed"):
+            manager.sync_deps("xbox-one", jobs=2, allow_download=True)
+        with patch.object(manager.os, "geteuid", return_value=0):
+            with self.assertRaisesRegex(manager.ManagerError, "as root"):
+                manager.sync_deps("ppsspp", jobs=2, allow_download=True)
+
+    def test_nested_source_manifest_rejects_untrusted_urls_before_download(self):
+        sandbox = self.root / "nested-fixture"
+        sandbox.mkdir()
+        manifest = sandbox / ".gitmodules"
+        manifest.write_text(
+            '[submodule "thirdparty"]\n'
+            '    path = externals/thirdparty\n'
+            '    url = file:///tmp/evil.git\n',
+            encoding="utf-8"
+        )
+        with self.assertRaisesRegex(manager.ManagerError, "Unreviewed submodule origin"):
+            manager.submodule_entries(sandbox)
+
+    def test_nested_source_manifest_rejects_path_traversal(self):
+        sandbox = self.root / "nested-fixture"
+        sandbox.mkdir()
+        (sandbox / ".gitmodules").write_text(
+            '[submodule "thirdparty"]\n'
+            '    path = ../outside\n'
+            '    url = https://github.com/safe/example.git\n',
+            encoding="utf-8"
+        )
+        with self.assertRaisesRegex(manager.ManagerError, "Unsafe submodule path"):
+            manager.submodule_entries(sandbox)
+
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
             manager.build("ppsspp", 1, yes=False)

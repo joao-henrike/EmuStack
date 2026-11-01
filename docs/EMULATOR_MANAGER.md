@@ -34,6 +34,34 @@ python3 scripts/emulator-manager.py deps bsnes
 
 **Diagnóstico de falha no Debian.** `ninja-build` fornece `ninja`, `clang` fornece `clang` e `clang++`, e `glslang-tools` fornece `glslangValidator`. Para bsnes, `make` e `g++` existentes não são suficientes: `deps bsnes` agora também verifica os módulos `pkg-config` `gtk+-3.0` e `sdl2`; o código não instala pacotes sozinho. A lista de pacotes impressa por `deps` é uma sugestão de manutenção, não um pedido para instalar tudo sem revisar. Se um build falhar, o erro mostra as últimas linhas do log e o arquivo completo permanece em `data/emulator-manager/logs/`. 
 
+### 1.1. Sincronizar dependências Git aninhadas (KytyPS5, shadPS4, PPSSPP)
+
+Se o `build-all` retornar `Nested dependencies missing/mismatched`, isso significa que os **submódulos de terceiro nível pertencentes ao upstream** ainda não foram baixados. Os 24 submódulos do EmuStack já podem estar corretos; são duas camadas diferentes.
+
+Os três upstreams possuem dezenas de dependências próprias. O comando abaixo **audita as URLs HTTPS, os gitlinks e os commits registrados** em cada `.gitmodules` antes de baixar, não segue branches nem executa o emulador. Ele só funciona com autorização explícita, limita profundidade e volume de submódulos, e não utiliza `--remote`.
+
+```bash
+python3 scripts/emulator-manager.py sync-deps kytyps5 --jobs 2 --yes-download-submodules
+python3 scripts/emulator-manager.py sync-deps shadps4 --jobs 2 --yes-download-submodules
+python3 scripts/emulator-manager.py sync-deps ppsspp --jobs 2 --yes-download-submodules
+```
+
+**Atenção:** isso clona muitos projetos de terceiros e pode consumir vários gigabytes e tráfego; faça apenas após revisar as URLs e licenças dos upstreams. Apenas repositórios HTTPS de `github.com` e `android.googlesource.com` são permitidos nesse sincronizador. Se houver novos hosts, mudanças em gitlinks ou profundidade excessiva, o comando **falha fechado** para revisão. A cópia temporária usada pelo build subsequente inclui o conteúdo sincronizado, mas não os metadados `.git`.
+
+### 1.2. Resolver Qt6 do melonDS
+
+Na execução do Debian, o CMake parou em `Qt6Config.cmake` ausente. Isso indica falta de pacotes **Qt6 de desenvolvimento** no **host**, não um problema do launcher instalado no Docker. No Debian com os pacotes correspondentes disponíveis:
+
+```bash
+sudo apt-get update
+sudo apt-get install --no-install-recommends \
+    qt6-base-dev qt6-base-private-dev qt6-multimedia-dev libqt6svg6-dev \
+    extra-cmake-modules libwayland-dev libcurl4-gnutls-dev
+python3 scripts/emulator-manager.py deps melonds
+```
+
+A checagem de melonDS agora testa `Qt6Core`, `Qt6Widgets`, `Qt6Multimedia`, `Qt6Svg` e módulos adicionais usando `pkg-config`. Ela apenas valida pré-requisitos básicos: a compilação real é a prova final. Se houver erro de versão de CMake/Qt, **não misture repositórios Debian de versões diferentes**; examine a versão do host e os requisitos do upstream antes de prosseguir.
+
 ## 2. Compilação explícita a partir de fonte fixada
 
 ```bash
