@@ -2,6 +2,8 @@
 import hashlib
 import importlib.util
 import json
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -286,6 +288,64 @@ class EmulatorManagerTests(unittest.TestCase):
     def test_plan_deps_refuses_unsupported_profile_before_git(self):
         with self.assertRaisesRegex(manager.ManagerError, "No source build recipe"):
             manager.plan_deps("xbox-series")
+
+    def test_staged_git_identity_is_source_commit_not_emustack_head(self):
+        """Nested FFmpeg must resolve its own pinned SHA in a disposable copy."""
+        parent = self.root / "upstream"
+        child_source = self.root / "ffmpeg"
+        stage = self.root / "staged-upstream"
+        parent.mkdir()
+        child_source.mkdir()
+
+        def git(cwd, *args):
+            completed = subprocess.run(
+                ["git", "-C", str(cwd), *args], capture_output=True, text=True,
+                check=True, timeout=30,
+            )
+            return completed.stdout.strip()
+
+        for location in (parent, child_source):
+            git(location, "init", "-q")
+            git(location, "config", "user.name", "Unit Test")
+            git(location, "config", "user.email", "test@invalid.example")
+
+        (child_source / "artifact.txt").write_text("nested-dependency\n", encoding="utf-8")
+        git(child_source, "add", "artifact.txt")
+        git(child_source, "commit", "-qm", "pin ffmpeg source")
+        nested_sha = git(child_source, "rev-parse", "HEAD")
+
+        (parent / "main.cpp").write_text("int main() { return 0; }\n", encoding="utf-8")
+        git(parent, "-c", "protocol.file.allow=always", "submodule", "add",
+            str(child_source), "externals/ffmpeg-core")
+        manifest = parent / ".gitmodules"
+        manifest.write_text(
+            '[submodule "externals/ffmpeg-core"]\n'
+            '    path = externals/ffmpeg-core\n'
+            '    url = https://github.com/shadps4-emu/ext-ffmpeg-core.git\n',
+            encoding="utf-8",
+        )
+        git(parent, "add", "-A")
+        git(parent, "commit", "-qm", "pin parent and nested source")
+        parent_sha = git(parent, "rev-parse", "HEAD")
+        self.assertNotEqual(parent_sha, nested_sha)
+
+        shutil.copytree(parent, stage, ignore=shutil.ignore_patterns(".git"))
+        result = manager.stage_git_metadata(parent, stage)
+        self.assertEqual(result["staged_git_repositories"], 2)
+        self.assertEqual(git(stage, "rev-parse", "HEAD"), parent_sha)
+        self.assertEqual(git(stage / "externals/ffmpeg-core", "rev-parse", "HEAD"),
+                         nested_sha)
+        self.assertEqual(git(parent, "rev-parse", "HEAD"), parent_sha)
+        self.assertEqual(git(parent / "externals/ffmpeg-core", "rev-parse", "HEAD"),
+                         nested_sha)
+        self.assertEqual(git(stage, "status", "--porcelain"), "")
+
+    def test_ppsspp_preflight_uses_sdl3_not_sdl2(self):
+        recipe = manager.RECIPES["ppsspp"]
+        self.assertEqual(recipe["pkg_config_required"], ["sdl3", "SDL3_ttf"])
+        self.assertIn("libsdl3-dev", recipe["packages"])
+        self.assertIn("libsdl3-ttf-dev", recipe["packages"])
+        self.assertNotIn("libsdl2-dev", recipe["packages"])
 
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
