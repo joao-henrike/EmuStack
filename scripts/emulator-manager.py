@@ -1035,18 +1035,17 @@ def main() -> int:
     p.add_argument("--sha256", required=True)
     p.add_argument("--binary-name", required=True)
     args = parser.parse_args()
-    # Serialize operations that mutate state or pinned nested sources. The fd
-    # remains live until process exit; flock is released by the OS on every
-    # successful or exceptional CLI path, including SIGKILL.
-    if args.action in {"build", "build-all", "install-file", "rollback",
-                       "uninstall", "purge", "sync-deps"}:
-        lock_dir = STATE / "locks"
-        ensure_dir(lock_dir)
-        lock_path = lock_dir / "mutations.lock"
-        check_managed_path(lock_path)
-        lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-        fcntl.flock(lock_fd, fcntl.LOCK_EX)
     try:
+        # All state-changing operations use one advisory lock.
+        # The process lifetime owns the fd; OS unlocks it on exit.
+        if args.action in {"build", "build-all", "install-file", "rollback",
+                           "uninstall", "purge", "sync-deps"}:
+            lock_dir = STATE / "locks"
+            ensure_dir(lock_dir)
+            lock_path = lock_dir / "mutations.lock"
+            check_managed_path(lock_path)
+            lock_fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
         if args.action == "status":
             data = status(args.id)
         elif args.action == "deps":

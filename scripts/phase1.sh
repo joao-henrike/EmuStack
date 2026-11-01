@@ -167,7 +167,7 @@ docker_args=(
 # Host data including games and saves remains read-only.
 # Grant writes only to manager state and the selected profile executable folder.
 case "$action" in
-  build|build-all|rollback|uninstall|purge|install-file)
+  build|build-all|rollback|uninstall|purge|install-file|sync-deps)
     manager_state="$ROOT/data/emulator-manager"
     [[ ! -L "$manager_state" ]] || { echo "ERRO: gerenciador symlink." >&2; exit 1; }
     mkdir -p "$manager_state"
@@ -176,6 +176,8 @@ case "$action" in
     )
     if [[ "$action" == "build-all" ]]; then
       writable_profiles=(kytyps5 shadps4 ppsspp melonds bsnes)
+    elif [[ "$action" == "sync-deps" ]]; then
+      writable_profiles=()
     else
       writable_profiles=("$id")
     fi
