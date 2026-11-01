@@ -40,7 +40,9 @@ RECIPES = {
     "kytyps5": {
         "source": "kytyps5",
         "name": "kyty_launcher",
-        "requires": ["git", "cmake", "ninja", "clang", "clang++", "glslangValidator"],
+        "requires": ["git", "cmake", "ninja", "clang", "clang++", "glslangValidator", "pkg-config"],
+        "pkg_config_required": ["Qt6Core", "Qt6Widgets", "Qt6Network", "Qt6Concurrent"],
+        "qt6_min": "6.8",
         "packages": "clang lld cmake ninja-build git glslang-tools python3 pkg-config qt6-base-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev libxfixes-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev libxkbcommon-dev libasound2-dev libpulse-dev libudev-dev libdbus-1-dev libwayland-dev wayland-protocols",
         "reference": "https://github.com/KytyPS5/KytyPS5#building-on-linux",
         "artifacts": ["package/kyty_launcher", "package/launcher", "build/kyty_launcher"],
@@ -49,6 +51,7 @@ RECIPES = {
         "source": "shadps4",
         "name": "shadPS4",
         "requires": ["git", "cmake", "ninja", "cc", "c++"],
+        "cmake_min": "3.26",
         "packages": "build-essential cmake ninja-build libx11-dev libxext-dev libwayland-dev libxkbcommon-dev libxcursor-dev libxi-dev libxss-dev libxtst-dev libxrandr-dev libxfixes-dev libudev-dev libevdev-dev libasound2-dev libpulse-dev libopenal-dev libssl-dev libvulkan-dev libpng-dev",
         "reference": "https://github.com/shadps4-emu/shadPS4/blob/main/documents/building-linux.md",
         "artifacts": ["build/shadps4"],
@@ -470,9 +473,33 @@ def dependencies(identifier: str) -> dict:
                                        capture_output=True, timeout=10, check=False)
                 if probe.returncode:
                     missing_modules.append(module)
+    version_blockers = []
+    for tool_name, required in (("cmake", recipe.get("cmake_min")),
+                                ("Qt6Core", recipe.get("qt6_min"))):
+        if not required:
+            continue
+        if tool_name == "cmake":
+            binary = shutil.which("cmake")
+            cmd = [binary, "--version"] if binary else None
+        else:
+            binary = shutil.which("pkg-config")
+            cmd = [binary, "--modversion", "Qt6Core"] if binary and "Qt6Core" not in missing_modules else None
+        if cmd is None:
+            continue
+        try:
+            probe = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=False)
+            raw = (probe.stdout or "").strip()
+            match = re.search(r"([0-9]+)\\.([0-9]+)(?:\\.([0-9]+))?", raw)
+            req = tuple(int(x) for x in (required.split(".") + ["0", "0"])[:3])
+            found = tuple(int(x or 0) for x in match.groups()) if match and probe.returncode == 0 else None
+            if found is None or found < req:
+                version_blockers.append({"tool": tool_name, "required": required, "found": raw[:100] or "unknown"})
+        except (OSError, subprocess.TimeoutExpired):
+            version_blockers.append({"tool": tool_name, "required": required, "found": "probe-failed"})
     return {
         "id": identifier, "source_build": "configured",
         "missing_commands": missing, "missing_pkg_config": missing_modules,
+        "insufficient_versions": version_blockers,
         "debian_build_packages": recipe["packages"],
         "upstream_build_reference": recipe["reference"],
         "source_commit": source_map()[recipe["source"]]["commit"],
@@ -578,12 +605,15 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
     if not 1 <= jobs <= 8:
         raise ManagerError("--jobs must be 1..8")
     report = dependencies(identifier)
-    if report["missing_commands"] or report["missing_pkg_config"]:
+    if report["missing_commands"] or report["missing_pkg_config"] or report.get("insufficient_versions"):
         problems = []
         if report["missing_commands"]:
             problems.append("commands: " + ", ".join(report["missing_commands"]))
         if report["missing_pkg_config"]:
             problems.append("pkg-config modules: " + ", ".join(report["missing_pkg_config"]))
+        if report.get("insufficient_versions"):
+            problems.extend("version: {tool} >= {required} (found {found})".format(**item)
+                            for item in report["insufficient_versions"])
         raise ManagerError(
             "Missing build dependencies for " + identifier + " (" + "; ".join(problems) + "). "
             "Review required packages with: python3 scripts/emulator-manager.py deps " + identifier
