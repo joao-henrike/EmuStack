@@ -483,6 +483,25 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertEqual(first["bundle_sha256"], second["bundle_sha256"])
         self.assertTrue(manager.status("ppsspp")[0]["bundle_hash_valid"])
 
+    def test_bundle_executable_permissions_are_included_in_integrity(self):
+        folder = self._make_runtime_bundle("PPSSPPSDL", "permissions")
+        result = manager.install_build_bundle("ppsspp", folder, "PPSSPPSDL", {})
+        self.assertTrue(manager.status("ppsspp")[0]["bundle_hash_valid"])
+        entry = self.root / result["bundle_directory"] / "PPSSPPSDL"
+        entry.chmod(0o644)
+        self.assertFalse(manager.status("ppsspp")[0]["bundle_hash_valid"])
+
+    def test_bundle_build_without_required_kyty_helper_is_rejected(self):
+        work = self.root / "build"
+        work.mkdir()
+        (work / "package").mkdir()
+        launcher = work / "package" / "kyty_launcher"
+        launcher.write_bytes(b"fake")
+        launcher.chmod(0o755)
+        (work / "build").mkdir()
+        with self.assertRaisesRegex(manager.ManagerError, "kyty_emulator runtime helper"):
+            manager._build_package("kytyps5", work, self.root, launcher)
+
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
             manager.build("ppsspp", 1, yes=False)
