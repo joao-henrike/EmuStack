@@ -150,13 +150,41 @@ docker_args=(
   --network "$network"
   --ipc private
   --mount "type=bind,src=$ROOT,dst=/workspace,readonly"
-  --mount "type=bind,src=$ROOT/data,dst=/workspace/data"
+  --mount "type=bind,src=$ROOT/data,dst=/workspace/data,readonly"
   --env HOME=/tmp
   --env XDG_CACHE_HOME=/tmp/.cache
   --env GIT_OPTIONAL_LOCKS=0
   --env PYTHONPYCACHEPREFIX=/tmp/pycache
   --workdir /workspace
 )
+
+# Host data including games and saves remains read-only.
+# Grant writes only to manager state and the selected profile executable folder.
+case "$action" in
+  build|build-all|rollback|uninstall|install-file)
+    manager_state="$ROOT/data/emulator-manager"
+    [[ ! -L "$manager_state" ]] || { echo "ERRO: gerenciador symlink." >&2; exit 1; }
+    mkdir -p "$manager_state"
+    docker_args+=(
+      --mount "type=bind,src=$manager_state,dst=/workspace/data/emulator-manager"
+    )
+    if [[ "$action" == "build-all" ]]; then
+      writable_profiles=(kytyps5 shadps4 ppsspp melonds bsnes)
+    else
+      writable_profiles=("$id")
+    fi
+    for profile_id in "${writable_profiles[@]}"; do
+      container_path="$ROOT/data/environments/$profile_id/emulators"
+      [[ ! -L "$ROOT/data/environments" && ! -L "$ROOT/data/environments/$profile_id" && ! -L "$container_path" ]] || {
+        echo "ERRO: diretório do perfil não pode ser symlink." >&2; exit 1;
+      }
+      mkdir -p "$container_path"
+      docker_args+=(
+        --mount "type=bind,src=$container_path,dst=/workspace/data/environments/$profile_id/emulators"
+      )
+    done
+    ;;
+esac
 
 # Source sync is the only explicit exception to read-only checkout.
 # It must write pinned submodule Git metadata and files on the host via scoped mounts.
