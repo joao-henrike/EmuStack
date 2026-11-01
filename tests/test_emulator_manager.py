@@ -377,8 +377,11 @@ class EmulatorManagerTests(unittest.TestCase):
         verify.assert_not_called()
 
     def test_isolated_builder_does_not_expose_docker_socket_or_privileged_mode(self):
-        script = (MODULE_PATH.parents[0] / "build-phase1-isolated.sh").read_text()
+        script = (MODULE_PATH.parents[0] / "phase1.sh").read_text()
+        compatibility = (MODULE_PATH.parents[0] / "build-phase1-isolated.sh").read_text()
         dockerfile = (MODULE_PATH.parents[0] / "phase1-builder" / "Dockerfile").read_text()
+        self.assertIn("phase1.sh", compatibility)
+        self.assertIn("build", compatibility)
         self.assertIn("--read-only", script)
         self.assertIn("--cap-drop ALL", script)
         self.assertIn("no-new-privileges", script)
@@ -390,6 +393,16 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertIn("debian:trixie-slim@sha256:", dockerfile)
         self.assertIn("libsdl3-dev", dockerfile)
         self.assertIn("qt6-base-dev", dockerfile)
+        self.assertIn('case "$action" in status|deps|test|validate|build)', script)
+        for profile in ("kytyps5", "shadps4", "ppsspp", "melonds", "bsnes"):
+            self.assertIn(profile, script)
+        self.assertIn('--network "$network"', script)
+        self.assertIn("network=none", script)
+        self.assertIn("python3-yaml", dockerfile)
+        self.assertIn("nodejs", dockerfile)
+        self.assertIn("PYTHONPYCACHEPREFIX=/tmp/pycache", script)
+        self.assertNotIn("apt-get install", script)
+        self.assertNotIn("sudo ", script)
 
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):

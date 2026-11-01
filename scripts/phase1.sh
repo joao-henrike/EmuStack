@@ -9,7 +9,8 @@ usage() {
 Usage:
   bash scripts/phase1.sh status [profile-id]
   bash scripts/phase1.sh deps {kytyps5|shadps4|ppsspp|melonds|bsnes}
-  bash scripts/phase1.sh test
+  bash scripts/phase1.sh test                 # focused regression tests
+  bash scripts/phase1.sh validate             # full static validation
   bash scripts/phase1.sh build {kytyps5|shadps4|ppsspp|melonds|bsnes} --yes-run-upstream-code [--jobs 1..4]
 
 Builds run upstream code inside a nonprivileged Debian Trixie container.
@@ -21,7 +22,7 @@ USAGE
 [[ $# -ge 1 ]] || usage
 action="$1"
 shift
-case "$action" in status|deps|test|build) ;; *) usage ;; esac
+case "$action" in status|deps|test|validate|build) ;; *) usage ;; esac
 
 valid_id() {
   case "$1" in kytyps5|shadps4|ppsspp|melonds|bsnes) return 0 ;; *) return 1 ;; esac
@@ -30,7 +31,7 @@ valid_id() {
 jobs=2
 id=""
 case "$action" in
-  test) [[ $# -eq 0 ]] || usage ;;
+  test|validate) [[ $# -eq 0 ]] || usage ;;
   status)
     [[ $# -le 1 ]] || usage
     if [[ $# -eq 1 ]]; then
@@ -93,6 +94,7 @@ docker_args=(
   --env HOME=/tmp
   --env XDG_CACHE_HOME=/tmp/.cache
   --env GIT_OPTIONAL_LOCKS=0
+  --env PYTHONPYCACHEPREFIX=/tmp/pycache
   --workdir /workspace
   "$tag"
 )
@@ -113,5 +115,8 @@ case "$action" in
   test)
     docker "${docker_args[@]}" python3 -m unittest discover \
       -s tests -p 'test_emulator_manager.py' -v
+    ;;
+  validate)
+    docker "${docker_args[@]}" bash scripts/validate-project.sh
     ;;
 esac

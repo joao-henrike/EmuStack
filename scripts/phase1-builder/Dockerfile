@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive HOME=/tmp XDG_CACHE_HOME=/tmp/.cache \
 RUN set -eu; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
-      ca-certificates git python3 cmake ninja-build clang lld build-essential pkg-config \
+      ca-certificates git python3 python3-yaml nodejs cmake ninja-build clang lld build-essential pkg-config \
       glslang-tools qt6-base-dev qt6-base-private-dev qt6-multimedia-dev qt6-svg-dev \
       extra-cmake-modules libsdl2-dev libsdl3-dev libsdl3-ttf-dev \
       libarchive-dev libenet-dev libzstd-dev libfaad-dev libpcap0.8-dev \
