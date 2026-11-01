@@ -15,6 +15,7 @@ import json
 import os
 import platform
 import re
+import shlex
 import shutil
 import stat
 import subprocess
@@ -599,7 +600,7 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
     if identifier not in RECIPES:
         raise ManagerError(f"No reviewed source-build recipe for {identifier}; use an official pinned release instead")
     if not yes:
-        raise ManagerError("Building executes third-party code on the host. Review the source; add --yes-run-upstream-code to authorize.")
+        raise ManagerError("Building executes reviewed third-party code; prefer the Docker-first scripts/phase1.sh wrapper and add --yes-run-upstream-code.")
     if os.geteuid() == 0:
         raise ManagerError("Do not compile upstream code as root")
     if not 1 <= jobs <= 8:
@@ -657,7 +658,8 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
             raise ManagerError(f"Expected executable not produced; inspect {log.relative_to(ROOT)}")
         if binary.stat().st_size == 0:
             raise ManagerError("Build produced an empty binary")
-        return install_artifact(identifier, binary, RECIPES[identifier]["name"], {
+        package, executable = _build_package(identifier, work, cloned, binary)
+        return install_build_bundle(identifier, package, executable, {
             "method": "pinned-source-build", "source": pin["url"],
             "commit": pin["commit"], "build_log": str(log.relative_to(ROOT)),
             "host": {"os": platform.system(), "architecture": platform.machine(),
@@ -666,6 +668,153 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
             "staging": staged_git,
             "warning": "Binary existence is not proof of runtime compatibility; resources may still be required.",
         })
+
+
+def _bundle_tree_hash(folder: Path) -> tuple[str, list[dict]]:
+    """Hash exactly the packaged regular files. Refuse links/devices and path escapes."""
+    items = []
+    total_size = 0
+    if not folder.is_dir() or folder.is_symlink():
+        raise ManagerError("Bundle root must be a plain directory")
+    for base, directories, files in os.walk(folder, followlinks=False):
+        current = Path(base)
+        for name in directories + files:
+            child = current / name
+            if child.is_symlink():
+                raise ManagerError("Bundle contains unsupported symlink: " + str(child))
+            if not child.is_dir() and not child.is_file():
+                raise ManagerError("Bundle contains nonregular file: " + str(child))
+        for filename in sorted(files):
+            path = current / filename
+            relative = path.relative_to(folder).as_posix()
+            size = path.stat().st_size
+            total_size += size
+            if total_size > 2_500_000_000:
+                raise ManagerError("Bundle exceeds 2.5 GB size limit")
+            items.append({"path": relative, "sha256": hash_file(path), "size": size})
+            if len(items) > 20000:
+                raise ManagerError("Bundle exceeds 20,000 file limit")
+    items.sort(key=lambda x: x["path"])
+    canonical = json.dumps(items, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest(), items
+
+
+def _build_package(identifier: str, work: Path, source: Path, binary: Path) -> tuple[Path, str]:
+    """Stage a complete runtime payload in the disposable build root."""
+    folder = work / "package-ready"
+    folder.mkdir()
+    executable = RECIPES[identifier]["name"]
+    if identifier == "kytyps5":
+        # Upstream cmake --install deploys updater, libQt6*, plugins and qt.conf.
+        installed = work / "package"
+        if not installed.is_dir():
+            raise ManagerError("KytyPS5 did not create its installed Qt/runtime package")
+        shutil.copytree(installed, folder, dirs_exist_ok=True)
+    else:
+        shutil.copy2(binary, folder / executable)
+        if identifier == "ppsspp":
+            resources = source / "assets"
+            if not resources.is_dir():
+                raise ManagerError("PPSSPP assets missing from pinned source")
+            shutil.copytree(resources, folder / "assets")
+        elif identifier == "bsnes":
+            # Official Linux builds need shader presets and database files at runtime.
+            shaders = source / "shaders"
+            database = source / "bsnes" / "Database"
+            if not shaders.is_dir() or not database.is_dir():
+                raise ManagerError("bsnes shaders or game database missing")
+            shutil.copytree(shaders, folder / "shaders")
+            shutil.copytree(database, folder / "Database")
+    candidate = folder / executable
+    if not candidate.is_file() or candidate.is_symlink() or candidate.stat().st_size == 0:
+        raise ManagerError("Expected package entrypoint was not produced: " + executable)
+    if not os.access(candidate, os.X_OK):
+        candidate.chmod(0o755)
+    return folder, executable
+
+
+def install_build_bundle(identifier: str, package: Path, binary_name: str, origin: dict) -> dict:
+    """Promote immutable runtime payload before atomically switching a launcher.
+
+    Every prior launcher references a unique content-addressed payload, so the
+    existing binary rollback mechanism restores its matching resources as well.
+    """
+    dest = destination(identifier, binary_name)
+    bundle_hash, entries = _bundle_tree_hash(package)
+    if not entries:
+        raise ManagerError("Cannot install empty runtime bundle")
+    bundle_id = bundle_hash[:32]
+    store = dest.parent / ".emustack-bundles"
+    ensure_dir(store)
+    target = store / bundle_id
+    check_managed_path(target)
+    if target.exists() or target.is_symlink():
+        if target.is_symlink() or not target.is_dir():
+            raise ManagerError("Bundle destination is not an ordinary directory")
+        existing_hash, _ = _bundle_tree_hash(target)
+        if existing_hash != bundle_hash:
+            raise ManagerError("Existing versioned bundle changed unexpectedly; refusing to overwrite")
+    else:
+        staging = Path(tempfile.mkdtemp(prefix=".emustack-stage-", dir=store))
+        try:
+            shutil.copytree(package, staging, dirs_exist_ok=True)
+            after_hash, _ = _bundle_tree_hash(staging)
+            if after_hash != bundle_hash:
+                raise ManagerError("Bundle payload changed while copying")
+            staging.rename(target)
+        finally:
+            if staging.exists():
+                shutil.rmtree(staging)
+    # Runtime paths refer to only this console's RO /custom-emulators mount.
+    entry = shlex.quote("./" + binary_name)
+    runtime_dir = "/custom-emulators/.emustack-bundles/" + bundle_id
+    launcher = (
+        "#!/bin/sh\n"
+        "# EmuStack managed launcher: immutable versioned runtime package\n"
+        "cd " + shlex.quote(runtime_dir) + " || exit 126\n"
+        "exec " + entry + ' "$@"\n'
+    )
+    temp = STATE / "work" / (identifier + "-launcher-" + bundle_id + ".sh")
+    ensure_dir(temp.parent)
+    if temp.exists() or temp.is_symlink():
+        raise ManagerError("Staged launcher already exists")
+    try:
+        temp.write_text(launcher, encoding="utf-8")
+        temp.chmod(0o700)
+        result = install_artifact(identifier, temp, binary_name, {
+            **origin, "method": "pinned-source-build-bundle",
+            "bundle_id": bundle_id, "bundle_sha256": bundle_hash,
+            "bundle_files": len(entries), "bundle_entrypoint": binary_name,
+            "bundle_directory": str(target.relative_to(ROOT)),
+        }, hash_file(temp))
+        return {**result, "bundle_files": len(entries),
+                "bundle_sha256": bundle_hash,
+                "bundle_directory": str(target.relative_to(ROOT))}
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def verify_bundle(identifier: str, current: dict) -> bool | None:
+    info = current.get("origin", {})
+    expected = info.get("bundle_sha256")
+    bundle_id = info.get("bundle_id")
+    if not expected:
+        return None
+    if not HEX64.fullmatch(expected) or not isinstance(bundle_id, str):
+        return False
+    if bundle_id != expected[:32]:
+        return False
+    root = ROOT / "data" / "environments" / identifier / "emulators" / ".emustack-bundles" / bundle_id
+    try:
+        check_managed_path(root)
+        if root.is_symlink():
+            return False
+        actual, _ = _bundle_tree_hash(root)
+        return actual == expected
+    except (ManagerError, OSError):
+        return False
+
+
 
 
 def history(identifier: str) -> list[dict]:
@@ -764,6 +913,7 @@ def status(identifier: str | None = None) -> list[dict]:
             "source_build": name in RECIPES,
             "managed_install": current,
             "managed_hash_valid": checked,
+            "bundle_hash_valid": verify_bundle(name, current) if current else None,
             "binary_signature": signature,
             "previous_versions": len(history(name)),
             "availability": "not-checked-in-host-runtime",
