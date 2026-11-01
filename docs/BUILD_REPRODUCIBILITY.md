@@ -93,7 +93,7 @@ O gerenciador recria metadados Git para cada repo na cópia temporária, incluin
 
 ## Ambiente de build separado
 
-`scripts/phase1-builder/Dockerfile` utiliza a mesma imagem base Trixie pinada pelo digest do Dockerfile principal. O processo de build roda não-root, sob bind read-only do código, e não modifica bibliotecas de desenvolvimento do Debian 12 do host. O apt dessa imagem **não é fixado a um snapshot imutável**; registramos as versões efetivas em `toolchain_info`/logs, mas isso ainda não produz builds bit a bit reproduzíveis. O instalador de perfil preserva backups e SHA-256 dos binários promovidos. A saída gráfica e dependências de runtime não são garantidas.
+`scripts/phase1-builder/Dockerfile` utiliza a mesma imagem base Trixie pinada pelo digest do Dockerfile principal. O processo de build roda não-root, sob bind read-only do código, e não modifica bibliotecas de desenvolvimento do Debian 12 do host. O apt dessa imagem **não é fixado a um snapshot imutável**; registramos as versões efetivas em `toolchain_info`/logs, mas isso ainda não produz builds bit a bit reproduzíveis. O instalador por perfil usa pacotes com assets endereçados por hash e histórico de executáveis/metadados; no rollback exige integridade do pacote anterior. A desinstalação pode ser seguida por purge confirmado de backups órfãos, sem remover ROMs/BIOS/saves. A saída gráfica e dependências de runtime não são garantidas.
 
 ## ⚠️ Limites de reprodutibilidade
 

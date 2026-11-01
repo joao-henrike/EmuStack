@@ -46,19 +46,19 @@ Outros scripts de bootstrap ainda dependem do Python do host; a migração total
 
 ## 🛠️ Fase 1 — Instalação e rollback por perfil
 
-A imagem Docker continua instalando assets oficiais pelo `release-lock.json` e pacotes APT. Adicionalmente, o **gerenciador de host** instala executáveis revisados em `data/environments/<id>/emulators/`, isolados por console, com SHA-256, versões anteriores, rollback e remoção controlada. Cinco receitas de build-fonte opt-in foram integradas: **KytyPS5, shadPS4, PPSSPP, melonDS e bsnes**. A compilação e execução real ainda exigem validação no host; nada é declarado compatível apenas por existir um binário.
+A imagem Docker continua instalando assets oficiais pelo `release-lock.json` e pacotes APT. Adicionalmente, a **CLI Docker-first de gerenciamento** instala executáveis revisados em `data/environments/<id>/emulators/`, isolados por console, com SHA-256, versões anteriores, rollback e remoção controlada. Cinco receitas de build-fonte opt-in foram integradas: **KytyPS5, shadPS4, PPSSPP, melonDS e bsnes**. A compilação e execução real ainda exigem validação no host; nada é declarado compatível apenas por existir um binário.
 
 ```bash
-python3 scripts/emulator-manager.py status
-python3 scripts/emulator-manager.py deps ppsspp
-python3 scripts/emulator-manager.py history ppsspp
+bash scripts/phase1.sh status
+bash scripts/phase1.sh deps ppsspp
+bash scripts/phase1.sh history ppsspp
 ```
 
-A instalação e o build são ações explícitas do operador no host, **nunca executadas pelo dashboard**. Não há download de jogos, firmware ou BIOS. Consulte [Gerenciamento de emuladores e builds](docs/EMULATOR_MANAGER.md) antes de usar importação ou compilação.
+A instalação e o build são ações explícitas via CLI Docker no terminal do operador, **nunca executadas pelo dashboard**. Não há download de jogos, firmware ou BIOS. Consulte [Gerenciamento de emuladores e builds](docs/EMULATOR_MANAGER.md) antes de usar importação ou compilação.
 
-### Builder isolado para os quatro perfis ainda pendentes
+### Builder isolado para todos os cinco perfis
 
-O host Debian 12 não precisa receber pacotes de outra versão para compilar shadPS4, PPSSPP e KytyPS5. Foi adicionado um builder **opt-in** em Debian 13 Trixie, com CMake mais recente, Qt 6.8 e SDL3, mantendo o código-fonte do host somente leitura e a área `data/` separada. Exemplo: `bash scripts/build-phase1-isolated.sh shadps4 --yes-run-upstream-code --jobs 2`. Para PPSSPP/KytyPS5, troque o ID. Essa compilação ainda exige avaliação no runtime, especialmente recursos/Qt do Kyty. [Procedimento e segurança](docs/EMULATOR_MANAGER.md).
+O host Debian 12 não precisa receber pacotes de outra versão para compilar shadPS4, PPSSPP e KytyPS5. Foi adicionado um builder **opt-in** em Debian 13 Trixie, com CMake mais recente, Qt 6.8 e SDL3, mantendo o código-fonte do host somente leitura e a área `data/` separada. Exemplo: `bash scripts/phase1.sh build shadps4 --yes-run-upstream-code --jobs 2`. Para PPSSPP/KytyPS5, troque o ID. Essa compilação ainda exige avaliação no runtime, especialmente recursos/Qt do Kyty. [Procedimento e segurança](docs/EMULATOR_MANAGER.md).
 
 ### Fase 1 — Aceitação parcial no Debian (31/10/2026)
 

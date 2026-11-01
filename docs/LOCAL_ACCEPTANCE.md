@@ -83,12 +83,12 @@ A aceitação salva `data/runtime-acceptance.json`; o diagnóstico do host com `
 Sem executar código upstream, valide o catálogo do host:
 
 ```bash
-python3 scripts/emulator-manager.py status
-python3 scripts/emulator-manager.py deps kytyps5
-python3 scripts/emulator-manager.py deps shadps4
-python3 scripts/emulator-manager.py deps ppsspp
-python3 scripts/emulator-manager.py deps melonds
-python3 scripts/emulator-manager.py deps bsnes
+bash scripts/phase1.sh status
+bash scripts/phase1.sh deps kytyps5
+bash scripts/phase1.sh deps shadps4
+bash scripts/phase1.sh deps ppsspp
+bash scripts/phase1.sh deps melonds
+bash scripts/phase1.sh deps bsnes
 python3 -m unittest discover -s tests -p 'test_emulator_manager.py' -v
 ```
 
@@ -96,7 +96,7 @@ O gerenciador **não certifica** a execução apenas pelo hash: `binary_signatur
 
 ### Evidência de build de 31/10/2026
 
-O relatório local mostrou **bsnes instalado** com `runtime_tested: false`. Os outros quatro builds foram bloqueados por submódulos internos (KytyPS5/shadPS4/PPSSPP) ou Qt6 ausente (melonDS). Os comandos `plan-deps` e `sync-deps` já foram executados no host com êxito: KytyPS5 (14), shadPS4 (54), PPSSPP (28) submódulos internos. No build posterior, melonDS continuou sem Qt6 pois o comando APT foi simulação; PPSSPP exigiu SDL3 em vez de SDL2; KytyPS5 e shadPS4 consultaram incorretamente o SHA do EmuStack para os prebuilds de FFmpeg. Os metadados Git temporários e a receita SDL3 foram corrigidos, ainda sem reexecução no host. Execute novamente os testes e registre hashes antes de afirmar que o software é executável.
+O relatório local mostrou **bsnes instalado** com `runtime_tested: false`. Os outros quatro builds foram bloqueados por submódulos internos (KytyPS5/shadPS4/PPSSPP) ou Qt6 ausente (melonDS). Os comandos `plan-deps` e `sync-deps` já foram executados no host com êxito: KytyPS5 (14), shadPS4 (54), PPSSPP (28) submódulos internos. Em tentativa intermediária, melonDS não encontrava Qt6 pois um comando APT foi simulação; posteriormente 41 pacotes Qt6 foram instalados e `deps melonds` passou sem pendências, ainda sem build Docker-first; PPSSPP exigiu SDL3 em vez de SDL2; KytyPS5 e shadPS4 consultaram incorretamente o SHA do EmuStack para os prebuilds de FFmpeg. Os metadados Git temporários e a receita SDL3 foram corrigidos, ainda sem reexecução no host. Execute novamente os testes e registre hashes antes de afirmar que o software é executável.
 
 ### Nova tentativa de compilação em Debian 12
 

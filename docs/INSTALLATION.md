@@ -46,9 +46,9 @@ Abra **http://127.0.0.1:8765** na mesma máquina. A porta é publicada pelo `das
 Depois do setup e de sincronizar os submódulos, use **no host**, sem sudo:
 
 ```bash
-python3 scripts/emulator-manager.py status
-python3 scripts/emulator-manager.py deps melonds
-python3 scripts/emulator-manager.py history melonds
+bash scripts/phase1.sh status
+bash scripts/phase1.sh deps melonds
+bash scripts/phase1.sh history melonds
 ```
 
 O novo gerenciador oferece compilação revisável para KytyPS5, shadPS4, PPSSPP, melonDS e bsnes, importação de binários por SHA-256, rollback e remoção. Ele **não substitui** a instalação padrão da imagem Docker nem eleva permissões; a UI continua sem acesso ao gerenciador de pacotes do host. Veja todos os comandos e avisos em [Gerenciador de emuladores](EMULATOR_MANAGER.md).
@@ -58,16 +58,16 @@ O novo gerenciador oferece compilação revisável para KytyPS5, shadPS4, PPSSPP
 A inicialização dos 24 submódulos do EmuStack não instala automaticamente os submódulos próprios de KytyPS5, shadPS4 e PPSSPP. Para revisar o primeiro nível sem download, execute:
 
 ```bash
-python3 scripts/emulator-manager.py plan-deps kytyps5
-python3 scripts/emulator-manager.py plan-deps shadps4
-python3 scripts/emulator-manager.py plan-deps ppsspp
+bash scripts/phase1.sh plan-deps kytyps5
+bash scripts/phase1.sh plan-deps shadps4
+bash scripts/phase1.sh plan-deps ppsspp
 ```
 
-Depois de auditar as URLs, `sync-deps <id> --jobs 2 --yes-download-submodules` baixa apenas commits gitlink fixados, sem executar builds. Para melonDS, verifique se `qt6-base-dev` e outros pacotes de desenvolvimento Qt6 estão instalados no host; os pacotes do Docker não bastam. Consulte [Fase 1](EMULATOR_MANAGER.md).
+Depois de auditar as URLs, `bash scripts/phase1.sh sync-deps <id> --yes-download-submodules --jobs 2` baixa commits gitlink fixados, sem compilar. As dependências Qt/SDL do melonDS ficam **na imagem Docker de builder**, não no host; não misture versões Debian do sistema. Consulte [Fase 1](EMULATOR_MANAGER.md).
 
 ### Toolchain isolada para compilação em Debian 12
 
-Se shadPS4 falhar com `BUILD_LOCAL_INTERFACE`, KytyPS5 exigir Qt 6.8 ou PPSSPP exigir SDL3, **não adicione repositórios do Debian 13 ao host**. O builder opcional `bash scripts/build-phase1-isolated.sh shadps4 --yes-run-upstream-code --jobs 2` usa a imagem Debian Trixie fixada pelo digest do projeto, executa a fonte dentro de container sem privilégios e escreve somente em `data/`. Para KytyPS5 ou PPSSPP, substitua o ID. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md) e considere os custos de disco/CPU; compilação não implica funcionamento do emulador.
+Se shadPS4 falhar com `BUILD_LOCAL_INTERFACE`, KytyPS5 exigir Qt 6.8 ou PPSSPP exigir SDL3, **não adicione repositórios do Debian 13 ao host**. O builder opcional `bash scripts/phase1.sh build shadps4 --yes-run-upstream-code --jobs 2` usa a imagem Debian Trixie fixada pelo digest do projeto, executa a fonte dentro de container sem privilégios e escreve somente em `data/`. Para KytyPS5 ou PPSSPP, substitua o ID. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md) e considere os custos de disco/CPU; compilação não implica funcionamento do emulador.
 
 ## 🧭 Subir ou inspecionar manualmente
 
