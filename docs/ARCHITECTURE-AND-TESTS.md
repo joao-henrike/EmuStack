@@ -8,6 +8,10 @@
 > [!IMPORTANT]
 > A CI acima passou pelo pipeline automatizado, incluindo build da imagem, inicialização do runtime isolado, testes de fronteira entre agentes e contratos da UI. Isso é evidência válida para aquele commit e ambiente CI; não certifica todos os jogos, firmwares, GPUs, controles ou desktops físicos.
 
+## 🐳 Princípio Docker-first
+
+Imagens especializadas abrigam toolchain e dependências dos builds; containers Compose abrigam dashboard e 20 agentes. O host expõe somente o hardware/sessão e o daemon Docker necessários, além de arquivos de dados persistentes por perfil. A CLI canônica para validar, inspecionar e compilar na Fase 1 é `bash scripts/phase1.sh`; não implica que todas as etapas legadas de bootstrap estejam migradas. Leia [Docker-first](DOCKER_FIRST_ARCHITECTURE.md).
+
 ## 🎯 Objetivo arquitetural
 
 EmuStack separa um **plano de controle** — proxy local, dashboard e CLI — de **20 agentes de perfil**. O navegador acessa `127.0.0.1:8765` pelo proxy Nginx; o dashboard não publica uma porta no host. O dashboard lista capacidades e encaminha solicitações validadas. Ele não monta os diretórios persistentes de jogos/BIOS/HOME dos consoles nem o socket Docker. Cada agente usa sua própria raiz de dados e uma rede interna exclusiva.

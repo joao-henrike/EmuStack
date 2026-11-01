@@ -2,6 +2,10 @@
 
 Este guia conduz do clone até o primeiro dashboard. Para limites de recursos e todas as variáveis, consulte [Configuração](CONFIGURATION.md).
 
+## 🐳 Padrão de instalação
+
+**A engenharia prioriza Docker-first.** Ferramentas de build, CMake/Qt/SDL, dependências de desenvolvimento, testes e emuladores ficam em containers. O host deve manter Docker Engine/Compose, a configuração de GPU/driver e as interfaces de sessão gráfica/áudio/controle estritamente necessárias. Para a Fase 1, use `bash scripts/phase1.sh validate` e `bash scripts/phase1.sh build melonds --yes-run-upstream-code --jobs 2`. O bootstrap existente ainda usa Python 3 para algumas etapas; leia [o mapa das dependências do host](DOCKER_FIRST_ARCHITECTURE.md).
+
 ## ✅ Requisitos
 
 - Linux x86-64; ambiente de referência: Debian 13.

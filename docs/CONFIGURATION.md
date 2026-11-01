@@ -2,6 +2,10 @@
 
 O arquivo `.env.example` documenta as variáveis esperadas. O caminho recomendado é executar `./scripts/host-setup.sh`, que prepara o `.env` real e as raízes de dados. **Mantenha o `.env` privado.**
 
+## Filosofia operacional Docker-first
+
+Não instalar Qt6, SDL3, FFmpeg de build, compiladores, CMake ou ferramentas de teste no host somente por causa do EmuStack. A imagem `scripts/phase1-builder/Dockerfile` contém a toolchain e a CLI de host `bash scripts/phase1.sh` executa `validate`, `test`, `deps`, `status` e `build` dentro do Docker. O Docker Engine/Compose, kernel, drivers, sessão gráfica/áudio e dispositivos autorizados permanecem do lado host. Consulte [arquitetura Docker-first](DOCKER_FIRST_ARCHITECTURE.md).
+
 ## 👥 Identidade do processo
 
 | Variável | Padrão/documento | Função |

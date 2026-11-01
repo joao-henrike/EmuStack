@@ -1,5 +1,9 @@
 # 🛡️ Modelo de segurança — EmuStack 0.7.1
 
+## Isolamento de toolchain — Docker-first
+
+Compilações e inspeções de perfis usam `bash scripts/phase1.sh`, que não compartilha o Docker socket com os containers, monta o checkout somente leitura e mantém apenas `data/` como pasta persistente gravável. Testes/inspeções são sem rede; a rede da compilação é explicitamente necessária para alguns upstreams. Essa abordagem **não garante ausência de risco**: código upstream ainda é executado, e quem pode usar o Docker daemon no host tem privilégios elevados. Mantenha o dashboard longe do daemon. Leia [arquitetura Docker-first](DOCKER_FIRST_ARCHITECTURE.md).
+
 ## 🎯 Objetivo
 
 Reduzir a exposição desnecessária entre dashboard, agentes e dados persistentes dos perfis. A configuração é voltada a uso **local e individual**. Não é uma plataforma multiusuário nem uma sandbox de alta garantia para executar arquivos deliberadamente maliciosos.

@@ -30,6 +30,18 @@ python3 scripts/upstream-manager.py audit --require-checkout
 
 Para atualizar commits com revisão e sem alterar silenciosamente todos os módulos, veja o [guia de códigos-fonte upstream](docs/UPSTREAM_SOURCES.md).
 
+## 🐳 Docker-first: host mínimo, engenharia padronizada
+
+**Princípio do projeto:** dashboard, agentes, emuladores, ferramentas de build, Qt, SDL e testes executam dentro de containers. O host mantém Docker/Compose, driver da GPU/sessão gráfica/áudio e as interfaces de hardware inevitáveis. O novo `scripts/phase1.sh` executa validação, status, dependências e builds dos **cinco perfis** dentro do mesmo builder Trixie, sem instalar toolchains no host:
+
+```bash
+bash scripts/phase1.sh validate
+bash scripts/phase1.sh deps melonds
+bash scripts/phase1.sh build melonds --yes-run-upstream-code --jobs 2
+```
+
+Outros scripts de bootstrap ainda dependem do Python do host; a migração total do bootstrap não foi declarada concluída. Ver [arquitetura Docker-first e dívida técnica](docs/DOCKER_FIRST_ARCHITECTURE.md).
+
 ## 🛠️ Fase 1 — Instalação e rollback por perfil
 
 A imagem Docker continua instalando assets oficiais pelo `release-lock.json` e pacotes APT. Adicionalmente, o **gerenciador de host** instala executáveis revisados em `data/environments/<id>/emulators/`, isolados por console, com SHA-256, versões anteriores, rollback e remoção controlada. Cinco receitas de build-fonte opt-in foram integradas: **KytyPS5, shadPS4, PPSSPP, melonDS e bsnes**. A compilação e execução real ainda exigem validação no host; nada é declarado compatível apenas por existir um binário.

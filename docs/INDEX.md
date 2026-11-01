@@ -9,6 +9,7 @@ Bem-vindo à central de documentação do EmuStack. Os guias são organizados po
 
 | Objetivo | Leia primeiro | Depois |
 |---|---|---|
+| Entender o padrão Docker-first e o mínimo necessário no host | [Arquitetura Docker-first](DOCKER_FIRST_ARCHITECTURE.md) | [Instalação](INSTALLATION.md), [Segurança](SECURITY.md) |
 | Instalar do zero | [Instalação](INSTALLATION.md) | [Configuração](CONFIGURATION.md), [Aceitação local](LOCAL_ACCEPTANCE.md) |
 | Abrir o painel | [Guia do usuário](USER_GUIDE.md) | [Solução de problemas](TROUBLESHOOTING.md) |
 | Saber o que cada console suporta | [Matriz de emuladores](EMULATOR_MATRIX.md) | [Menus originais](ORIGINAL_SYSTEM_UI.md) |
@@ -41,6 +42,7 @@ Bem-vindo à central de documentação do EmuStack. Os guias são organizados po
 - [Arquitetura, testes e limites de validação](ARCHITECTURE-AND-TESTS.md)
 
 ### 🧰 Engenharia e manutenção
+- [Arquitetura Docker-first — host mínimo, builders e volumes](DOCKER_FIRST_ARCHITECTURE.md)
 - [Build e reprodutibilidade](BUILD_REPRODUCIBILITY.md)
 - [Referência de API e CLI](API_REFERENCE.md)
 - [Política de release e atualização](RELEASE_AND_UPDATES.md)

@@ -5,6 +5,19 @@ O EmuStack possui **duas vias complementares de instalação**, que não devem s
 1. **Imagem Docker oficial:** `release-lock.json`, pacotes Debian e `scripts/install-upstream.py` mantêm os executáveis oficiais já instalados durante o build. Reconstruir a imagem continua sendo a forma de renovar esses assets.
 2. **Gerenciador de host:** `scripts/emulator-manager.py` mantém binários adicionais *somente* em `data/environments/<id>/emulators/`, que é montado **somente leitura** no agente daquele console. Não monta o socket Docker no dashboard, não executa comandos arbitrários pela API e não mexe nos arquivos de jogos/saves.
 
+## Caminho recomendado: Docker para **todos os cinco builds**
+
+O caminho canônico é `bash scripts/phase1.sh`, que executa `status`, `deps`, `test`, `validate` e a compilação dos perfis **KytyPS5, shadPS4, PPSSPP, melonDS e bsnes** usando a mesma imagem Trixie. O host não precisa de CMake, Qt, SDL, Node ou Python para esse comando; só Bash, Docker e checkout Git. O build nativo `python3 scripts/emulator-manager.py build ...` continua **apenas como opção de desenvolvimento/legado**, não como recomendação padrão. O script antigo `build-phase1-isolated.sh` delega para a CLI nova.
+
+```bash
+bash scripts/phase1.sh validate
+bash scripts/phase1.sh deps melonds
+bash scripts/phase1.sh status
+bash scripts/phase1.sh build melonds --yes-run-upstream-code --jobs 2
+```
+
+Os comandos sem compilação são executados com rede desativada. O build pode usar rede para dependências upstream, mas não ganha socket Docker ou acesso administrativo ao host. Recursos e bibliotecas de runtime ainda necessitam de validação após compilar. Consulte [arquitetura Docker-first](DOCKER_FIRST_ARCHITECTURE.md).
+
 ## Estado de integração (não confundir com compatibilidade)
 
 | Perfil | Situação de Fase 1 |

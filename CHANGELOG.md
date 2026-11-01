@@ -12,6 +12,13 @@ Todas as alterações relevantes do projeto são registradas aqui. Status de com
 - 🔄 Documentada a atualização manual do release-lock e a revisão de artifacts antes da incorporação.
 - ⚖️ Reforçadas as orientações de conteúdo legal, privacidade dos relatórios e ausência de ROMs/BIOS/firmware no projeto.
 
+### Fase 1 — Padronização Docker-first (31/10/2026)
+
+- A decisão arquitetural é manter CMake, Clang, Qt, SDL, Node/Python de testes e emuladores no Docker. Drivers/kernel, Docker Engine/Compose e integração de hardware/sessão permanecem no host.
+- `scripts/phase1.sh` passa a ser CLI canônica para `validate`, `test`, `deps`, `status` e `build` dos cinco perfis com toolchain padronizada, rede desligada nos diagnósticos e fontes somente leitura.
+- `scripts/build-phase1-isolated.sh` permanece como wrapper compatível; suporte de build de bsnes incluído no Docker, deixando o host sem necessidade de toolchain para a Fase 1.
+- Documento `docs/DOCKER_FIRST_ARCHITECTURE.md` registra fronteiras, dependências mínimas, privilégios, limitações e etapas de bootstrap ainda legadas.
+
 ### Fase 1 — Ambiente isolado de build para Debian 12 (31/10/2026)
 
 - Corrigido o diagnóstico das versões: shadPS4/OpenAL usa expressão CMake 3.26 não reconhecida pelo CMake 3.25.1; KytyPS5 exige Qt6 >=6.8 e host traz 6.4.2; PPSSPP necessita SDL3 e SDL3_ttf ausentes no APT Bookworm.
