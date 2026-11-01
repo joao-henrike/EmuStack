@@ -16,6 +16,7 @@ Usage:
   bash scripts/phase1.sh history <profile>
   bash scripts/phase1.sh rollback <profile>
   bash scripts/phase1.sh uninstall <profile>
+  bash scripts/phase1.sh purge <profile> --yes-delete-managed-backups # irreversible
   bash scripts/phase1.sh logs <profile>
   bash scripts/phase1.sh install-file <profile> <data/imports/filename> <sha256> <allowlisted-binary-name>
   bash scripts/phase1.sh build-all --yes-run-upstream-code [--jobs 1..4]
@@ -31,7 +32,7 @@ USAGE
 [[ $# -ge 1 ]] || usage
 action="$1"
 shift
-case "$action" in status|deps|test|validate|build|build-all|plan-deps|sync-deps|history|rollback|uninstall|install-file|logs) ;; *) usage ;; esac
+case "$action" in status|deps|test|validate|build|build-all|plan-deps|sync-deps|history|rollback|uninstall|purge|install-file|logs) ;; *) usage ;; esac
 
 valid_id() {
   case "$1" in kytyps5|shadps4|ppsspp|melonds|bsnes) return 0 ;; *) return 1 ;; esac
@@ -70,6 +71,10 @@ case "$action" in
     ;;
   history|rollback|uninstall|logs)
     [[ $# -eq 1 ]] || usage
+    id="$1"
+    ;;
+  purge)
+    [[ $# -eq 2 && "$2" == "--yes-delete-managed-backups" ]] || usage
     id="$1"
     ;;
   install-file)
@@ -112,7 +117,7 @@ esac
 
 # Commands accepting profile IDs are never forwarded unchecked to the container.
 case "$action" in
-  history|rollback|uninstall|logs|install-file)
+  history|rollback|uninstall|purge|logs|install-file)
     case "$id" in
       kytyps5|shadps4|ppsspp|melonds|bsnes|rpcs3|duckstation|pcsx2|vita3k|xbox-one|xenia-canary|xbox-series|xemu|eden|cemu|dolphin|azahar|mgba|mupen64plus|mesen) ;;
       *) usage ;;
@@ -162,7 +167,7 @@ docker_args=(
 # Host data including games and saves remains read-only.
 # Grant writes only to manager state and the selected profile executable folder.
 case "$action" in
-  build|build-all|rollback|uninstall|install-file)
+  build|build-all|rollback|uninstall|purge|install-file)
     manager_state="$ROOT/data/emulator-manager"
     [[ ! -L "$manager_state" ]] || { echo "ERRO: gerenciador symlink." >&2; exit 1; }
     mkdir -p "$manager_state"
@@ -236,6 +241,9 @@ case "$action" in
     ;;
   history|rollback|uninstall)
     docker "${docker_args[@]}" python3 scripts/emulator-manager.py "$action" "$id"
+    ;;
+  purge)
+    docker "${docker_args[@]}" python3 scripts/emulator-manager.py       purge "$id" --yes-delete-managed-backups
     ;;
   install-file)
     [[ ! -L "$ROOT/data/imports" && -f "$ROOT/data/imports/$filename" && ! -L "$ROOT/data/imports/$filename" ]] || {
