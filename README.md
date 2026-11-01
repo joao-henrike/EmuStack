@@ -42,6 +42,10 @@ python3 scripts/emulator-manager.py history ppsspp
 
 A instalação e o build são ações explícitas do operador no host, **nunca executadas pelo dashboard**. Não há download de jogos, firmware ou BIOS. Consulte [Gerenciamento de emuladores e builds](docs/EMULATOR_MANAGER.md) antes de usar importação ou compilação.
 
+### Fase 1 — Aceitação parcial no Debian (31/10/2026)
+
+O operador compilou e instalou **bsnes** no mount privado do perfil, com SHA-256 registrado; `runtime_tested` continua falso. KytyPS5, shadPS4 e PPSSPP foram bloqueados por **submódulos Git internos ainda não sincronizados**. melonDS falhou porque o CMake não encontrou Qt6 de desenvolvimento. Para os três primeiros, use a inspeção `plan-deps` e a sincronização explícita `sync-deps`; para melonDS instale Qt6 do **mesmo Debian do host** e repita `deps`. O guia completo está em [Gerenciador da Fase 1](docs/EMULATOR_MANAGER.md). Nenhuma falha de instalação é tratada como prova de incompatibilidade do console.
+
 ## ✨ Visão geral
 
 | Área | O que oferece |

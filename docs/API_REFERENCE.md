@@ -5,7 +5,7 @@
 
 ## 🛠️ Gerenciador exclusivo do host
 
-`scripts/emulator-manager.py` é uma CLI separada das APIs. Os comandos `status`, `deps`, `build`, `build-all`, `install-file`, `history`, `rollback` e `uninstall` emitem JSON ou erros em stderr. `status` exibe metadados do release lock, formato estático do binário gerenciado e estado da instalação, sem afirmar jogabilidade. **Não existem endpoints HTTP para instalar, atualizar ou apagar executáveis**, preservando a fronteira de privilégios do dashboard. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md).
+`scripts/emulator-manager.py` é uma CLI separada das APIs. Os comandos `status`, `deps`, `plan-deps`, `sync-deps`, `build`, `build-all`, `install-file`, `history`, `rollback` e `uninstall` emitem JSON ou erros em stderr. `status` exibe metadados do release lock, formato estático do binário gerenciado e estado da instalação, sem afirmar jogabilidade. **Não existem endpoints HTTP para instalar, atualizar ou apagar executáveis**, preservando a fronteira de privilégios do dashboard. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md).
 
 ## 🧭 Camadas de API
 

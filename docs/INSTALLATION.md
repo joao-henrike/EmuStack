@@ -47,6 +47,18 @@ python3 scripts/emulator-manager.py history melonds
 
 O novo gerenciador oferece compilação revisável para KytyPS5, shadPS4, PPSSPP, melonDS e bsnes, importação de binários por SHA-256, rollback e remoção. Ele **não substitui** a instalação padrão da imagem Docker nem eleva permissões; a UI continua sem acesso ao gerenciador de pacotes do host. Veja todos os comandos e avisos em [Gerenciador de emuladores](EMULATOR_MANAGER.md).
 
+### Submódulos internos e Qt6 durante a Fase 1
+
+A inicialização dos 24 submódulos do EmuStack não instala automaticamente os submódulos próprios de KytyPS5, shadPS4 e PPSSPP. Para revisar o primeiro nível sem download, execute:
+
+```bash
+python3 scripts/emulator-manager.py plan-deps kytyps5
+python3 scripts/emulator-manager.py plan-deps shadps4
+python3 scripts/emulator-manager.py plan-deps ppsspp
+```
+
+Depois de auditar as URLs, `sync-deps <id> --jobs 2 --yes-download-submodules` baixa apenas commits gitlink fixados, sem executar builds. Para melonDS, verifique se `qt6-base-dev` e outros pacotes de desenvolvimento Qt6 estão instalados no host; os pacotes do Docker não bastam. Consulte [Fase 1](EMULATOR_MANAGER.md).
+
 ## 🧭 Subir ou inspecionar manualmente
 
 Se o host setup gerou um override, inclua-o em cada comando manual que precise das integrações:
