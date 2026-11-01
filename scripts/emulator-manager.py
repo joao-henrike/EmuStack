@@ -668,6 +668,10 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
             raise ManagerError(f"Expected executable not produced; inspect {log.relative_to(ROOT)}")
         if binary.stat().st_size == 0:
             raise ManagerError("Build produced an empty binary")
+        details = inspect_binary(binary)
+        if details.get("format") != "ELF" or details.get("architecture_hint") != "x86_64":
+            raise ManagerError("Built executable is not verified Linux x86_64 ELF; "
+                               "refusing to install the wrong platform artifact")
         package, executable = _build_package(identifier, work, cloned, binary)
         return install_build_bundle(identifier, package, executable, {
             "method": "pinned-source-build", "source": pin["url"],
@@ -701,7 +705,8 @@ def _bundle_tree_hash(folder: Path) -> tuple[str, list[dict]]:
             total_size += size
             if total_size > 2_500_000_000:
                 raise ManagerError("Bundle exceeds 2.5 GB size limit")
-            items.append({"path": relative, "sha256": hash_file(path), "size": size})
+            items.append({"path": relative, "sha256": hash_file(path), "size": size,
+                          "executable": bool(path.stat().st_mode & 0o111)})
             if len(items) > 20000:
                 raise ManagerError("Bundle exceeds 20,000 file limit")
     items.sort(key=lambda x: x["path"])
