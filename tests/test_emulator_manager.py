@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -346,6 +347,49 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertIn("libsdl3-dev", recipe["packages"])
         self.assertIn("libsdl3-ttf-dev", recipe["packages"])
         self.assertNotIn("libsdl2-dev", recipe["packages"])
+
+    def test_shadps4_preflight_blocks_old_cmake_version(self):
+        with patch.object(manager.shutil, "which", side_effect=lambda exe: "/usr/bin/" + exe), \
+             patch.object(manager.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout="cmake version 3.25.1\n")):
+            report = manager.dependencies("shadps4")
+        self.assertEqual(report["insufficient_versions"], [
+            {"tool": "cmake", "required": "3.26", "found": "cmake version 3.25.1"}
+        ])
+
+    def test_kyty_launcher_preflight_blocks_old_qt6_version(self):
+        with patch.object(manager.shutil, "which", side_effect=lambda exe: "/usr/bin/" + exe), \
+             patch.object(manager.subprocess, "run",
+                          return_value=SimpleNamespace(returncode=0, stdout="6.4.2\n")):
+            report = manager.dependencies("kytyps5")
+        self.assertEqual(report["insufficient_versions"], [
+            {"tool": "Qt6Core", "required": "6.8", "found": "6.4.2"}
+        ])
+
+    def test_version_preflight_rejects_build_before_touching_source(self):
+        with patch.object(manager.os, "geteuid", return_value=1000), \
+             patch.object(manager, "dependencies", return_value={
+                 "missing_commands": [], "missing_pkg_config": [],
+                 "insufficient_versions": [{"tool": "cmake", "required": "3.26", "found": "3.25.1"}]
+             }), patch.object(manager, "verify_source") as verify:
+            with self.assertRaisesRegex(manager.ManagerError, r"cmake >= 3\.26"):
+                manager.build("shadps4", 2, True)
+        verify.assert_not_called()
+
+    def test_isolated_builder_does_not_expose_docker_socket_or_privileged_mode(self):
+        script = (MODULE_PATH.parents[0] / "build-phase1-isolated.sh").read_text()
+        dockerfile = (MODULE_PATH.parents[0] / "phase1-builder" / "Dockerfile").read_text()
+        self.assertIn("--read-only", script)
+        self.assertIn("--cap-drop ALL", script)
+        self.assertIn("no-new-privileges", script)
+        self.assertIn("--yes-run-upstream-code", script)
+        self.assertIn("dst=/workspace,readonly", script)
+        self.assertIn("dst=/workspace/data", script)
+        self.assertNotIn("/var/run/docker.sock", script)
+        self.assertNotIn("--privileged", script)
+        self.assertIn("debian:trixie-slim@sha256:", dockerfile)
+        self.assertIn("libsdl3-dev", dockerfile)
+        self.assertIn("qt6-base-dev", dockerfile)
 
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
