@@ -399,6 +399,8 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertIn("sync-deps", script)
         self.assertIn("install-file", script)
         self.assertIn("rollback", script)
+        self.assertIn("purge", script)
+        self.assertIn("--yes-delete-managed-backups", script)
         self.assertIn("history", script)
         self.assertIn("logs", script)
         for profile in ("kytyps5", "shadps4", "ppsspp", "melonds", "bsnes"):
@@ -501,6 +503,52 @@ class EmulatorManagerTests(unittest.TestCase):
         (work / "build").mkdir()
         with self.assertRaisesRegex(manager.ManagerError, "kyty_emulator runtime helper"):
             manager._build_package("kytyps5", work, self.root, launcher)
+
+    def test_purge_requires_uninstall_and_explicit_confirmation(self):
+        folder = self._make_runtime_bundle("PPSSPPSDL", "purge")
+        manager.install_build_bundle("ppsspp", folder, "PPSSPPSDL", {})
+        with self.assertRaisesRegex(manager.ManagerError, "yes-delete-managed-backups"):
+            manager.purge("ppsspp", False)
+        with self.assertRaisesRegex(manager.ManagerError, "Uninstall"):
+            manager.purge("ppsspp", True)
+        self.assertTrue(manager.status("ppsspp")[0]["bundle_hash_valid"])
+
+    def test_purge_removes_only_managed_backups_not_user_data(self):
+        first = self._make_runtime_bundle("PPSSPPSDL", "first")
+        second = self._make_runtime_bundle("PPSSPPSDL", "second")
+        manager.install_build_bundle("ppsspp", first, "PPSSPPSDL", {})
+        manager.install_build_bundle("ppsspp", second, "PPSSPPSDL", {})
+        game = self.root / "data/environments/ppsspp/games/game.iso"
+        game.parent.mkdir(parents=True)
+        game.write_bytes(b"homebrew")
+        bios = self.root / "data/environments/ppsspp/bios/custom.bin"
+        bios.parent.mkdir(parents=True)
+        bios.write_bytes(b"user-owned")
+        saves = self.root / "data/environments/ppsspp/saves/save.dat"
+        saves.parent.mkdir(parents=True)
+        saves.write_bytes(b"saved")
+        manager.uninstall("ppsspp")
+        result = manager.purge("ppsspp", True)
+        self.assertEqual(result["bundle_directories"], 2)
+        self.assertFalse((self.root / "data/environments/ppsspp/emulators/.emustack-bundles").exists())
+        self.assertEqual(game.read_bytes(), b"homebrew")
+        self.assertEqual(bios.read_bytes(), b"user-owned")
+        self.assertEqual(saves.read_bytes(), b"saved")
+        self.assertEqual(manager.history("ppsspp"), [])
+        with self.assertRaisesRegex(manager.ManagerError, "No manager-controlled"):
+            manager.rollback("ppsspp")
+
+    def test_purge_rejects_unmanaged_files_in_bundle_store(self):
+        manager.install_build_bundle(
+            "ppsspp", self._make_runtime_bundle("PPSSPPSDL", "first"),
+            "PPSSPPSDL", {}
+        )
+        manager.uninstall("ppsspp")
+        unexpected = self.root / "data/environments/ppsspp/emulators/.emustack-bundles/unmanaged"
+        unexpected.write_text("keep", encoding="utf-8")
+        with self.assertRaisesRegex(manager.ManagerError, "Unexpected bundle store entry"):
+            manager.purge("ppsspp", True)
+        self.assertTrue(unexpected.is_file())
 
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
