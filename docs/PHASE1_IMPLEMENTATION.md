@@ -1,5 +1,7 @@
 # Fase 1 — Implementação Docker-first e critérios de aceitação
 
+**Serialização e isolamento:** operações mutáveis usam um `flock` no estado do gerenciador, impedindo builds/rollbacks/purges simultâneos conflitantes. Para `sync-deps`, o único acesso de escrita a Git é ao checkout `third_party/<id>` selecionado e a seus metadados `.git/modules/third_party/<id>`; os outros projetos permanecem somente leitura.
+
 **Escopo:** branch `fix/dashboard-degraded-startup`; não foi mesclada à `main`. Este documento descreve o código preparado para a Fase 1, **não equivale a atestado de compilação, execução gráfica, suporte a ROM ou boot de console**.
 
 ## Arquitetura de operação

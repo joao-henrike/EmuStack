@@ -1,5 +1,7 @@
 # 🐳 Princípio Docker-first do EmuStack
 
+**Serialização e isolamento:** operações mutáveis usam um `flock` no estado do gerenciador, impedindo builds/rollbacks/purges simultâneos conflitantes. Para `sync-deps`, o único acesso de escrita a Git é ao checkout `third_party/<id>` selecionado e a seus metadados `.git/modules/third_party/<id>`; os outros projetos permanecem somente leitura.
+
 **Decisão operacional aplicada à Fase 1:** somente o estado do manager e o subdiretório `emulators/` do perfil em alteração são graváveis no builder. `data/` permanece read-only em geral, protegendo jogos/saves/BIOS; `sync-deps` constitui exceção explícita para gravar Git/submódulos. Veja [escopo completo](PHASE1_IMPLEMENTATION.md).
 
 > Regra de engenharia: não instalar ferramentas de compilação ou bibliotecas de emuladores no host quando puderem existir numa imagem Docker pinada, auditável e descartável.

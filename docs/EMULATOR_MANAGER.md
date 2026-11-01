@@ -1,5 +1,7 @@
 # 🛠️ Fase 1 — Gerenciador Docker-first de emuladores
 
+**Serialização e isolamento:** operações mutáveis usam um `flock` no estado do gerenciador, impedindo builds/rollbacks/purges simultâneos conflitantes. Para `sync-deps`, o único acesso de escrita a Git é ao checkout `third_party/<id>` selecionado e a seus metadados `.git/modules/third_party/<id>`; os outros projetos permanecem somente leitura.
+
 > **Estado:** ciclo de código implementado na branch `fix/dashboard-degraded-startup`, sem merge em `main`. Builds reais, compatibilidade gráfica e integração com jogos **ainda dependem da rodada de testes posterior**. [Contrato e aceite](PHASE1_IMPLEMENTATION.md).
 
 ## 1. Arquitetura e fronteiras
