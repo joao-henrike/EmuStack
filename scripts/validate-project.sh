@@ -21,5 +21,5 @@ else
 fi
 printf '\n== Shell syntax ==\n'
 for script in scripts/host-setup.sh scripts/install-available-apt.sh; do sh -n "$script"; done
-for script in scripts/build-and-audit.sh scripts/validate-project.sh scripts/freeze-upstream-lock.sh scripts/runtime-acceptance.sh scripts/build-phase1-isolated.sh scripts/phase1.sh; do bash -n "$script"; done
+for script in scripts/build-and-audit.sh scripts/validate-project.sh scripts/freeze-upstream-lock.sh scripts/runtime-acceptance.sh scripts/build-phase1-isolated.sh scripts/phase1.sh scripts/phase1-acceptance.sh; do bash -n "$script"; done
 printf 'Shell syntax OK.\n'

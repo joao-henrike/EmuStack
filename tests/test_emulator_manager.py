@@ -408,6 +408,7 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertIn("python3-yaml", dockerfile)
         self.assertIn("nodejs", dockerfile)
         self.assertIn("PYTHONPYCACHEPREFIX=/tmp/pycache", script)
+        self.assertIn("data/imports", script)
         self.assertNotIn("apt-get install", script)
         self.assertNotIn("sudo ", script)
 

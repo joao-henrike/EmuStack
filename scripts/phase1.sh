@@ -22,7 +22,8 @@ Usage:
   bash scripts/phase1.sh build {kytyps5|shadps4|ppsspp|melonds|bsnes} --yes-run-upstream-code [--jobs 1..4]
 
 Builds run upstream code inside a nonprivileged Debian Trixie container.
-Only project data/ is writable; the checkout, source lock and Git objects are read-only.
+Builds only write manager state and the selected profile emulators; game/BIOS/save data stays read-only.
+Only explicit sync-deps may write selected upstream checkout and Git metadata.
 No host APT/CMake/Qt/SDL/Python or Docker socket inside the build container.
 USAGE
   exit 2
@@ -237,7 +238,7 @@ case "$action" in
     docker "${docker_args[@]}" python3 scripts/emulator-manager.py "$action" "$id"
     ;;
   install-file)
-    [[ -f "$ROOT/data/imports/$filename" && ! -L "$ROOT/data/imports/$filename" ]] || {
+    [[ ! -L "$ROOT/data/imports" && -f "$ROOT/data/imports/$filename" && ! -L "$ROOT/data/imports/$filename" ]] || {
       echo "ERRO: copie o arquivo revisado para data/imports/ antes de importar." >&2; exit 1;
     }
     docker "${docker_args[@]}" python3 scripts/emulator-manager.py \

@@ -25,12 +25,13 @@ def main() -> int:
         report["error"] = "managed executable missing, symlinked or not executable"
         print(json.dumps(report, indent=2))
         return 1
-    first = entry.read_bytes()[:8192]
+    with entry.open("rb") as source:
+        first = source.read(8192)
     marker = b"/custom-emulators/.emustack-bundles/"
     if marker not in first:
-        report["warning"] = "legacy unmanaged/raw binary; bundle identity unavailable"
+        report["error"] = "legacy raw binary; managed bundle integration not verified"
         print(json.dumps(report, indent=2))
-        return 0
+        return 1
     text = first.decode("utf-8", errors="replace")
     import re
     found = re.search(r"^cd /custom-emulators/\.emustack-bundles/([a-f0-9]{32}) \|\| exit 126$", text, re.M)
@@ -51,7 +52,8 @@ def main() -> int:
     elif profile == "bsnes":
         report["assets_found"] = (bundle / "Database").is_dir() and (bundle / "shaders").is_dir()
     elif profile == "kytyps5":
-        report["assets_found"] = (bundle / "qt.conf").is_file() and (bundle / "plugins").is_dir()
+        report["assets_found"] = (bundle / "qt.conf").is_file() and (
+            bundle / "plugins").is_dir() and (bundle / "kyty_emulator").is_file()
     else:
         report["assets_found"] = True
     if not shutil.which("ldd"):
