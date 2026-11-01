@@ -134,7 +134,9 @@ docker build --file "$ROOT/scripts/phase1-builder/Dockerfile" \
   --tag "$tag" "$ROOT/scripts/phase1-builder"
 
 network=none
-[[ "$action" == "build" || "$action" == "build-all" || "$action" == "sync-deps" ]] && network=bridge
+if [[ "$action" == "build" || "$action" == "build-all" || "$action" == "sync-deps" ]]; then
+  network=bridge
+fi
 docker_args=(
   run --rm --init
   --user "$(id -u):$(id -g)"
@@ -154,7 +156,6 @@ docker_args=(
   --env GIT_OPTIONAL_LOCKS=0
   --env PYTHONPYCACHEPREFIX=/tmp/pycache
   --workdir /workspace
-  "$tag"
 )
 
 # Source sync is the only explicit exception to read-only checkout.
@@ -171,6 +172,7 @@ if [[ "$action" == "sync-deps" ]]; then
     --mount "type=bind,src=$ROOT/third_party,dst=/workspace/third_party"
   )
 fi
+docker_args+=("$tag")
 
 case "$action" in
   build)
