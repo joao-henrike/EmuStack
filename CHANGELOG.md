@@ -1,6 +1,6 @@
 # 📝 Changelog
 
-**Fase 1 (branch de desenvolvimento):** CLI Docker-first unificada; sincronização de Git pinado; pacotes versionados por conteúdo para cinco emuladores; armazenamento de assets, provenance/rollback e verificação de integridade; smoke de libs do runtime; import SHA-256; volumes de games/BIOS/saves RO no builder. **Builds/GUI ainda exigem aceitação posterior.** [Documento técnico](docs/PHASE1_IMPLEMENTATION.md).
+**Fase 1 (branch de desenvolvimento):** CLI Docker-first unificada; sincronização de Git pinado; pacotes versionados por conteúdo para cinco emuladores; armazenamento de assets, provenance/rollback e verificação de integridade; smoke de libs do runtime; import SHA-256; volumes de games/BIOS/saves RO no builder. Incluído purge explícito de histórico/bundles após uninstall, com barreiras contra apagar dados de jogos. **Builds/GUI ainda exigem aceitação posterior.** [Documento técnico](docs/PHASE1_IMPLEMENTATION.md).
 
 Todas as alterações relevantes do projeto são registradas aqui. Status de compatibilidade e resultados atuais devem ser conferidos na matriz, nos artifacts e nas execuções CI; o histórico não é uma garantia de comportamento em qualquer host.
 

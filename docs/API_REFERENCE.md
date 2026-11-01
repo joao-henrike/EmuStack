@@ -1,6 +1,6 @@
 # 🔌 Referência de API e CLI
 
-**CLI de operações (não é API do dashboard):** `bash scripts/phase1.sh` fornece `status`, `deps`, `plan-deps`, `sync-deps`, `build`, `build-all`, `install-file`, `history`, `rollback`, `uninstall`, `logs`, `test` e `validate`. Não foi adicionada permissão de build ao dashboard. Consulte [referência Fase 1](PHASE1_IMPLEMENTATION.md).
+**CLI de operações (não é API do dashboard):** `bash scripts/phase1.sh` fornece `status`, `deps`, `plan-deps`, `sync-deps`, `build`, `build-all`, `install-file`, `history`, `rollback`, `uninstall`, `purge` (com confirmação destrutiva), `logs`, `test` e `validate`. Não foi adicionada permissão de build ao dashboard. Consulte [referência Fase 1](PHASE1_IMPLEMENTATION.md).
 
 > [!WARNING]
 > Esta é a API interna da versão 0.7.1, destinada à UI local e à comunicação entre dashboard e agentes. **Não é uma API pública estável.** Não exponha a porta, não use reverse proxy nem transforme os endpoints internos de agentes em endpoints acessíveis pela LAN.

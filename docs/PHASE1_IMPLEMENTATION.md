@@ -27,7 +27,7 @@ Outros 13 perfis permanecem sob gestão de releases oficiais fixados, instalador
 2. `build` compila em cópia temporária preservando o SHA Git dos submódulos e prepara um pacote por console, sem executar o jogo.
 3. `install_build_bundle` copia o payload inteiro para `.emustack-bundles/<sha256-prefix>` **dentro da pasta exclusiva do perfil**; arquivos são conferidos por hash e links simbólicos são rejeitados.
 4. Um launcher POSIX na raiz do mount aponta para o pacote exato. Atualizar esse launcher preserva a versão anterior e seus metadados; `rollback` restaura o pacote original, recusando conteúdo alterado.
-5. `uninstall` remove somente o launcher gerenciado. Os diretórios de versões anteriores são preservados por segurança e para rollback: limpeza agressiva **não é automática**.
+5. `uninstall` remove somente o launcher gerenciado. Os diretórios de versões anteriores são preservados por segurança e para rollback: limpeza agressiva **não é automática**. `purge <id> --yes-delete-managed-backups` pode apagar backups/bundles órfãos apenas depois da desinstalação, sem tocar em jogos/saves/BIOS. Isso elimina a possibilidade de rollback.
 6. `install-file` só importa arquivo local já revisado em `data/imports/`, com nome no catálogo e SHA-256 explícito; não busca binários de sites arbitrários.
 
 Os hashes demonstram integridade perante o conteúdo armazenado, **não autenticidade das fontes nem compatibilidade funcional**. O fluxo não atualiza silenciosamente `release-lock.json` ou `source-lock.json` e não distribui ROMs, BIOS ou firmware de console.
@@ -44,6 +44,7 @@ bash scripts/phase1.sh build-all --yes-run-upstream-code --jobs 2
 bash scripts/phase1.sh history melonds
 bash scripts/phase1.sh rollback melonds
 bash scripts/phase1.sh uninstall melonds
+bash scripts/phase1.sh purge melonds --yes-delete-managed-backups
 bash scripts/phase1.sh logs melonds
 bash scripts/phase1.sh test
 bash scripts/phase1.sh validate

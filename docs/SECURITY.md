@@ -1,5 +1,7 @@
 # 🛡️ Modelo de segurança — EmuStack 0.7.1
 
+**Complemento Fase 1:** limpeza `purge` só opera após desinstalação, exige consentimento destrutivo, valida nomes/conteúdo gerenciados e preserva jogos, BIOS e saves.
+
 **Segurança da Fase 1:** build não tem socket Docker, capabilities nem escrita em jogos, saves ou BIOS. Pacotes versionados são conferidos por SHA-256 e symlinks bloqueados; rollback verifica recursos antigos. `sync-deps` modifica apenas origens Git pinadas dentro de mounts RW explícitos. Acesso ao daemon Docker no host continua altamente privilegiado. [Detalhes](PHASE1_IMPLEMENTATION.md).
 
 ## Isolamento de toolchain — Docker-first

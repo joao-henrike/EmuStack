@@ -1,6 +1,6 @@
 # 🔄 Releases, assets e atualização
 
-**Fase 1:** a compilação pinada gera pacote completo por perfil e launcher cuja versão é rastreável; versões anteriores preservam executável, metadados e recursos. Use `bash scripts/phase1.sh history <id>`, `rollback` e `uninstall`, sem editar hashes manualmente. O release lock de ativos Docker é separado deste histórico. [Detalhes](PHASE1_IMPLEMENTATION.md).
+**Fase 1:** a compilação pinada gera pacote completo por perfil e launcher cuja versão é rastreável; versões anteriores preservam executável, metadados e recursos. Use `bash scripts/phase1.sh history <id>`, `rollback` e `uninstall`, sem editar hashes manualmente. Após desinstalar, `purge <id> --yes-delete-managed-backups` elimina histórico/pacotes de forma irreversível; não afeta ROMs, BIOS ou saves. O release lock de ativos Docker é separado deste histórico. [Detalhes](PHASE1_IMPLEMENTATION.md).
 
 ## 🎯 Princípio
 

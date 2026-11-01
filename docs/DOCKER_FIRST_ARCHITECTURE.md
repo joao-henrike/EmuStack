@@ -63,6 +63,7 @@ Host Debian Linux
 
 ## Estado de migração e dívida técnica
 
+- **Gerenciamento de espaço:** `purge` somente apaga históricos e pacotes gerenciados após `uninstall` e com autorização explícita; as demais pastas de `data/` são preservadas.
 - **Feito:** 20 agentes e dashboard em Compose; builder da Fase 1 para os cinco perfis; `status`, `deps`, `test` e `validate` dentro do Docker; sem necessidade de CMake, Qt ou SDL no host para essas operações.
 - **Ainda legado:** `scripts/host-setup.sh` usa Python 3 para gerar o override de GUI/áudio, e `scripts/build-and-audit.sh` e `scripts/host-doctor.py` ainda contêm comandos Python do host. Não afirmar que a migração integral do bootstrap/runtime tooling esteja concluída até trocar esses pontos.
 - **Pendente:** confirmar o build real dos cinco perfis na imagem, empaquetar todos os assets/libs para execução, validar GUI/áudio/GPU e ROMs de teste autorizadas; testar o ciclo update/rollback end-to-end.

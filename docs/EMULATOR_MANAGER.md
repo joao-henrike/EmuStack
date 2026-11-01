@@ -82,12 +82,14 @@ bash scripts/phase1.sh install-file ppsspp PPSSPPSDL SHA256_REAL_DE_64_HEX PPSSP
 bash scripts/phase1.sh history ppsspp
 bash scripts/phase1.sh rollback ppsspp
 bash scripts/phase1.sh uninstall ppsspp
+# Irreversível: após uninstall, liberar histórico/bundles gerenciados:
+bash scripts/phase1.sh purge ppsspp --yes-delete-managed-backups
 bash scripts/phase1.sh status ppsspp
 ```
 
 `install-file` aceita apenas arquivo de `data/imports` (nome sem separadores), nome de executável permitido pelo catálogo, SHA-256 correto e perfil suportado. Ele guarda um **binário avulso**: não presume recursos auxiliares e não recebe garantias de bundle.
 
-Atualizar uma receita de fonte requer revisão de commit e gitlink em branch separada, recompilação e substituição transacional do launcher. O backup anterior guarda hash, data e proveniência; `rollback` exige que o bundle da versão anterior continue intacto e recupera também sua identidade. Desinstalação salva tombstone para permitir rollback, não termina sessões em andamento e não limpa automaticamente pacotes antigos.
+Atualizar uma receita de fonte requer revisão de commit e gitlink em branch separada, recompilação e substituição transacional do launcher. O backup anterior guarda hash, data e proveniência; `rollback` exige que o bundle da versão anterior continue intacto e recupera também sua identidade. Desinstalação salva tombstone para permitir rollback, não termina sessões em andamento e não limpa automaticamente pacotes antigos. Para liberar espaço, **após desinstalar**, use `purge <id> --yes-delete-managed-backups`: remove apenas backups e bundles reconhecidos do perfil e impede rollback posterior; jogos, saves e BIOS não são tocados. `purge` falha se encontrar itens desconhecidos.
 
 **Pare os emuladores antes de atualizar, reverter ou desinstalar.** A substituição do launcher não reverte mudanças em saves feitas por versões futuras; execute backup antes da atualização.
 
