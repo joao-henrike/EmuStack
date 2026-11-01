@@ -404,6 +404,77 @@ class EmulatorManagerTests(unittest.TestCase):
         self.assertNotIn("apt-get install", script)
         self.assertNotIn("sudo ", script)
 
+    def _make_runtime_bundle(self, name: str, content: str) -> Path:
+        folder = self.root / ("package-" + content)
+        folder.mkdir()
+        entry = folder / name
+        entry.write_bytes(b"\x7fELF" + content.encode("utf-8"))
+        entry.chmod(0o755)
+        (folder / "assets").mkdir()
+        (folder / "assets" / "config.txt").write_text(content, encoding="utf-8")
+        return folder
+
+    def test_packaged_build_keeps_runtime_assets_and_launcher_under_one_console(self):
+        source = self._make_runtime_bundle("PPSSPPSDL", "first")
+        result = manager.install_build_bundle(
+            "ppsspp", source, "PPSSPPSDL",
+            {"source": "upstream-pinned", "commit": "a" * 40}
+        )
+        self.assertEqual(result["bundle_files"], 2)
+        installed = self.root / result["bundle_directory"]
+        self.assertEqual((installed / "assets/config.txt").read_text(), "first")
+        launcher = self.root / result["installed"]
+        self.assertIn("/custom-emulators/.emustack-bundles/", launcher.read_text())
+        self.assertTrue(manager.status("ppsspp")[0]["bundle_hash_valid"])
+        self.assertFalse((self.root / "data/environments/melonds/emulators/PPSSPPSDL").exists())
+
+    def test_bundle_upgrade_and_rollback_use_original_matching_assets(self):
+        first = manager.install_build_bundle(
+            "ppsspp", self._make_runtime_bundle("PPSSPPSDL", "first"),
+            "PPSSPPSDL", {"method": "pinned-source-build", "commit": "a" * 40}
+        )
+        second = manager.install_build_bundle(
+            "ppsspp", self._make_runtime_bundle("PPSSPPSDL", "second"),
+            "PPSSPPSDL", {"method": "pinned-source-build", "commit": "b" * 40}
+        )
+        self.assertNotEqual(first["bundle_sha256"], second["bundle_sha256"])
+        versions = manager.history("ppsspp")
+        self.assertEqual(len(versions), 1)
+        self.assertEqual(versions[0]["origin"]["bundle_sha256"], first["bundle_sha256"])
+        manager.rollback("ppsspp")
+        current = manager.status("ppsspp")[0]
+        self.assertTrue(current["bundle_hash_valid"])
+        self.assertEqual(current["managed_install"]["origin"]["bundle_sha256"],
+                         first["bundle_sha256"])
+
+    def test_bundle_rollback_rejects_corrupted_resources(self):
+        first = manager.install_build_bundle(
+            "ppsspp", self._make_runtime_bundle("PPSSPPSDL", "first"),
+            "PPSSPPSDL", {"method": "pinned-source-build"}
+        )
+        manager.install_build_bundle(
+            "ppsspp", self._make_runtime_bundle("PPSSPPSDL", "second"),
+            "PPSSPPSDL", {"method": "pinned-source-build"}
+        )
+        (self.root / first["bundle_directory"] / "assets/config.txt").write_text("tampered")
+        with self.assertRaisesRegex(manager.ManagerError, "bundle payload"):
+            manager.rollback("ppsspp")
+        self.assertTrue(manager.status("ppsspp")[0]["bundle_hash_valid"])
+
+    def test_bundle_refuses_upstream_symlinks_without_mutation(self):
+        folder = self._make_runtime_bundle("PPSSPPSDL", "outside")
+        (folder / "assets" / "external").symlink_to(self.input)
+        with self.assertRaisesRegex(manager.ManagerError, "symlink"):
+            manager.install_build_bundle("ppsspp", folder, "PPSSPPSDL", {})
+        self.assertFalse((self.root / "data/environments/ppsspp/emulators/PPSSPPSDL").exists())
+
+    def test_bundle_idempotency_does_not_modify_immutable_payload(self):
+        folder = self._make_runtime_bundle("PPSSPPSDL", "repeat")
+        first = manager.install_build_bundle("ppsspp", folder, "PPSSPPSDL", {})
+        second = manager.install_build_bundle("ppsspp", folder, "PPSSPPSDL", {})
+        self.assertEqual(first["bundle_sha256"], second["bundle_sha256"])
+        self.assertTrue(manager.status("ppsspp")[0]["bundle_hash_valid"])
+
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
             manager.build("ppsspp", 1, yes=False)
