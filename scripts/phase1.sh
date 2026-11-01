@@ -200,12 +200,15 @@ if [[ "$action" == "sync-deps" ]]; then
   [[ -d "$ROOT/.git" && ! -L "$ROOT/.git" ]] || {
     echo "ERRO: sync-deps exige checkout Git normal (não worktree)." >&2; exit 1;
   }
-  [[ -d "$ROOT/third_party" && ! -L "$ROOT/third_party" ]] || {
-    echo "ERRO: third_party/ ausente ou symlink." >&2; exit 1;
+  source_checkout="$ROOT/third_party/$id"
+  git_metadata="$ROOT/.git/modules/third_party/$id"
+  [[ -d "$source_checkout" && ! -L "$source_checkout" && -d "$git_metadata" && ! -L "$git_metadata" ]] || {
+    echo "ERRO: checkout ou metadados pinados ausentes para $id." >&2; exit 1;
   }
+  # The other 23 top-level checkouts and modules remain read-only.
   docker_args+=(
-    --mount "type=bind,src=$ROOT/.git,dst=/workspace/.git"
-    --mount "type=bind,src=$ROOT/third_party,dst=/workspace/third_party"
+    --mount "type=bind,src=$git_metadata,dst=/workspace/.git/modules/third_party/$id"
+    --mount "type=bind,src=$source_checkout,dst=/workspace/third_party/$id"
   )
 fi
 docker_args+=("$tag")
