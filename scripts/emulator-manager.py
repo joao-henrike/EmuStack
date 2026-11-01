@@ -56,8 +56,9 @@ RECIPES = {
     "ppsspp": {
         "source": "ppsspp",
         "name": "PPSSPPSDL",
-        "requires": ["git", "cmake", "ninja", "c++"],
-        "packages": "cmake ninja-build build-essential libsdl2-dev libsdl2-ttf-dev libfontconfig1-dev libcurl4-openssl-dev libglew-dev",
+        "requires": ["git", "cmake", "ninja", "c++", "pkg-config"],
+        "pkg_config_required": ["sdl3", "SDL3_ttf"],
+        "packages": "cmake ninja-build build-essential pkg-config libsdl3-dev libsdl3-ttf-dev libfontconfig1-dev libcurl4-openssl-dev libglew-dev",
         "reference": "https://github.com/hrydgard/ppsspp/wiki/Build-instructions",
         "artifacts": ["build/PPSSPPSDL", "build/PPSSPPQt"],
     },
@@ -480,6 +481,61 @@ def dependencies(identifier: str) -> dict:
     }
 
 
+
+def stage_git_metadata(original: Path, staged: Path) -> dict:
+    """Create independent staging Git metadata backed by read-only pinned objects.
+
+    Original source Git directories are not copied or altered. Staged checkouts
+    retain their real commit identities, including nested FFmpeg gitlinks, so
+    upstream CMake git rev-parse cannot accidentally discover EmuStack HEAD.
+    """
+    queue = deque([(original, staged, 0)])
+    initialized = 0
+    while queue:
+        origin, destination_path, depth = queue.popleft()
+        if depth > 4 or initialized >= 161:
+            raise ManagerError("Staged nested repository depth/count exceeded")
+        if destination_path.is_symlink() or not destination_path.is_dir():
+            raise ManagerError("Missing or symlinked staged Git tree: " + str(destination_path))
+        def inspect(*git_args: str) -> str:
+            p = subprocess.run(
+                ["git", "-C", str(origin), *git_args],
+                capture_output=True, text=True, timeout=60, check=True
+            )
+            return p.stdout.strip()
+        commit = inspect("rev-parse", "HEAD")
+        if not HEX40.fullmatch(commit):
+            raise ManagerError("Invalid pinned upstream commit while staging")
+        git_dir = Path(inspect("rev-parse", "--absolute-git-dir")).resolve(strict=True)
+        original_objects = (git_dir / "objects").resolve(strict=True)
+        if not original_objects.is_dir():
+            raise ManagerError("Missing original Git object database")
+        if (destination_path / ".git").exists() or (destination_path / ".git").is_symlink():
+            raise ManagerError("Staging unexpectedly contains .git metadata")
+        subprocess.run(["git", "init", "-q", str(destination_path)],
+                       capture_output=True, text=True, timeout=30, check=True)
+        alternates = destination_path / ".git" / "objects" / "info" / "alternates"
+        alternates.parent.mkdir(parents=True, exist_ok=True)
+        alternates.write_text(str(original_objects) + "\n", encoding="utf-8")
+        # Populate staging refs/index using the real immutable upstream object.
+        for git_args in (("read-tree", commit), ("update-ref", "HEAD", commit)):
+            subprocess.run(["git", "-C", str(destination_path), *git_args],
+                           capture_output=True, text=True, timeout=60, check=True)
+        if subprocess.run(
+            ["git", "-C", str(destination_path), "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=30, check=True
+        ).stdout.strip() != commit:
+            raise ManagerError("Staged Git HEAD differs from pinned source commit")
+        initialized += 1
+        for path, _url in submodule_entries(origin):
+            child = origin / path
+            staged_child = destination_path / path
+            if child.is_symlink() or not child.is_dir():
+                raise ManagerError("Nested dependency not initialized: " + path)
+            queue.append((child, staged_child, depth + 1))
+    return {"staged_git_repositories": initialized, "original_git_metadata_modified": False}
+
+
 def toolchain_info() -> dict:
     """Capture tool versions without running untrusted emulator binaries."""
     versions = {}
@@ -546,6 +602,7 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
             if link.is_symlink() and not link.resolve(strict=False).is_relative_to(cloned):
                 raise ManagerError("Upstream symlink points outside the staged source: "
                                    + str(link.relative_to(cloned)))
+        staged_git = stage_git_metadata(src, cloned)
         if identifier == "bsnes":
             run_build(["make", "-C", str(cloned / "bsnes"), "build=release",
                        "local=false", f"-j{jobs}"], work, log)
@@ -576,6 +633,7 @@ def build(identifier: str, jobs: int, yes: bool) -> dict:
             "host": {"os": platform.system(), "architecture": platform.machine(),
                      "python": platform.python_version()},
             "toolchain": toolchain_info(),
+            "staging": staged_git,
             "warning": "Binary existence is not proof of runtime compatibility; resources may still be required.",
         })
 
