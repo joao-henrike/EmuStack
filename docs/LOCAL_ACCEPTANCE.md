@@ -92,7 +92,7 @@ O gerenciador **não certifica** a execução apenas pelo hash: `binary_signatur
 
 ### Evidência de build de 31/10/2026
 
-O relatório local mostrou **bsnes instalado** com `runtime_tested: false`. Os outros quatro builds foram bloqueados por submódulos internos (KytyPS5/shadPS4/PPSSPP) ou Qt6 ausente (melonDS). Os novos comandos `plan-deps` e `sync-deps` servem para auditar e inicializar os submódulos pinados. Execute novamente os testes e registre hashes antes de afirmar que o software é executável.
+O relatório local mostrou **bsnes instalado** com `runtime_tested: false`. Os outros quatro builds foram bloqueados por submódulos internos (KytyPS5/shadPS4/PPSSPP) ou Qt6 ausente (melonDS). Os comandos `plan-deps` e `sync-deps` já foram executados no host com êxito: KytyPS5 (14), shadPS4 (54), PPSSPP (28) submódulos internos. No build posterior, melonDS continuou sem Qt6 pois o comando APT foi simulação; PPSSPP exigiu SDL3 em vez de SDL2; KytyPS5 e shadPS4 consultaram incorretamente o SHA do EmuStack para os prebuilds de FFmpeg. Os metadados Git temporários e a receita SDL3 foram corrigidos, ainda sem reexecução no host. Execute novamente os testes e registre hashes antes de afirmar que o software é executável.
 
 ## 🧱 6. Boot real por sistema/jogo
 

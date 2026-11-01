@@ -68,6 +68,21 @@ python3 scripts/emulator-manager.py deps melonds
 
 A checagem de melonDS agora testa `Qt6Core`, `Qt6Widgets`, `Qt6Multimedia`, `Qt6Svg` e módulos adicionais usando `pkg-config`. Ela apenas valida pré-requisitos básicos: a compilação real é a prova final. Se houver erro de versão de CMake/Qt, **não misture repositórios Debian de versões diferentes**; examine a versão do host e os requisitos do upstream antes de prosseguir.
 
+### 1.3. Diagnóstico posterior no Debian 12 — fontes sincronizadas, build pendente
+
+O relatório do host confirmou **119 testes Python aprovados**, 24 gitlinks principais e sincronização dos submódulos internos: **14 KytyPS5, 54 shadPS4, 28 PPSSPP**. **bsnes** compilado/instalado com SHA-256 válido, mas sem teste gráfico.
+
+- **melonDS:** o comando `sudo apt-get -s install ...` apenas **simula** a instalação. Portanto Qt6, libarchive e faad2 continuam ausentes. Reveja a transação e execute a instalação real dos pacotes de desenvolvimento no mesmo Debian, sem misturar repositórios.
+- **PPSSPP:** a versão fixada exige **SDL3 + SDL3_ttf**, não SDL2. A receita foi corrigida para exigir `sdl3` e `SDL3_ttf` antes de iniciar CMake. No Debian 12 Bookworm, verifique `apt-cache policy libsdl3-dev libsdl3-ttf-dev` antes de tentar instalar. Se não houver candidatos, compile em ambiente separado que ofereça SDL3 ou use release oficial revisado. Não misture repositórios Debian 12 e 13 no host.
+- **KytyPS5 e shadPS4:** dependência upstream FFmpeg chama `git rev-parse` para escolher o prebuilt por SHA. A cópia temporária anterior excluía `.git`, de modo que o comando retornava incorretamente `d24cb94`, commit do EmuStack. Agora cada pasta fonte/aninhada recebe metadados Git temporários separados com HEAD/index do commit fixado e alternates de objetos Git somente-leitura. A disponibilidade do pacote FFmpeg correto continua sujeita à próxima execução.
+
+**Evite reconstruir bsnes**, já instalado. Os scripts de build executam código de terceiros no host e a compilação não comprova compatibilidade de jogos ou menus originais.
+
+```bash
+python3 scripts/emulator-manager.py deps melonds
+python3 scripts/emulator-manager.py deps ppsspp
+apt-cache policy libsdl3-dev libsdl3-ttf-dev
+```
 ## 2. Compilação explícita a partir de fonte fixada
 
 ```bash
@@ -87,7 +102,7 @@ O KytyPS5 pode baixar dependências de build durante a configuração CMake e ex
 
 Esses comandos **executam o sistema de build de terceiros no host**, que não é uma sandbox. Se não confiar no código, compile numa VM/host descartável em vez de executar no computador principal. O gerenciador recusa execução como root, não faz downloads de firmware/jogos e executa comandos de build com lista fixa de argumentos (sem shell).
 
-O código-fonte é copiado para `data/emulator-manager/work/` antes do build para não modificar os submódulos. Logs de erro ficam em `data/emulator-manager/logs/`. O binário só é promovido ao perfil se o arquivo esperado realmente existir e tiver conteúdo. **Isso não comprova que o programa abra no desktop ou tenha todos os recursos auxiliares**: PPSSPP e bsnes podem exigir assets/recursos adicionais para funcionar. Teste o aplicativo real após a compilação. Nenhuma compilação deve ser considerada verde apenas porque a rotina retornou.
+O código-fonte é copiado para `data/emulator-manager/work/` antes do build para não modificar os submódulos. Cada diretório de estágio recebe metadados Git temporários individuais, com acesso aos objetos pinados originais somente em leitura, para preservar a identidade correta dos submódulos e impedir que um script de versão de FFmpeg use o commit do EmuStack. Logs de erro ficam em `data/emulator-manager/logs/`. O binário só é promovido ao perfil se o arquivo esperado realmente existir e tiver conteúdo. **Isso não comprova que o programa abra no desktop ou tenha todos os recursos auxiliares**: PPSSPP e bsnes podem exigir assets/recursos adicionais para funcionar. Teste o aplicativo real após a compilação. Nenhuma compilação deve ser considerada verde apenas porque a rotina retornou.
 
 ## 3. Importar um binário revisado, com hash obrigatório
 

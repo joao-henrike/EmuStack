@@ -85,6 +85,10 @@ O gerenciador `scripts/emulator-manager.py` possui receitas explícitas para Kyt
 
 Isso **não** torna o build bit a bit reproduzível: toolchain, bibliotecas, flags, sistema e dependências aninhadas ainda variam conforme o host. Os outros 13 projetos pinados não têm receita genérica de compilação nesta etapa, embora 11 assets binários do Docker estejam fixados pelo release lock e fallbacks Debian sejam utilizados. Consulte [Gerenciador de emuladores](EMULATOR_MANAGER.md).
 
+## Git temporário para builds de fonte
+
+O gerenciador recria metadados Git para cada repo na cópia temporária, incluindo submódulos FFmpeg. Os objetos originais são acessados por alternates sem alterações dos repositórios pinados, garantindo que o SHA consultado no estágio seja do projeto upstream, não do EmuStack. Isso não torna um build bit a bit reproduzível, nem certifica dependências de runtime.
+
 ## ⚠️ Limites de reprodutibilidade
 
 O digest da imagem base é pinado, mas APT continua temporal por padrão. Toolchain, arquitetura, Docker/BuildKit, flags, fonte upstream, build de dependências e backend gráfico influenciam o resultado. A política atual busca repetir assets conhecidos, não oferecer uma promessa de bit-for-bit reproducibility. Builds experimentais podem falhar e devem continuar assim identificados.

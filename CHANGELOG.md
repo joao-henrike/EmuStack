@@ -12,6 +12,14 @@ Todas as alterações relevantes do projeto são registradas aqui. Status de com
 - 🔄 Documentada a atualização manual do release-lock e a revisão de artifacts antes da incorporação.
 - ⚖️ Reforçadas as orientações de conteúdo legal, privacidade dos relatórios e ausência de ROMs/BIOS/firmware no projeto.
 
+### Fase 1 — Correções após sincronização no Debian (31/10/2026)
+
+- 119 testes Python passaram; os 24 checkouts principais e os 14/54/28 submódulos KytyPS5/shadPS4/PPSSPP foram verificados.
+- Corrigido o staging Git: prebuilds FFmpeg não devem usar o SHA do EmuStack como se fosse o SHA do submódulo. Cópias temporárias recebem HEAD/index real com alternates somente-leitura.
+- Atualizada a receita PPSSPP para SDL3/SDL3_ttf, com nota sobre indisponibilidade possível dos pacotes no Debian 12.
+- melonDS continua exigindo Qt6 e outras libs: `apt-get -s` somente simulou a instalação.
+- Rebuild/GUI ainda pendentes para os quatro perfis; bsnes instalado com hash, mas execução gráfica não validada.
+
 ### Fase 1 — Regressões observadas no Debian (31/10/2026)
 
 - bsnes compilado/instalado com SHA-256 registrado, mas execução gráfica ainda não testada; não mexer no binário já instalado até testar.
