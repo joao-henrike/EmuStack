@@ -209,7 +209,17 @@ def backup_current(identifier: str, target: Path) -> Path | None:
     ensure_dir(previous_dir(identifier))
     name = f"{time.time_ns()}-{hash_file(target)}.bin"
     backup = previous_dir(identifier) / name
+
+    previous = active(identifier)
     os.replace(target, backup)
+    if previous and previous.get("sha256") == backup.name.split("-")[-1].removesuffix(".bin"):
+        # Keep provenance (especially bundle ID) with the previous executable.
+        metadata = backup.with_suffix(".json")
+        try:
+            metadata.write_text(json.dumps(previous, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        except BaseException:
+            os.replace(backup, target)
+            raise
     return backup
 
 
@@ -827,7 +837,11 @@ def history(identifier: str) -> list[dict]:
         if file.is_symlink() or not file.is_file():
             continue
         sha = hash_file(file)
-        records.append({"file": file.name, "sha256": sha, "size": file.stat().st_size})
+
+        archived = file.with_suffix(".json")
+        record = load_json(archived) if archived.is_file() and not archived.is_symlink() else None
+        records.append({"file": file.name, "sha256": sha, "size": file.stat().st_size,
+                        "origin": record.get("origin") if record else None})
     return records
 
 
@@ -850,8 +864,16 @@ def rollback(identifier: str) -> dict:
     if not versions:
         raise ManagerError(f"No previous installation stored: {identifier}")
     candidate = previous_dir(identifier) / versions[0]["file"]
+
+    provenance = versions[0].get("origin")
+    if provenance and provenance.get("bundle_sha256"):
+        # The saved launcher contains a permanent content-addressed bundle path.
+        # Refuse rollback if the resources of that version have been corrupted.
+        if not verify_bundle(identifier, {"origin": provenance}):
+            raise ManagerError("Previous bundle payload missing or corrupted; rollback refused")
     return install_artifact(identifier, candidate, record["binary_name"],
-                            {"method": "rollback", "from": versions[0]["file"]},
+                            {**(provenance or {}), "restored_from": versions[0]["file"],
+                             "method": "rollback"},
                             versions[0]["sha256"])
 
 
