@@ -94,6 +94,15 @@ O gerenciador **não certifica** a execução apenas pelo hash: `binary_signatur
 
 O relatório local mostrou **bsnes instalado** com `runtime_tested: false`. Os outros quatro builds foram bloqueados por submódulos internos (KytyPS5/shadPS4/PPSSPP) ou Qt6 ausente (melonDS). Os comandos `plan-deps` e `sync-deps` já foram executados no host com êxito: KytyPS5 (14), shadPS4 (54), PPSSPP (28) submódulos internos. No build posterior, melonDS continuou sem Qt6 pois o comando APT foi simulação; PPSSPP exigiu SDL3 em vez de SDL2; KytyPS5 e shadPS4 consultaram incorretamente o SHA do EmuStack para os prebuilds de FFmpeg. Os metadados Git temporários e a receita SDL3 foram corrigidos, ainda sem reexecução no host. Execute novamente os testes e registre hashes antes de afirmar que o software é executável.
 
+### Nova tentativa de compilação em Debian 12
+
+- **melonDS:** dependências básicas Qt6 detectadas; compilação ainda não executada nesta rodada
+- **shadPS4:** CMake 3.25.1 rejeitou expressão do OpenAL adicionada em CMake 3.26
+- **KytyPS5:** launcher exige Qt 6.8, host possui Qt 6.4.2
+- **PPSSPP:** bibliotecas SDL3/SDL3_ttf indisponíveis no APT Bookworm configurado
+
+Para os três últimos, existe um builder Debian Trixie opt-in que usa os mesmos commits upstream previamente auditados, preserva as permissões do host e registra resultado por perfil. Depois da build, **validar bibliotecas efetivamente vinculadas, plugins/resources, inicialização gráfica e logs**; o builder, por si só, não certifica runtime ou jogo.
+
 ## 🧱 6. Boot real por sistema/jogo
 
 Para cada perfil que pretende usar, faça um teste com arquivos que você tem direito de utilizar. Registre o resultado de forma separada para:

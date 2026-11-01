@@ -83,6 +83,33 @@ python3 scripts/emulator-manager.py deps melonds
 python3 scripts/emulator-manager.py deps ppsspp
 apt-cache policy libsdl3-dev libsdl3-ttf-dev
 ```
+## 🧱 Build isolado compatível com Debian 12 — sem atualizar o host
+
+**Diagnóstico observado no host:** em 31/10/2026 o melonDS passou no pré-teste de dependências após a instalação real de 41 pacotes; ainda falta compilar. O shadPS4 não conseguiu gerar o projeto com CMake **3.25.1** porque o upstream OpenAL usa `$<BUILD_LOCAL_INTERFACE:...>`, introduzido no **CMake 3.26**. O launcher KytyPS5 rejeitou Qt6 **6.4.2** porque exige **6.8 ou superior**. Para PPSSPP, o Debian 12 não ofereceu `libsdl3-dev` / `libsdl3-ttf-dev`. Isso é problema de toolchain, não de sincronização de submódulos.
+
+O projeto agora inclui um **builder opcional Debian Trixie**: `scripts/phase1-builder/Dockerfile` e `scripts/build-phase1-isolated.sh`. Ele instala CMake mais recente, Qt6 6.8 e SDL3 num container separado; **não altera o APT do seu Debian 12 e não monta o socket Docker**. O código Git do EmuStack é montado **somente leitura**; o único diretório gravável persistente é `data/`, onde ficam os logs, versões e binários isolados por perfil. O processo de build roda como seu UID/GID, com `--cap-drop ALL`, `no-new-privileges`, filesystem base read-only e limites de CPU/memória/processos. **Não é uma garantia formal de isolamento contra todo código malicioso; revise os upstreams.** O Dockerfile usa o mesmo digest base que a stack, mas pacotes APT ainda não têm snapshot totalmente fixado.
+
+Uso (cada comando compila **somente o perfil escolhido** e executa código de terceiros dentro do container):
+
+```bash
+git switch fix/dashboard-degraded-startup && git pull --ff-only
+./scripts/validate-project.sh
+bash scripts/build-phase1-isolated.sh shadps4 --yes-run-upstream-code --jobs 2
+bash scripts/build-phase1-isolated.sh ppsspp --yes-run-upstream-code --jobs 2
+bash scripts/build-phase1-isolated.sh kytyps5 --yes-run-upstream-code --jobs 2
+```
+
+Se faltar espaço ou RAM, conclua somente um perfil por execução. O builder limita a 4 CPUs e 8 GiB de RAM; compilações grandes podem falhar ao atingir esses limites, e a imagem de toolchain também ocupará disco. As dependências já sincronizadas (14 KytyPS5, 54 shadPS4, 28 PPSSPP) permanecem no host, não são baixadas novamente sem necessidade.
+
+**Importante:** um binário compilado contra Trixie pode exigir bibliotecas da mesma geração; o runtime Docker do EmuStack utiliza Trixie, mas a integração de Qt/plugins/assets, formatos de jogo e GUI ainda requer testes reais. Particularmente o launcher KytyPS5 pode exigir um pacote completo de recursos e libs Qt; a rotina atual **não garante** que copiar um único executável seja suficiente. Não promova uma build como compatível apenas por ter SHA-256 ou status `installed`.
+
+Para o **melonDS**, que já passou no pré-teste do Debian 12, prefira testar a receita no host primeiro (com código revisado):
+
+```bash
+python3 scripts/emulator-manager.py build melonds --jobs 2 --yes-run-upstream-code
+python3 scripts/emulator-manager.py status melonds
+```
+
 ## 2. Compilação explícita a partir de fonte fixada
 
 ```bash

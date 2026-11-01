@@ -89,6 +89,10 @@ Isso **não** torna o build bit a bit reproduzível: toolchain, bibliotecas, fla
 
 O gerenciador recria metadados Git para cada repo na cópia temporária, incluindo submódulos FFmpeg. Os objetos originais são acessados por alternates sem alterações dos repositórios pinados, garantindo que o SHA consultado no estágio seja do projeto upstream, não do EmuStack. Isso não torna um build bit a bit reproduzível, nem certifica dependências de runtime.
 
+## Ambiente de build separado
+
+`scripts/phase1-builder/Dockerfile` utiliza a mesma imagem base Trixie pinada pelo digest do Dockerfile principal. O processo de build roda não-root, sob bind read-only do código, e não modifica bibliotecas de desenvolvimento do Debian 12 do host. O apt dessa imagem **não é fixado a um snapshot imutável**; registramos as versões efetivas em `toolchain_info`/logs, mas isso ainda não produz builds bit a bit reproduzíveis. O instalador de perfil preserva backups e SHA-256 dos binários promovidos. A saída gráfica e dependências de runtime não são garantidas.
+
 ## ⚠️ Limites de reprodutibilidade
 
 O digest da imagem base é pinado, mas APT continua temporal por padrão. Toolchain, arquitetura, Docker/BuildKit, flags, fonte upstream, build de dependências e backend gráfico influenciam o resultado. A política atual busca repetir assets conhecidos, não oferecer uma promessa de bit-for-bit reproducibility. Builds experimentais podem falhar e devem continuar assim identificados.

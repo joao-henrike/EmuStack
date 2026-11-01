@@ -59,6 +59,10 @@ python3 scripts/emulator-manager.py plan-deps ppsspp
 
 Depois de auditar as URLs, `sync-deps <id> --jobs 2 --yes-download-submodules` baixa apenas commits gitlink fixados, sem executar builds. Para melonDS, verifique se `qt6-base-dev` e outros pacotes de desenvolvimento Qt6 estão instalados no host; os pacotes do Docker não bastam. Consulte [Fase 1](EMULATOR_MANAGER.md).
 
+### Toolchain isolada para compilação em Debian 12
+
+Se shadPS4 falhar com `BUILD_LOCAL_INTERFACE`, KytyPS5 exigir Qt 6.8 ou PPSSPP exigir SDL3, **não adicione repositórios do Debian 13 ao host**. O builder opcional `bash scripts/build-phase1-isolated.sh shadps4 --yes-run-upstream-code --jobs 2` usa a imagem Debian Trixie fixada pelo digest do projeto, executa a fonte dentro de container sem privilégios e escreve somente em `data/`. Para KytyPS5 ou PPSSPP, substitua o ID. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md) e considere os custos de disco/CPU; compilação não implica funcionamento do emulador.
+
 ## 🧭 Subir ou inspecionar manualmente
 
 Se o host setup gerou um override, inclua-o em cada comando manual que precise das integrações:

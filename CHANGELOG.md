@@ -12,6 +12,14 @@ Todas as alterações relevantes do projeto são registradas aqui. Status de com
 - 🔄 Documentada a atualização manual do release-lock e a revisão de artifacts antes da incorporação.
 - ⚖️ Reforçadas as orientações de conteúdo legal, privacidade dos relatórios e ausência de ROMs/BIOS/firmware no projeto.
 
+### Fase 1 — Ambiente isolado de build para Debian 12 (31/10/2026)
+
+- Corrigido o diagnóstico das versões: shadPS4/OpenAL usa expressão CMake 3.26 não reconhecida pelo CMake 3.25.1; KytyPS5 exige Qt6 >=6.8 e host traz 6.4.2; PPSSPP necessita SDL3 e SDL3_ttf ausentes no APT Bookworm.
+- Novo preflight de versões do CMake e Qt6 no gerenciador, evitando builds demorados que inevitavelmente falhariam no host.
+- Dockerfile Debian 13 Trixie de build-fonte opt-in com Qt6 6.8, SDL3, CMake mais recente. Lançador de CLI limita recursos, monta sources read-only, recusa root e deixa somente data/ gravável, sem Docker socket e sem privilegiar o dashboard.
+- melonDS: Qt6 e demais pacotes instalados no host, `deps` passou sem pendências. A execução do build real está pendente.
+- Compatibilidade gráfica, plugins e packaging dos binários continuam dependentes de testes em runtime.
+
 ### Fase 1 — Correções após sincronização no Debian (31/10/2026)
 
 - 119 testes Python passaram; os 24 checkouts principais e os 14/54/28 submódulos KytyPS5/shadPS4/PPSSPP foram verificados.

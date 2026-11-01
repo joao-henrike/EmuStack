@@ -42,6 +42,10 @@ python3 scripts/emulator-manager.py history ppsspp
 
 A instalação e o build são ações explícitas do operador no host, **nunca executadas pelo dashboard**. Não há download de jogos, firmware ou BIOS. Consulte [Gerenciamento de emuladores e builds](docs/EMULATOR_MANAGER.md) antes de usar importação ou compilação.
 
+### Builder isolado para os quatro perfis ainda pendentes
+
+O host Debian 12 não precisa receber pacotes de outra versão para compilar shadPS4, PPSSPP e KytyPS5. Foi adicionado um builder **opt-in** em Debian 13 Trixie, com CMake mais recente, Qt 6.8 e SDL3, mantendo o código-fonte do host somente leitura e a área `data/` separada. Exemplo: `bash scripts/build-phase1-isolated.sh shadps4 --yes-run-upstream-code --jobs 2`. Para PPSSPP/KytyPS5, troque o ID. Essa compilação ainda exige avaliação no runtime, especialmente recursos/Qt do Kyty. [Procedimento e segurança](docs/EMULATOR_MANAGER.md).
+
 ### Fase 1 — Aceitação parcial no Debian (31/10/2026)
 
 O operador compilou e instalou **bsnes** no mount privado do perfil, com SHA-256 registrado; `runtime_tested` continua falso. Os submódulos internos de KytyPS5 (14), shadPS4 (54) e PPSSPP (28) foram sincronizados no Debian. Na tentativa seguinte, KytyPS5/shadPS4 consultaram o SHA errado do EmuStack para prebuilds de FFmpeg (staging Git corrigido), PPSSPP exigiu SDL3/SDL3_ttf (receita corrigida), e melonDS permaneceu sem Qt6 de desenvolvimento (o APT foi executado apenas em modo simulado). Para os três primeiros, use a inspeção `plan-deps` e a sincronização explícita `sync-deps`; para melonDS instale Qt6 do **mesmo Debian do host** e repita `deps`. O guia completo está em [Gerenciador da Fase 1](docs/EMULATOR_MANAGER.md). Nenhuma falha de instalação é tratada como prova de incompatibilidade do console.
