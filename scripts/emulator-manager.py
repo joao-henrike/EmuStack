@@ -909,6 +909,50 @@ def uninstall(identifier: str) -> dict:
     return {"removed": identifier, "rollback_backup": str(backup.relative_to(ROOT))}
 
 
+def purge(identifier: str, yes: bool) -> dict:
+    """Deliberately remove *managed* backups after uninstall, never user data."""
+    profile(identifier)
+    if not yes:
+        raise ManagerError("Purge destroys rollback history; pass --yes-delete-managed-backups")
+    if active(identifier) is not None:
+        raise ManagerError("Uninstall the managed executable first; refusing to purge active bundles")
+    target_root = ROOT / "data" / "environments" / identifier / "emulators"
+    bundle_store = target_root / ".emustack-bundles"
+    versions = previous_dir(identifier)
+    tombstone = tombstone_file(identifier)
+    for path in (target_root, bundle_store, versions, tombstone):
+        check_managed_path(path)
+        if path.is_symlink():
+            raise ManagerError("Refusing symlinked purge target: " + str(path))
+    if bundle_store.is_dir():
+        # Verify all children are ordinary folders; refuse unexpected files/links.
+        for child in bundle_store.iterdir():
+            if child.is_symlink() or not child.is_dir():
+                raise ManagerError("Unexpected bundle store entry; purge refused")
+            check_managed_path(child)
+            if not re.fullmatch(r"[0-9a-f]{32}", child.name):
+                raise ManagerError("Unexpected unmanaged bundle directory; purge refused")
+            _bundle_tree_hash(child)
+    if versions.is_dir():
+        for child in versions.iterdir():
+            if child.is_symlink() or not child.is_file():
+                raise ManagerError("Unexpected version entry; purge refused")
+            if not re.fullmatch(r"[0-9]+-[0-9a-f]{64}\.(bin|json)", child.name):
+                raise ManagerError("Unexpected unmanaged version entry; purge refused")
+    # All known paths were pre-validated; none of these are games/BIOS/saves.
+    backup_count = len(list(versions.iterdir())) if versions.is_dir() else 0
+    bundle_count = len(list(bundle_store.iterdir())) if bundle_store.is_dir() else 0
+    if versions.is_dir():
+        shutil.rmtree(versions)
+    if bundle_store.is_dir():
+        shutil.rmtree(bundle_store)
+    tombstone.unlink(missing_ok=True)
+    return {"purged_profile": identifier, "bundle_directories": bundle_count,
+            "version_files": backup_count, "games_bios_saves_untouched": True}
+
+
+
+
 def inspect_binary(path: Path) -> dict:
     """Read file signatures and ELF machine without executing the executable."""
     with path.open("rb") as stream:
@@ -974,6 +1018,9 @@ def main() -> int:
     sync.add_argument("id", choices=sorted(RECIPES))
     sync.add_argument("--jobs", type=int, default=2)
     sync.add_argument("--yes-download-submodules", action="store_true")
+    p = sub.add_parser("purge", help="delete manager-owned backups/bundles only after uninstall")
+    p.add_argument("id")
+    p.add_argument("--yes-delete-managed-backups", action="store_true")
     p = sub.add_parser("build", help="compile one reviewed source recipe")
     p.add_argument("id", choices=sorted(RECIPES))
     p.add_argument("--jobs", type=int, default=2)
@@ -1017,6 +1064,8 @@ def main() -> int:
                                     args.sha256)
         elif args.action == "rollback":
             data = rollback(args.id)
+        elif args.action == "purge":
+            data = purge(args.id, args.yes_delete_managed_backups)
         else:
             data = uninstall(args.id)
         print(json.dumps(data, ensure_ascii=False, indent=2))
