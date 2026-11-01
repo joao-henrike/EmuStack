@@ -1,5 +1,7 @@
 # ⚙️ Configuração e variáveis
 
+**Fase 1 — Docker:** execução como UID/GID do host, limite 4 CPUs/8 GiB/512 PIDs no builder, rede desligada para inspeção e habilitada apenas em compilação/sincronização de fontes. Sources read-only no build; acesso write apenas ao manager e perfil. Consulte [guia](PHASE1_IMPLEMENTATION.md).
+
 O arquivo `.env.example` documenta as variáveis esperadas. O caminho recomendado é executar `./scripts/host-setup.sh`, que prepara o `.env` real e as raízes de dados. **Mantenha o `.env` privado.**
 
 ## Filosofia operacional Docker-first

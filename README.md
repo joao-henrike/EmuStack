@@ -1,5 +1,7 @@
 # 🎮 EmuStack
 
+**Fase 1 — implementação Docker-first preparada para aceitação posterior:** builds de cinco perfis, pacotes versionados com assets, importação por SHA-256, rollback, inspeção de dependências e logs, e critérios de aceitação nos agentes. Guia: [Fase 1](docs/PHASE1_IMPLEMENTATION.md). Status de instalação não significa execução aprovada.
+
 <p align="center">
   <strong>Um painel local para organizar, isolar e auditar ambientes de emulação no Linux.</strong><br>
   Um perfil por sistema · dados separados · execução verificável · sem ROMs distribuídas

@@ -1,5 +1,7 @@
 # 🧭 Central da documentação EmuStack
 
+**Documento de referência:** [Fase 1 — implementação, versionamento e aceitação pendente](PHASE1_IMPLEMENTATION.md).
+
 Bem-vindo à central de documentação do EmuStack. Os guias são organizados por tarefa e por área técnica; os links levam às páginas que explicam comandos, limitações e evidências.
 
 > [!NOTE]

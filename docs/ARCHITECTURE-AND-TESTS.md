@@ -1,5 +1,7 @@
 # 🧱 Arquitetura, validação e relatório de testes
 
+**Arquitetura Fase 1:** builder Trixie isolado prepara pacotes de conteúdo endereçado por hash; cada agente somente lê seu pacote pelo mount `/custom-emulators`. `phase1-smoke.py` confere resources/`ldd` no runtime sem executar jogos. Evidências de host e aprovação gráfica aguardam testes. [Detalhes](PHASE1_IMPLEMENTATION.md).
+
 **Versão documentada:** EmuStack 0.7.1  
 **Relatório atualizado:** 31 de outubro de 2026  
 **Evidência CI histórica (commit 07e57c8):** [EmuStack CI — run 40798086510](https://github.com/joao-henrike/EmuStack/actions/runs/40798086510)  

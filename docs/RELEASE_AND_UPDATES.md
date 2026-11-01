@@ -1,5 +1,7 @@
 # 🔄 Releases, assets e atualização
 
+**Fase 1:** a compilação pinada gera pacote completo por perfil e launcher cuja versão é rastreável; versões anteriores preservam executável, metadados e recursos. Use `bash scripts/phase1.sh history <id>`, `rollback` e `uninstall`, sem editar hashes manualmente. O release lock de ativos Docker é separado deste histórico. [Detalhes](PHASE1_IMPLEMENTATION.md).
+
 ## 🎯 Princípio
 
 A atualização de upstream pode alterar código, artefatos, comandos, dependências e comportamento. EmuStack mantém o lock estrito para assets efetivamente baixados e validados; não transforma mudanças upstream em compatibilidade garantida.

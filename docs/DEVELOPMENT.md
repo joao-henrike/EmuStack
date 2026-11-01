@@ -1,5 +1,7 @@
 # 🧑‍💻 Desenvolvimento e contribuição
 
+**Desenvolvimento da Fase 1:** usar `bash scripts/phase1.sh validate` e o builder Docker para os cinco perfis em vez de instalar toolchains no host. A revisão dos commits fonte, bibliotecas runtime, pacotes completos e limitações de hardware é obrigatória. [Checklist](PHASE1_IMPLEMENTATION.md).
+
 Este guia descreve como mudar EmuStack sem enfraquecer os limites de segurança ou confundir capacidade planejada com comportamento testado.
 
 ## 🧰 Ambiente

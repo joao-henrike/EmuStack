@@ -1,5 +1,7 @@
 # 🛠️ Fase 1 — Gerenciador de emuladores por perfil
 
+**Atualização de escopo:** a execução preferida é integralmente `bash scripts/phase1.sh`. Builds agora instalam pacotes com recursos em `.emustack-bundles/<hash>` e o rollback preserva a identidade do pacote. `status` expõe `bundle_hash_valid`; `history`, `rollback`, `uninstall`, `logs`, `plan-deps`, `sync-deps` e `install-file` são operações containerizadas. O antigo gerenciador Python direto no host permanece apenas como backend de CLI, não como procedimento recomendado. [Contrato e checklist completos](PHASE1_IMPLEMENTATION.md).
+
 O EmuStack possui **duas vias complementares de instalação**, que não devem ser confundidas:
 
 1. **Imagem Docker oficial:** `release-lock.json`, pacotes Debian e `scripts/install-upstream.py` mantêm os executáveis oficiais já instalados durante o build. Reconstruir a imagem continua sendo a forma de renovar esses assets.

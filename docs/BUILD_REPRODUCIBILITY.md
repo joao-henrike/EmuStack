@@ -1,5 +1,7 @@
 # 📦 Build, lock de assets e reprodutibilidade
 
+**Bundle de runtime:** compilação gera árvore imutável de arquivos versionada por hash; não apenas um ELF. Recursos são revalidados no `status` (`bundle_hash_valid`) e antes do rollback. Isso não garante builds bit a bit iguais nem execução funcional. [Contrato Fase 1](PHASE1_IMPLEMENTATION.md).
+
 ## 🎯 Escopo do que é fixado
 
 A reprodutibilidade é parcial e explícita. Há três fontes que precisam ser consideradas separadamente:

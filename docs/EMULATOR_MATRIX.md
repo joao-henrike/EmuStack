@@ -1,5 +1,7 @@
 # 🧩 Matriz de emuladores, perfis e sistemas originais
 
+**Implementação Fase 1:** cinco receitas de fonte fixa (`kytyps5`, `shadps4`, `ppsspp`, `melonds`, `bsnes`) possuem fluxo de empacotamento de recursos, instalação e rollback por Docker. Os outros perfis não ganham automaticamente build-fonte/compatibilidade; Xbox One/Series seguem bloqueados. [Estado](PHASE1_IMPLEMENTATION.md).
+
 Esta matriz separa cinco perguntas: **o perfil está cadastrado? O asset upstream está fixado? O binário foi instalado nesta build? Há suporte upstream para o alvo? O sistema/menu realmente inicializou?** As respostas não são intercambiáveis.
 
 ## 🔧 Integração de instalação por perfil — branch de desenvolvimento

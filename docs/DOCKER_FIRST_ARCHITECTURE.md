@@ -1,5 +1,7 @@
 # 🐳 Princípio Docker-first do EmuStack
 
+**Decisão operacional aplicada à Fase 1:** somente o estado do manager e o subdiretório `emulators/` do perfil em alteração são graváveis no builder. `data/` permanece read-only em geral, protegendo jogos/saves/BIOS; `sync-deps` constitui exceção explícita para gravar Git/submódulos. Veja [escopo completo](PHASE1_IMPLEMENTATION.md).
+
 > Regra de engenharia: não instalar ferramentas de compilação ou bibliotecas de emuladores no host quando puderem existir numa imagem Docker pinada, auditável e descartável.
 
 ## Separação de responsabilidades

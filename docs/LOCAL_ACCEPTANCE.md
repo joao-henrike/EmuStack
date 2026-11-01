@@ -1,5 +1,7 @@
 # ✅ Checklist de aceitação no host
 
+**Aceitação da nova Fase 1 fica para a etapa posterior.** Use os scripts preparados `bash scripts/phase1.sh validate` e `bash scripts/phase1-acceptance.sh` somente depois de concluir os builds e reconstruir a imagem runtime. O segundo verifica libs/recursos sem rodar ROMs; testes gráficos e controles ainda são manuais. [Matriz completa](PHASE1_IMPLEMENTATION.md).
+
 Este procedimento separa a validação automatizada de código do que só pode ser verificado na máquina-alvo. Marque os resultados com host, data, commit e versão do emulador. **Um teste não executado é desconhecido, não aprovado.**
 
 ## 🧾 1. Preparação e baseline

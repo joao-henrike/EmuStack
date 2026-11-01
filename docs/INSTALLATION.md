@@ -1,5 +1,7 @@
 # 🛠️ Instalação do EmuStack 0.7.1
 
+**Fluxo atual da Fase 1:** após checkout/setup, utilize `bash scripts/phase1.sh validate` e, apenas após revisão de upstream, `bash scripts/phase1.sh build <perfil> --yes-run-upstream-code --jobs 2`. Não instale Qt/SDL/CMake no host por causa da compilação. Veja [etapas e limites](PHASE1_IMPLEMENTATION.md).
+
 Este guia conduz do clone até o primeiro dashboard. Para limites de recursos e todas as variáveis, consulte [Configuração](CONFIGURATION.md).
 
 ## 🐳 Padrão de instalação

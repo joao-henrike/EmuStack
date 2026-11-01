@@ -1,5 +1,7 @@
 # 🛡️ Modelo de segurança — EmuStack 0.7.1
 
+**Segurança da Fase 1:** build não tem socket Docker, capabilities nem escrita em jogos, saves ou BIOS. Pacotes versionados são conferidos por SHA-256 e symlinks bloqueados; rollback verifica recursos antigos. `sync-deps` modifica apenas origens Git pinadas dentro de mounts RW explícitos. Acesso ao daemon Docker no host continua altamente privilegiado. [Detalhes](PHASE1_IMPLEMENTATION.md).
+
 ## Isolamento de toolchain — Docker-first
 
 Compilações e inspeções de perfis usam `bash scripts/phase1.sh`, que não compartilha o Docker socket com os containers, monta o checkout somente leitura e mantém apenas `data/` como pasta persistente gravável. Testes/inspeções são sem rede; a rede da compilação é explicitamente necessária para alguns upstreams. Essa abordagem **não garante ausência de risco**: código upstream ainda é executado, e quem pode usar o Docker daemon no host tem privilégios elevados. Mantenha o dashboard longe do daemon. Leia [arquitetura Docker-first](DOCKER_FIRST_ARCHITECTURE.md).
