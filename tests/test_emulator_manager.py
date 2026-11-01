@@ -2,6 +2,9 @@
 import hashlib
 import importlib.util
 import json
+import io
+import sys
+from contextlib import redirect_stdout
 import shutil
 import subprocess
 import tempfile
@@ -549,6 +552,22 @@ class EmulatorManagerTests(unittest.TestCase):
         with self.assertRaisesRegex(manager.ManagerError, "Unexpected bundle store entry"):
             manager.purge("ppsspp", True)
         self.assertTrue(unexpected.is_file())
+
+    def test_mutating_cli_obtains_exclusive_manager_lock(self):
+        with patch.object(sys, "argv", ["emulator-manager.py", "rollback", "ppsspp"]), \
+             patch.object(manager, "rollback", return_value={"restored": "ppsspp"}), \
+             patch.object(manager.fcntl, "flock") as flock:
+            with redirect_stdout(io.StringIO()) as output:
+                self.assertEqual(manager.main(), 0)
+        flock.assert_called_once()
+        self.assertIn("restored", output.getvalue())
+
+    def test_phase1_sync_writes_only_selected_git_module(self):
+        script = (MODULE_PATH.parents[0] / "phase1.sh").read_text()
+        self.assertIn('src=$git_metadata,dst=/workspace/.git/modules/third_party/$id', script)
+        self.assertIn('src=$source_checkout,dst=/workspace/third_party/$id', script)
+        self.assertNotIn('src=$ROOT/.git,dst=/workspace/.git', script)
+        self.assertNotIn('src=$ROOT/third_party,dst=/workspace/third_party', script)
 
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
