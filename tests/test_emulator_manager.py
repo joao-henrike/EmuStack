@@ -266,6 +266,27 @@ class EmulatorManagerTests(unittest.TestCase):
         with self.assertRaisesRegex(manager.ManagerError, "Unsafe submodule path"):
             manager.submodule_entries(sandbox)
 
+
+    def test_nested_source_manifest_rejects_symlink_path(self):
+        sandbox = self.root / "nested-fixture"
+        sandbox.mkdir()
+        (sandbox / ".gitmodules").write_text(
+            '[submodule "thirdparty"]\n'
+            '    path = externals/thirdparty\n'
+            '    url = https://github.com/official/thing.git\n',
+            encoding="utf-8"
+        )
+        (sandbox / "externals").symlink_to(self.root, target_is_directory=True)
+        # Git should never receive a path that resolves through a symlink.
+        with patch.object(manager.subprocess, "run") as run:
+            run.return_value.stdout = "160000 " + "a" * 40 + " 0\texternals/thirdparty\n"
+            with self.assertRaisesRegex(manager.ManagerError, "Submodule target escapes"):
+                manager.submodule_entries(sandbox)
+
+    def test_plan_deps_refuses_unsupported_profile_before_git(self):
+        with self.assertRaisesRegex(manager.ManagerError, "No source build recipe"):
+            manager.plan_deps("xbox-series")
+
     def test_native_build_requires_explicit_opt_in(self):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
             manager.build("ppsspp", 1, yes=False)

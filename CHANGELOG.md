@@ -12,6 +12,13 @@ Todas as alterações relevantes do projeto são registradas aqui. Status de com
 - 🔄 Documentada a atualização manual do release-lock e a revisão de artifacts antes da incorporação.
 - ⚖️ Reforçadas as orientações de conteúdo legal, privacidade dos relatórios e ausência de ROMs/BIOS/firmware no projeto.
 
+### Fase 1 — Regressões observadas no Debian (31/10/2026)
+
+- bsnes compilado/instalado com SHA-256 registrado, mas execução gráfica ainda não testada; não mexer no binário já instalado até testar.
+- KytyPS5, shadPS4 e PPSSPP bloqueados por submódulos aninhados não sincronizados. Adicionados `plan-deps` e `sync-deps` para auditar URLs/gitlinks antes de baixar commits pinados, com guardas HTTPS/host, symlink, profundidade, contagem e opt-in.
+- melonDS falhou na configuração CMake por `Qt6Config.cmake` ausente. Adicionada inspeção de módulos `pkg-config` Qt6 e guia Debian para dependências Qt6.
+- Nenhuma compilação pendente é declarada bem-sucedida ou funcional sem nova aceitação no host.
+
 ### Fase 1 — Integração de instalação (branch de desenvolvimento)
 
 - Novo gerenciador de host por perfil com importação hash-verificada, backups por binário, histórico, rollback, remoção e status JSON; nenhum poder adicional para o dashboard Docker.

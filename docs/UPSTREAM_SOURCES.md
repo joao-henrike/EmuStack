@@ -39,6 +39,10 @@ git commit -m "chore(upstream): pin reviewed PPSSPP source commit"
 
 Além do sincronizador de fontes, o `scripts/emulator-manager.py` permite construir **KytyPS5, shadPS4, PPSSPP, melonDS e bsnes** a partir dos commits fixados, após revisar dependências e consentir explicitamente em executar código upstream. Saída privada em `data/environments/<id>/emulators/`, com backup e rollback controlados. **Não substitui** a instalação oficial em Docker por release lock, não compila automaticamente os outros 13 projetos e não prova que os quatro builds funcionem no host. Consulte [Gerenciador de emuladores](EMULATOR_MANAGER.md).
 
+## Submódulos aninhados de upstream (Fase 1)
+
+Os 24 submódulos do EmuStack são diferentes das dezenas de submódulos próprios dos projetos KytyPS5, shadPS4 e PPSSPP. Para compilar essas três fontes, execute `python3 scripts/emulator-manager.py plan-deps <id>` (sem download) e, após revisão, `sync-deps <id> --jobs 2 --yes-download-submodules`. Esse gerenciador restringe origens a HTTPS GitHub/Android Googlesource, confere gitlinks e não segue branches móveis, para impedir uma atualização silenciosa. Pode haver novos submódulos em dependências transitivas: cada nível também é auditado e há limites de profundidade/quantidade. Consulte o [gerenciador](EMULATOR_MANAGER.md).
+
 ## Limites e licenças
 
 - As licenças e avisos de copyright pertencem a **cada upstream**. O MIT do EmuStack não se sobrepõe às licenças de `third_party`. Inspecione os avisos e requisitos dos 24 repositórios antes de redistribuir versões ou builds.

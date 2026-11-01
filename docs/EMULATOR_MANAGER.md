@@ -41,6 +41,12 @@ Se o `build-all` retornar `Nested dependencies missing/mismatched`, isso signifi
 Os três upstreams possuem dezenas de dependências próprias. O comando abaixo **audita as URLs HTTPS, os gitlinks e os commits registrados** em cada `.gitmodules` antes de baixar, não segue branches nem executa o emulador. Ele só funciona com autorização explícita, limita profundidade e volume de submódulos, e não utiliza `--remote`.
 
 ```bash
+# Veja primeiro origens e commits fixados de primeiro nível, sem download:
+python3 scripts/emulator-manager.py plan-deps kytyps5
+python3 scripts/emulator-manager.py plan-deps shadps4
+python3 scripts/emulator-manager.py plan-deps ppsspp
+
+# Após revisar, sincronize cada upstream explicitamente:
 python3 scripts/emulator-manager.py sync-deps kytyps5 --jobs 2 --yes-download-submodules
 python3 scripts/emulator-manager.py sync-deps shadps4 --jobs 2 --yes-download-submodules
 python3 scripts/emulator-manager.py sync-deps ppsspp --jobs 2 --yes-download-submodules

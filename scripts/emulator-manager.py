@@ -343,8 +343,39 @@ def submodule_entries(repo_dir: Path) -> list[tuple[str, str]]:
         ).stdout.strip()
         if not re.fullmatch(r"160000 [0-9a-f]{40} 0\t" + re.escape(path), staged):
             raise ManagerError("Missing pinned gitlink for submodule: " + path)
+        target = repo_dir / path
+        if not target.resolve(strict=False).is_relative_to(repo_dir.resolve()):
+            raise ManagerError("Submodule target escapes repository: " + path)
+        current = target
+        while current != repo_dir:
+            if current.is_symlink():
+                raise ManagerError("Symlink in nested submodule path: " + path)
+            current = current.parent
         entries.append((path, url))
     return entries
+
+
+
+def plan_deps(identifier: str) -> dict:
+    """Inspect the first-level remote URLs and exact gitlink commits, without fetching."""
+    if identifier not in RECIPES:
+        raise ManagerError("No source build recipe for " + identifier)
+    root, pin = verify_source(identifier, require_nested=False)
+    entries = submodule_entries(root)
+    return {
+        "profile": identifier, "parent_commit": pin["commit"],
+        "first_level": [
+            {
+                "path": path, "url": url,
+                "commit": subprocess.run(
+                    ["git", "-C", str(root), "ls-files", "--stage", "--", path],
+                    capture_output=True, text=True, timeout=30, check=True
+                ).stdout.strip().split()[1],
+            }
+            for path, url in entries
+        ],
+        "note": "First-level plan only. Deeper submodules are audited before each level is fetched.",
+    }
 
 
 def sync_deps(identifier: str, jobs: int, allow_download: bool) -> dict:
@@ -661,6 +692,8 @@ def main() -> int:
     for action in ("status", "deps", "history", "rollback", "uninstall"):
         p = sub.add_parser(action)
         p.add_argument("id", nargs="?" if action == "status" else None)
+    plan = sub.add_parser("plan-deps", help="show first-level pinned nested sources and origins; no network")
+    plan.add_argument("id", choices=sorted(RECIPES))
     sync = sub.add_parser("sync-deps", help="audit and download index-pinned nested source checkouts")
     sync.add_argument("id", choices=sorted(RECIPES))
     sync.add_argument("--jobs", type=int, default=2)
@@ -685,6 +718,8 @@ def main() -> int:
             data = dependencies(args.id)
         elif args.action == "history":
             data = history(args.id)
+        elif args.action == "plan-deps":
+            data = plan_deps(args.id)
         elif args.action == "sync-deps":
             data = sync_deps(args.id, args.jobs, args.yes_download_submodules)
         elif args.action == "build":
