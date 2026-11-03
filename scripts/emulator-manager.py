@@ -934,7 +934,7 @@ def uninstall(identifier: str) -> dict:
     finally:
         if temp is not None:
             temp.unlink(missing_ok=True)
-    return {"removed": identifier, "rollback_backup": str(backup.relative_to(ROOT))
+    return {"removed": identifier, "rollback_backup": str(backup.relative_to(ROOT))}
 
 
 def purge(identifier: str, yes: bool) -> dict:
