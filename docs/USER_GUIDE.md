@@ -12,8 +12,19 @@ O painel organiza ambientes isolados e fornece uma forma controlada de consultar
 | **Emuladores** | Catálogo, launchers reconhecidos e informações do perfil. | Executável encontrado não garante jogo funcional. |
 | **Biblioteca** | Arquivos encontrados por ambiente com o ID do perfil visível. | A biblioteca não copia nem converte arquivos entre sistemas. |
 | **Fontes de jogos** | Índice por categoria e por console para conteúdo publicado/licenciado. | Fontes são pontos de descoberta, não garantia jurídica ou técnica. |
-| **Sessões** | Acompanhar/encerrar sessões iniciadas pelo painel e consultar logs relacionados. | A janela gráfica pode depender do display e dos drivers do host. |
+| **Sessões** | Consultar filtros, estado dos processos, logs e encerramento individual pela nova aba dedicada. | A janela gráfica pode depender do display e dos drivers do host. |
 | **Relatório de instalação/aceitação** | Verificar ativos e probes disponíveis. | Relatórios podem expor informações do host; revise antes de compartilhar. |
+
+
+## 📺 Fase 2 — modo TV, controle e tela cheia
+
+Use o botão **Modo TV** na barra superior para ampliar fontes e alvos. O botão de ajustes (⚙) abre as preferências locais: ativar a navegação por controle, reforçar contraste e reduzir animações. A preferência de movimento reduzido do sistema também é respeitada. Configurações são guardadas apenas no armazenamento local do navegador e não são enviadas ao backend; se o armazenamento for bloqueado, valem apenas até o recarregamento.
+
+No modo TV, as **setas** do teclado percorrem comandos visíveis e **Enter** ativa o comando focado. Campos de texto e seletores preservam o comportamento normal. Em um navegador com Gamepad API, D-pad e analógico movem o foco, **A/Cross** ativa, **B/Circle** fecha um diálogo ou volta para o início, **Start/Options** abre ajustes. A leitura do controle é feita somente com modo TV e suporte a controle ativados, enquanto a página está visível. Cada acionamento exige liberar o botão antes de repetir. A compatibilidade e o mapeamento variam conforme o navegador e o dispositivo.
+
+A opção de **tela cheia** usa a API do navegador mediante ação explícita; não é restabelecida automaticamente e pode ser recusada. Nenhuma opção muda resolução, drivers, Vulkan, renderizador, áudio ou as preferências internas dos emuladores. Consulte a [aceitação local](LOCAL_ACCEPTANCE.md) para testes físicos.
+
+A aba **Sessões** permite filtrar processos ativos/finalizados, consultar logs e pedir encerramento de cada sessão. O botão **Atualizar sessões** consulta a API existente; não faz polling contínuo. O filtro não altera processos nem remove saves. Para detalhes de implementação e limites, veja [Fase 2](PHASE2_IMPLEMENTATION.md).
 
 ## 📂 Adicionar jogos próprios
 

@@ -32,6 +32,10 @@ python3 scripts/upstream-manager.py audit --require-checkout
 
 Para atualizar commits com revisão e sem alterar silenciosamente todos os módulos, veja o [guia de códigos-fonte upstream](docs/UPSTREAM_SOURCES.md).
 
+## 📺 Fase 2 — experiência de console
+
+Na branch de desenvolvimento, o painel ganha **Modo TV**, navegação por teclado/controle via Gamepad API, tela cheia, contraste e movimento configuráveis no navegador e **centro de sessões** com filtros, logs e encerramento. Tudo usa a UI e os endpoints existentes, sem novas permissões Docker/GPU ou conteúdo proprietário. A experiência ainda requer verificação manual no navegador/controle/desktop real. [Contrato e aceitação](docs/PHASE2_IMPLEMENTATION.md).
+
 ## 🐳 Docker-first: host mínimo, engenharia padronizada
 
 **Princípio do projeto:** dashboard, agentes, emuladores, ferramentas de build, Qt, SDL e testes executam dentro de containers. O host mantém Docker/Compose, driver da GPU/sessão gráfica/áudio e as interfaces de hardware inevitáveis. O novo `scripts/phase1.sh` executa validação, status, dependências e builds dos **cinco perfis** dentro do mesmo builder Trixie, sem instalar toolchains no host:

@@ -2,6 +2,8 @@
 
 **Serialização e isolamento:** operações mutáveis usam um `flock` no estado do gerenciador, impedindo builds/rollbacks/purges simultâneos conflitantes. Para `sync-deps`, o único acesso de escrita a Git é ao checkout `third_party/<id>` selecionado e a seus metadados `.git/modules/third_party/<id>`; os outros projetos permanecem somente leitura.
 
+**Fase 2 — experiência de console (03/11/2026):** implementados modo TV, navegação por teclado/gamepad, fullscreen explícito, preferências visuais locais e central de sessões (filtros, logs e encerramento pelas rotas existentes). Testes JavaScript integrados à CI; acesso ao Docker/GPU permanece inalterado. Compatibilidade com controle, navegador e desktop físico ainda depende de aceitação no host.
+
 **Fase 1 — hardening de integridade (03/11/2026):** o histórico de backups agora diferencia hash recalculado de checksum originalmente registrado. Rollback recusa arquivos alterados; desinstalação recupera launcher e estado ao falhar; purge valida checksums dos backups e bundles antes de remover. Regressões automatizadas cobrem os três fluxos. Aceitação de builds/GUI no Debian permanece pendente.
 
 **Fase 1 (branch de desenvolvimento):** CLI Docker-first unificada; sincronização de Git pinado; pacotes versionados por conteúdo para cinco emuladores; armazenamento de assets, provenance/rollback e verificação de integridade; smoke de libs do runtime; import SHA-256; volumes de games/BIOS/saves RO no builder. Incluído purge explícito de histórico/bundles após uninstall, com barreiras contra apagar dados de jogos. **Builds/GUI ainda exigem aceitação posterior.** [Documento técnico](docs/PHASE1_IMPLEMENTATION.md).
