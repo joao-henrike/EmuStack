@@ -111,6 +111,9 @@ jobs:
           test -s web/app.css
           test -s web/app.js
           test -s web/launch-utils.js
+          test -s web/experience.js
+          grep -q 'id="view-sessions"' web/index.html
+          grep -q 'id="experience-dialog"' web/index.html
           grep -q 'id="view-consoles"' web/index.html
           grep -q 'id="console-system-grid"' web/index.html
           grep -q 'renderConsoleSystems' web/app.js

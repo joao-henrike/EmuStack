@@ -14,6 +14,8 @@ if command -v node >/dev/null 2>&1; then
   printf '\n== JavaScript syntax and launch recommendation tests ==\n'
   node --check web/app.js
   node --check web/launch-utils.js
+  node --check web/experience.js
+  node tests/test_experience.js
   node tests/test_launch_utils.js
   node tests/test_console_ui.js
 else
