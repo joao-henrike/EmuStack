@@ -573,6 +573,55 @@ class EmulatorManagerTests(unittest.TestCase):
         with self.assertRaisesRegex(manager.ManagerError, "yes-run-upstream-code"):
             manager.build("ppsspp", 1, yes=False)
 
+    def test_backup_history_reports_integrity_and_rollback_refuses_tampering(self):
+        manager.install_artifact("ppsspp", self.input, "PPSSPPSDL",
+                                 {"method": "test"}, self.digest)
+        newer = self.root / "new.bin"
+        newer.write_bytes(b"new version")
+        manager.install_artifact("ppsspp", newer, "PPSSPPSDL",
+                                 {"method": "test"}, hashlib.sha256(newer.read_bytes()).hexdigest())
+        entry = manager.history("ppsspp")[0]
+        self.assertTrue(entry["integrity_ok"])
+        backup = manager.previous_dir("ppsspp") / entry["file"]
+        backup.write_bytes(b"tampered archive")
+        self.assertFalse(manager.history("ppsspp")[0]["integrity_ok"])
+        with self.assertRaisesRegex(manager.ManagerError, "Backup SHA-256 mismatch"):
+            manager.rollback("ppsspp")
+        self.assertEqual((self.root / "data/environments/ppsspp/emulators/PPSSPPSDL").read_bytes(),
+                         newer.read_bytes())
+
+    def test_failed_uninstall_restores_active_executable_and_does_not_leave_tombstone(self):
+        manager.install_artifact("ppsspp", self.input, "PPSSPPSDL",
+                                 {"method": "test"}, self.digest)
+        with patch.object(manager, "write_record", side_effect=OSError("simulated state failure")):
+            with self.assertRaisesRegex(OSError, "simulated state failure"):
+                manager.uninstall("ppsspp")
+        target = self.root / "data/environments/ppsspp/emulators/PPSSPPSDL"
+        self.assertEqual(target.read_bytes(), self.input.read_bytes())
+        self.assertEqual(manager.active("ppsspp")["sha256"], self.digest)
+        self.assertFalse(manager.tombstone_file("ppsspp").exists())
+        self.assertEqual(manager.history("ppsspp"), [])
+
+    def test_purge_refuses_tampered_managed_backup(self):
+        manager.install_artifact("ppsspp", self.input, "PPSSPPSDL",
+                                 {"method": "test"}, self.digest)
+        manager.uninstall("ppsspp")
+        archived = manager.previous_dir("ppsspp") / manager.history("ppsspp")[0]["file"]
+        archived.write_bytes(b"bad backup")
+        with self.assertRaisesRegex(manager.ManagerError, "Backup SHA-256 mismatch"):
+            manager.purge("ppsspp", True)
+        self.assertTrue(archived.exists())
+
+    def test_purge_refuses_tampered_managed_bundle(self):
+        installed = manager.install_build_bundle(
+            "ppsspp", self._make_runtime_bundle("PPSSPPSDL", "original"),
+            "PPSSPPSDL", {"method": "test"})
+        manager.uninstall("ppsspp")
+        asset = self.root / installed["bundle_directory"] / "assets/config.txt"
+        asset.write_text("modified", encoding="utf-8")
+        with self.assertRaisesRegex(manager.ManagerError, "Bundle SHA-256 mismatch"):
+            manager.purge("ppsspp", True)
+        self.assertTrue(asset.exists())
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

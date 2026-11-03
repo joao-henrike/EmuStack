@@ -857,7 +857,12 @@ def history(identifier: str) -> list[dict]:
 
         archived = file.with_suffix(".json")
         record = load_json(archived) if archived.is_file() and not archived.is_symlink() else None
-        records.append({"file": file.name, "sha256": sha, "size": file.stat().st_size,
+        # The filename is the checksum captured when the backup was created.
+        # Never treat a newly computed hash as proof that a modified archive is trusted.
+        expected = file.name.rsplit("-", 1)[-1].removesuffix(".bin")
+        records.append({"file": file.name, "sha256": sha,
+                        "integrity_ok": bool(HEX64.fullmatch(expected)) and sha == expected,
+                        "size": file.stat().st_size,
                         "origin": record.get("origin") if record else None})
     return records
 
@@ -881,6 +886,8 @@ def rollback(identifier: str) -> dict:
     if not versions:
         raise ManagerError(f"No previous installation stored: {identifier}")
     candidate = previous_dir(identifier) / versions[0]["file"]
+    if not versions[0]["integrity_ok"]:
+        raise ManagerError("Backup SHA-256 mismatch; rollback refused")
 
     provenance = versions[0].get("origin")
     if provenance and provenance.get("bundle_sha256"):
@@ -901,13 +908,33 @@ def uninstall(identifier: str) -> dict:
     dest = destination(identifier, record["binary_name"])
     if dest.is_symlink() or not dest.is_file() or hash_file(dest) != record["sha256"]:
         raise ManagerError("Managed executable modified or missing; refusing to delete it")
-    backup = backup_current(identifier, dest)
     tombstone = tombstone_file(identifier)
     ensure_dir(tombstone.parent)
-    # A removal record allows rollback even after uninstall; active stays absent.
-    tombstone.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    write_record(identifier, None)
-    return {"removed": identifier, "rollback_backup": str(backup.relative_to(ROOT))}
+    if tombstone.exists() or tombstone.is_symlink():
+        raise ManagerError("Existing removal record; refusing to overwrite it")
+    # Persist the removal record atomically; recover the executable if state changes fail.
+    backup = backup_current(identifier, dest)
+    temp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                                         dir=tombstone.parent, prefix=".removed-",
+                                         delete=False) as stream:
+            temp = Path(stream.name)
+            json.dump(record, stream, ensure_ascii=False, indent=2)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp, tombstone)
+        write_record(identifier, None)
+    except BaseException:
+        os.replace(backup, dest)
+        backup.with_suffix(".json").unlink(missing_ok=True)
+        tombstone.unlink(missing_ok=True)
+        raise
+    finally:
+        if temp is not None:
+            temp.unlink(missing_ok=True)
+    return {"removed": identifier, "rollback_backup": str(backup.relative_to(ROOT))
 
 
 def purge(identifier: str, yes: bool) -> dict:
@@ -933,13 +960,19 @@ def purge(identifier: str, yes: bool) -> dict:
             check_managed_path(child)
             if not re.fullmatch(r"[0-9a-f]{32}", child.name):
                 raise ManagerError("Unexpected unmanaged bundle directory; purge refused")
-            _bundle_tree_hash(child)
+            digest, _ = _bundle_tree_hash(child)
+            if digest[:32] != child.name:
+                raise ManagerError("Bundle SHA-256 mismatch; purge refused")
     if versions.is_dir():
         for child in versions.iterdir():
             if child.is_symlink() or not child.is_file():
                 raise ManagerError("Unexpected version entry; purge refused")
             if not re.fullmatch(r"[0-9]+-[0-9a-f]{64}\.(bin|json)", child.name):
                 raise ManagerError("Unexpected unmanaged version entry; purge refused")
+            if child.suffix == ".bin":
+                expected = child.name.rsplit("-", 1)[-1].removesuffix(".bin")
+                if hash_file(child) != expected:
+                    raise ManagerError("Backup SHA-256 mismatch; purge refused")
     # All known paths were pre-validated; none of these are games/BIOS/saves.
     backup_count = len(list(versions.iterdir())) if versions.is_dir() else 0
     bundle_count = len(list(bundle_store.iterdir())) if bundle_store.is_dir() else 0

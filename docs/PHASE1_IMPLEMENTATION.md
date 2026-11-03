@@ -32,6 +32,8 @@ Outros 13 perfis permanecem sob gestão de releases oficiais fixados, instalador
 5. `uninstall` remove somente o launcher gerenciado. Os diretórios de versões anteriores são preservados por segurança e para rollback: limpeza agressiva **não é automática**. `purge <id> --yes-delete-managed-backups` pode apagar backups/bundles órfãos apenas depois da desinstalação, sem tocar em jogos/saves/BIOS. Isso elimina a possibilidade de rollback.
 6. `install-file` só importa arquivo local já revisado em `data/imports/`, com nome no catálogo e SHA-256 explícito; não busca binários de sites arbitrários.
 
+**Resistência a falhas e corrupção:** `history` publica `integrity_ok` comparando o SHA-256 atual ao checksum imutável do nome do backup. `rollback` recusa backups alterados sem substituir o executável ativo. `uninstall` grava tombstone via arquivo temporário e restaura executável/estado anterior em caso de falha ao persistir a remoção. `purge` valida hashes de todos os backups e pacotes antes de excluir; diante de corrupção, falha fechado e preserva os arquivos para investigação. Os testes de regressão exercitam essas condições sem jogos ou firmware.
+
 Os hashes demonstram integridade perante o conteúdo armazenado, **não autenticidade das fontes nem compatibilidade funcional**. O fluxo não atualiza silenciosamente `release-lock.json` ou `source-lock.json` e não distribui ROMs, BIOS ou firmware de console.
 
 ## Contrato de CLI
