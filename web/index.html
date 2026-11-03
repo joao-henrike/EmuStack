@@ -9,6 +9,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/app.css">
   <script src="/assets/launch-utils.js" defer></script>
+  <script src="/assets/experience.js" defer></script>
   <script src="/assets/app.js" defer></script>
 </head>
 <body>
@@ -26,6 +27,7 @@
         <button class="nav-item" data-view="consoles"><span class="nav-icon">▣</span><span>Sistemas originais</span><span class="nav-count" id="nav-console-count">—</span></button>
         <button class="nav-item" data-view="emulators"><span class="nav-icon">⌘</span><span>Emuladores</span><span class="nav-count" id="nav-emulator-count">20</span></button>
         <button class="nav-item" data-view="library"><span class="nav-icon">▤</span><span>Biblioteca</span><span class="nav-count" id="nav-game-count">—</span></button>
+        <button class="nav-item" data-view="sessions"><span class="nav-icon">▶</span><span>Sessões</span></button>
         <button class="nav-item" data-view="sources"><span class="nav-icon">↗</span><span>Fontes de jogos</span></button>
         <button class="nav-item" data-view="docs"><span class="nav-icon">☷</span><span>Documentação</span></button>
       </nav>
@@ -41,6 +43,8 @@
         <div class="breadcrumbs"><span>EmuStack</span><span class="crumb-slash">/</span><strong id="crumb-current">Visão geral</strong></div>
         <div class="topbar-actions">
           <label class="global-search"><span>⌕</span><input id="global-search" type="search" placeholder="Buscar emuladores…" autocomplete="off"><kbd>/</kbd></label>
+          <button class="tv-toggle" id="tv-mode-toggle" type="button" aria-pressed="false">Modo TV</button>
+          <button class="icon-button" id="experience-settings" type="button" title="Ajustes de tela e controle" aria-label="Ajustes de tela e controle">⚙</button>
           <button class="icon-button" id="refresh-button" title="Atualizar dados" aria-label="Atualizar dados">↻</button>
           <div class="avatar" title="Execução local">EL</div>
         </div>
@@ -100,6 +104,14 @@
           <div class="notice-line"><span>⌁</span><p>A extensão do arquivo serve para catalogação e não confirma integridade, licença ou compatibilidade. Pastas ocultas e links simbólicos são ignorados.</p></div>
         </section>
 
+        <section class="view" id="view-sessions">
+          <div class="page-head"><div><div class="eyebrow">CENTRO DE EXECUÇÃO</div><h1>Sessões</h1><p class="lede">Acompanhe os processos iniciados pelo EmuStack, consulte logs e encerre sessões individualmente. Um processo em execução não comprova renderização ou compatibilidade de jogos.</p></div><div class="page-head-icon">▶</div></div>
+          <div class="console-system-stats session-stats"><div class="summary-chip"><span>Total registrado</span><b id="session-total">0</b></div><div class="summary-chip"><span>Em execução</span><b id="session-running">0</b></div><div class="summary-chip"><span>Finalizadas</span><b id="session-finished">0</b></div></div>
+          <div class="console-system-toolbar"><label for="session-filter">Mostrar sessões</label><select id="session-filter" aria-label="Filtrar sessões"><option value="all">Todas</option><option value="running">Em execução</option><option value="finished">Encerradas ou com falha</option></select><button type="button" class="button secondary" id="refresh-session-center">Atualizar sessões</button></div>
+          <div class="panel session-center"><div id="session-center-list" class="process-list" aria-live="polite"><div class="loading-line">Consultando sessões…</div></div></div>
+          <div class="notice-line"><span>ⓘ</span><p>Encerrar solicita a finalização do processo no agente do perfil; não exclui jogos ou saves. Logs são capturados por sessão com tamanho limitado.</p></div>
+        </section>
+
         <section class="view" id="view-sources">
           <div class="page-head"><div><div class="eyebrow">DESCOBERTA RESPONSÁVEL</div><h1>Fontes de jogos</h1><p class="lede">Lojas oficiais, autores independentes e projetos homebrew. Links úteis — sem catálogos de cópias não autorizadas.</p></div><div class="page-head-icon">↗</div></div>
           <div class="source-callout"><div class="callout-icon">✦</div><div><b>Conteúdo autorizado em primeiro lugar</b><p>EmuStack não hospeda nem baixa jogos, ROMs, BIOS, chaves ou firmware. A licença e o direito de distribuição devem ser verificados item por item.</p></div></div>
@@ -119,6 +131,17 @@
     </main>
   </div>
   <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <dialog class="launch-dialog experience-dialog" id="experience-dialog" aria-labelledby="experience-title">
+    <form method="dialog" class="dialog-close-form"><button class="dialog-close" aria-label="Fechar ajustes">×</button></form>
+    <div class="dialog-eyebrow">MODO CONSOLE</div><h2 id="experience-title">Tela e controles</h2>
+    <p>Preferências locais do navegador. Não alteram GPU, drivers, dispositivos ou a configuração dos emuladores.</p>
+    <label class="experience-choice"><input id="experience-tv" type="checkbox"><span>Modo TV <small>Elementos maiores e navegação por setas.</small></span></label>
+    <label class="experience-choice"><input id="experience-gamepad" type="checkbox"><span>Controle no modo TV <small>D-pad / analógico: navegar; A: selecionar; B: voltar; Start: ajustes.</small></span></label>
+    <label class="experience-choice"><input id="experience-contrast" type="checkbox"><span>Contraste reforçado <small>Melhora a leitura à distância.</small></span></label>
+    <label class="experience-choice"><input id="experience-motion" type="checkbox"><span>Reduzir animações <small>Desativa transições visuais não essenciais.</small></span></label>
+    <p id="experience-gamepad-status" role="status" aria-live="polite"></p>
+    <div class="dialog-foot"><span id="experience-fullscreen-status">Tela cheia exige uma ação explícita e permissão do navegador.</span><button type="button" class="button secondary" id="experience-fullscreen" aria-pressed="false">Entrar em tela cheia</button><button type="button" class="button primary" id="close-experience">Fechar</button></div>
+  </dialog>
   <dialog class="launch-dialog" id="launch-dialog"><form method="dialog" class="dialog-close-form"><button class="dialog-close" aria-label="Fechar">×</button></form><div class="dialog-eyebrow">LAUNCHER</div><h2 id="launch-title">Abrir emulador</h2><p id="launch-description">Selecione um arquivo da biblioteca ou abra o emulador sem um jogo.</p><label class="field-label" for="launch-emulator-select">Emulador</label><select id="launch-emulator-select"></select><label class="field-label" for="launch-game-select">Jogo (opcional)</label><select id="launch-game-select"><option value="">Abrir interface do emulador</option></select><div class="dialog-foot"><span id="launch-status-note">O emulador abrirá na sessão gráfica configurada no Docker.</span><button class="button primary" id="confirm-launch">Abrir emulador <span>→</span></button></div></dialog>
   <dialog class="launch-dialog process-log-dialog" id="process-log-dialog"><form method="dialog" class="dialog-close-form"><button class="dialog-close" aria-label="Fechar logs">×</button></form><div class="dialog-eyebrow">DIAGNÓSTICO DE EXECUÇÃO</div><h2 id="process-log-title">Logs da sessão</h2><pre id="process-log-content" class="process-log-content">Sem logs.</pre><div class="dialog-foot"><span>Os logs ficam no volume persistente de dados do usuário.</span><button class="button secondary" id="close-process-log" type="button">Fechar</button></div></dialog>
   <dialog class="launch-dialog system-setup-dialog" id="system-setup-dialog"><form method="dialog" class="dialog-close-form"><button class="dialog-close" aria-label="Fechar instruções">×</button></form><div class="dialog-eyebrow">SISTEMA DO CONSOLE</div><h2 id="system-setup-title">Preparar sistema</h2><p id="system-setup-summary"></p><div id="system-setup-checks" class="system-setup-checks"></div><h3>Como preparar</h3><ol id="system-setup-steps" class="system-setup-steps"></ol><div class="system-setup-links" id="system-setup-links"></div><div class="dialog-foot"><span>Arquivos de sistema não são distribuídos pelo EmuStack. Use apenas dumps que você tem direito de usar.</span><button class="button secondary" id="close-system-setup" type="button">Fechar</button></div></dialog>

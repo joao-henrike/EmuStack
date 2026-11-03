@@ -1,5 +1,7 @@
 # 🧭 Central da documentação EmuStack
 
+**Documentos de referência:** [Fase 1 — Docker-first](PHASE1_IMPLEMENTATION.md) · [Fase 2 — experiência de console](PHASE2_IMPLEMENTATION.md).
+
 Bem-vindo à central de documentação do EmuStack. Os guias são organizados por tarefa e por área técnica; os links levam às páginas que explicam comandos, limitações e evidências.
 
 > [!NOTE]
@@ -9,14 +11,18 @@ Bem-vindo à central de documentação do EmuStack. Os guias são organizados po
 
 | Objetivo | Leia primeiro | Depois |
 |---|---|---|
+| Entender o padrão Docker-first e o mínimo necessário no host | [Arquitetura Docker-first](DOCKER_FIRST_ARCHITECTURE.md) | [Instalação](INSTALLATION.md), [Segurança](SECURITY.md) |
 | Instalar do zero | [Instalação](INSTALLATION.md) | [Configuração](CONFIGURATION.md), [Aceitação local](LOCAL_ACCEPTANCE.md) |
 | Abrir o painel | [Guia do usuário](USER_GUIDE.md) | [Solução de problemas](TROUBLESHOOTING.md) |
+| Usar modo TV, controle e preferências visuais | [Fase 2 — experiência de console](PHASE2_IMPLEMENTATION.md) | [Guia do usuário](USER_GUIDE.md) |
 | Saber o que cada console suporta | [Matriz de emuladores](EMULATOR_MATRIX.md) | [Menus originais](ORIGINAL_SYSTEM_UI.md) |
 | Usar jogos, BIOS e saves próprios | [Guia do usuário](USER_GUIDE.md) | [Fontes e direitos](GAME_SOURCES.md) |
 | Fazer backup ou recuperar dados | [Guia do usuário](USER_GUIDE.md#armazenamento-backup-e-restauração) | [Ambientes isolados](ISOLATED_ENVIRONMENTS.md) |
 | Testar GUI, áudio, Vulkan, GPU ou controle | [Aceitação local](LOCAL_ACCEPTANCE.md) | [Solução de problemas](TROUBLESHOOTING.md) |
 | Revisar segurança | [Segurança](SECURITY.md) | [Arquitetura](ARCHITECTURE-AND-TESTS.md) |
 | Atualizar hashes oficiais | [Releases e atualizações](RELEASE_AND_UPDATES.md) | [Build e reprodutibilidade](BUILD_REPRODUCIBILITY.md) |
+| Instalar, compilar, atualizar, remover ou reverter um emulador | [Gerenciador de emuladores](EMULATOR_MANAGER.md) | [Fontes upstream](UPSTREAM_SOURCES.md), [Aceitação local](LOCAL_ACCEPTANCE.md) |
+| Sincronizar/atualizar 24 fontes upstream | [Códigos-fonte upstream](UPSTREAM_SOURCES.md) | [Releases e atualizações](RELEASE_AND_UPDATES.md) |
 | Consultar API ou CLI | [Referência de API/CLI](API_REFERENCE.md) | [Arquitetura e testes](ARCHITECTURE-AND-TESTS.md) |
 | Contribuir com código | [Desenvolvimento](DEVELOPMENT.md) | [Arquitetura e testes](ARCHITECTURE-AND-TESTS.md) |
 
@@ -26,6 +32,7 @@ Bem-vindo à central de documentação do EmuStack. Os guias são organizados po
 - [Instalação — requisitos, primeira execução e desligamento](INSTALLATION.md)
 - [Configuração — variáveis de ambiente e limites](CONFIGURATION.md)
 - [Guia do usuário — painel, biblioteca, sessões e storage](USER_GUIDE.md)
+- [Fase 2 — modo TV, controle, tela cheia e centro de sessões](PHASE2_IMPLEMENTATION.md)
 - [Matriz de emuladores — disponibilidade e limites por ID](EMULATOR_MATRIX.md)
 - [Sistemas originais e menus reais](ORIGINAL_SYSTEM_UI.md)
 - [Fontes de jogos e conteúdo autorizado](GAME_SOURCES.md)
@@ -39,9 +46,11 @@ Bem-vindo à central de documentação do EmuStack. Os guias são organizados po
 - [Arquitetura, testes e limites de validação](ARCHITECTURE-AND-TESTS.md)
 
 ### 🧰 Engenharia e manutenção
+- [Arquitetura Docker-first — host mínimo, builders e volumes](DOCKER_FIRST_ARCHITECTURE.md)
 - [Build e reprodutibilidade](BUILD_REPRODUCIBILITY.md)
 - [Referência de API e CLI](API_REFERENCE.md)
 - [Política de release e atualização](RELEASE_AND_UPDATES.md)
+- [Gerenciador de emuladores: builds, SHA-256 e rollback](EMULATOR_MANAGER.md)
 - [Guia de desenvolvimento e contribuição](DEVELOPMENT.md)
 - [Histórico de mudanças](../CHANGELOG.md)
 

@@ -61,7 +61,7 @@ printf '\n== 4/6: inventário e diagnóstico ==\n'
 "${compose[@]}" run --rm emustack list
 "${compose[@]}" run --rm emustack doctor
 printf '\n== 5/6: iniciando dashboard local ==\n'
-"${compose[@]}" up -d dashboard
+"${compose[@]}" up -d dashboard-proxy
 if [[ "${RUN_RUNTIME_ACCEPTANCE:-0}" == "1" ]]; then
   printf '\n== Runtime acceptance (host Docker, GUI/GPU/game tests still separate) ==\n'
   USE_NVIDIA="${USE_NVIDIA:-0}" ./scripts/runtime-acceptance.sh
