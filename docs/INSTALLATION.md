@@ -1,5 +1,7 @@
 # 🛠️ Instalação do EmuStack 0.7.1
 
+> **Branch de desenvolvimento:** a Fase 1 descrita aqui está em `fix/dashboard-degraded-startup` e não foi integrada à `main`. Para testar esta implementação num clone da `main`, execute `git fetch origin fix/dashboard-degraded-startup && git switch --track origin/fix/dashboard-degraded-startup` antes de seguir.
+
 **Fluxo atual da Fase 1:** após checkout/setup, utilize `bash scripts/phase1.sh validate` e, apenas após revisão de upstream, `bash scripts/phase1.sh build <perfil> --yes-run-upstream-code --jobs 2`. Não instale Qt/SDL/CMake no host por causa da compilação. Veja [etapas e limites](PHASE1_IMPLEMENTATION.md).
 
 Este guia conduz do clone até o primeiro dashboard. Para limites de recursos e todas as variáveis, consulte [Configuração](CONFIGURATION.md).
@@ -10,7 +12,7 @@ Este guia conduz do clone até o primeiro dashboard. Para limites de recursos e 
 
 ## ✅ Requisitos
 
-- Linux x86-64; ambiente de referência: Debian 13.
+- Host Linux x86-64 (Debian 12/13 como referência); o **builder Docker** usa Debian 13 Trixie, independentemente da versão Debian do host.
 - Docker Engine funcionando e plugin **Docker Compose v2**.
 - Usuário com permissão para acessar o daemon Docker.
 - Rede para baixar pacotes/assets no build inicial; espaço para imagem, cache, executáveis, jogos e arquivos de sistema do usuário.
