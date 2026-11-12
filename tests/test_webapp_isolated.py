@@ -140,7 +140,7 @@ class IsolatedDashboardLogicTests(unittest.TestCase):
         }
         with patch.object(webapp, "ISOLATED_MODE", False), \
              patch.object(webapp, "environment_records") as records, \
-             patch.object(webapp, "_agent_processes", return_value=[{"status": "running"}, {"status": "exited"}]), \
+             patch.object(webapp, "_process_snapshots", return_value=[{"status": "running"}, {"status": "exited"}]), \
              patch.object(webapp, "get_game_files", return_value=[]), \
              patch.object(webapp, "load_json", return_value={"items": "invalid"}):
             result = webapp.summarize(lambda: catalog, lambda item: status[item["id"]])
