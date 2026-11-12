@@ -6,6 +6,8 @@ printf '\n== Python unit/regression tests ==\n'
 python3 -m unittest discover -s tests -v
 printf '\n== Python syntax ==\n'
 python3 -m compileall -q emustack.py webapp.py console_modes.py console_agent.py scripts tests
+printf '\n== Cross-manifest and Compose contract validation ==\n'
+python3 scripts/validate-manifests.py
 python3 scripts/check-release-lock.py release-lock.json
 printf '\n== Auditoria dos 24 fontes upstream ==\n'
 python3 scripts/upstream-manager.py audit
@@ -23,5 +25,5 @@ else
 fi
 printf '\n== Shell syntax ==\n'
 for script in scripts/host-setup.sh scripts/install-available-apt.sh; do sh -n "$script"; done
-for script in scripts/build-and-audit.sh scripts/validate-project.sh scripts/freeze-upstream-lock.sh scripts/runtime-acceptance.sh scripts/build-phase1-isolated.sh scripts/phase1.sh scripts/phase1-acceptance.sh; do bash -n "$script"; done
+for script in scripts/build-and-audit.sh scripts/validate-project.sh scripts/freeze-upstream-lock.sh scripts/runtime-acceptance.sh scripts/build-phase1-isolated.sh scripts/phase1.sh scripts/phase1-acceptance.sh scripts/supply-chain-scan.sh; do bash -n "$script"; done
 printf 'Shell syntax OK.\n'

@@ -101,6 +101,10 @@ jobs:
           docker compose -f compose.yaml -f compose.nvidia.yaml config --quiet
       - name: Build runtime image without optional upstream downloads
         run: docker compose -f compose.yaml build --build-arg BUILD_KYTYPS5=0 --build-arg INSTALL_UPSTREAM=0 dashboard
+      - name: Generate pinned SPDX SBOM and scan HIGH/CRITICAL vulnerabilities
+        env:
+          EMUSTACK_SECURITY_ARTIFACTS_DIR: artifacts
+        run: bash scripts/supply-chain-scan.sh
       - name: Start isolated agents and dashboard
         run: docker compose -f compose.yaml up -d --no-build dashboard-proxy
       - name: Run Docker runtime acceptance and inter-agent boundary probes
@@ -125,3 +129,29 @@ jobs:
           grep -q 'renderConsoleSystems' web/app.js
           grep -q 'recommendEmulatorForGame(gamePath)' web/app.js
           git diff --check
+      - name: Generate CI validation report
+        if: always()
+        env:
+          VALIDATION_RESULT: ${{ job.status }}
+        run: |
+          mkdir -p artifacts
+          cat > artifacts/validation-report.md <<EOF
+          # EmuStack CI validation report
+
+          - Workflow run: [#${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})
+          - Commit SHA: ${GITHUB_SHA}
+          - Job status before artifact upload: ${VALIDATION_RESULT}
+          - Upstream install flag: INSTALL_UPSTREAM=0 (disabled)
+          - Experimental KytyPS5 build flag: BUILD_KYTYPS5=0 (disabled)
+          - Host coverage: GitHub-hosted runner only; physical GPU/host performance is not verified.
+          - Compatibility boundary: this run does not certify BIOS/firmware, original-console boot, individual-game compatibility or gameplay on physical hardware.
+          EOF
+          cat artifacts/validation-report.md >> "$GITHUB_STEP_SUMMARY"
+          if [[ -s artifacts/supply-chain-summary.md ]]; then cat artifacts/supply-chain-summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - name: Upload CI validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emustack-validation-report-${{ github.run_number }}
+          path: artifacts/
+          if-no-files-found: warn
