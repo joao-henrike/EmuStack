@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "tools": [
+    {
+      "id": "syft",
+      "version": "1.55.0",
+      "url": "https://github.com/anchore/syft/releases/download/v1.55.0/syft_1.55.0_linux_amd64.tar.gz",
+      "sha256": "bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d",
+      "executable": "syft"
+    },
+    {
+      "id": "trivy",
+      "version": "0.74.0",
+      "url": "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz",
+      "sha256": "2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a",
+      "executable": "trivy"
+    }
+  ],
+  "scan_policy": {
+    "scanners": [
+      "vuln"
+    ],
+    "severities": [
+      "HIGH",
+      "CRITICAL"
+    ],
+    "vulnerability_types": [
+      "os",
+      "library"
+    ],
+    "mode": "report-only",
+    "exit_code_on_findings": 0,
+    "fail_on_tool_download_checksum_or_scan_error": true,
+    "rationale": "First reviewed inventory baseline. Publish all HIGH/CRITICAL findings as CI artifacts without hiding unfixed findings. Do not block solely on findings until the team triages the baseline and documents exceptions; scanner download/integrity/runtime errors remain blocking."
+  },
+  "target_image": "local/emustack:0.7.1"
+}

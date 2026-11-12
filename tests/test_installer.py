@@ -1,4 +1,5 @@
 import importlib.util
+import io
 import json
 import subprocess
 import sys
@@ -18,6 +19,14 @@ class InstallerTests(unittest.TestCase):
         self.assertIn('apt-cache policy "$1"', script)
         self.assertIn('[ "$candidate" != "(none)" ]', script)
         self.assertNotIn('apt-cache show "$package"', script)
+
+    def test_debian_games_path_exposes_dolphin_and_mupen_apt_fallbacks(self):
+        dockerfile = (PROJECT / "Dockerfile").read_text(encoding="utf-8")
+        install_script = (PROJECT / "scripts" / "install-available-apt.sh").read_text(encoding="utf-8")
+        path_line = next(line for line in dockerfile.splitlines() if line.startswith("ENV PATH="))
+        self.assertIn("/usr/games:", path_line)
+        self.assertIn("dolphin-emu", install_script)
+        self.assertIn("mupen64plus-ui-console", install_script)
 
     def test_skip_network_writes_a_complete_20_entry_report(self):
         with tempfile.TemporaryDirectory() as td:
@@ -50,6 +59,21 @@ class InstallerTests(unittest.TestCase):
                     module.download_to_path("https://malicious.example/payload", destination)
             urlopen_mock.assert_not_called()
             self.assertFalse(destination.exists())
+
+    def test_vita3k_uses_a_versioned_official_build_release(self):
+        spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        self.assertIn("Vita3K/Vita3K-builds", module.GITHUB_SOURCES["vita3k"]["repos"])
+        lock = json.loads((PROJECT / "release-lock.json").read_text(encoding="utf-8"))
+        self.assertEqual(lock["items"]["vita3k"]["repo"], "Vita3K/Vita3K-builds")
+        self.assertEqual(lock["items"]["vita3k"]["tag"], "4246")
+        self.assertEqual(lock["items"]["vita3k"]["asset"], "Vita3K-x86_64.AppImage")
+        self.assertEqual(
+            lock["items"]["vita3k"]["sha256"],
+            "a1c543b2870300739386835dca32bad0c26e8464b45059c8246a8db60e7604ca",
+        )
 
     def test_official_sources_are_allowlisted(self):
         spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)
@@ -105,14 +129,38 @@ class InstallerTests(unittest.TestCase):
             root = Path(td)
             archive = root / "links.tar"
             with tarfile.open(archive, "w") as tf:
+                payload = b"safe payload"
+                regular = tarfile.TarInfo("safe.txt")
+                regular.size = len(payload)
+                tf.addfile(regular, io.BytesIO(payload))
+
                 link = tarfile.TarInfo("outside-link")
                 link.type = tarfile.SYMTYPE
                 link.linkname = "../../escape"
                 tf.addfile(link)
             destination = root / "out"
             module.safe_extract(archive, destination)
+            self.assertEqual((destination / "safe.txt").read_bytes(), b"safe payload")
             self.assertFalse((destination / "outside-link").exists())
             self.assertFalse((root.parent / "escape").exists())
+
+    def test_tar_path_traversal_is_rejected(self):
+        spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)
+        module = importlib.util.module_from_spec(spec)
+        assert spec.loader is not None
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            archive = root / "unsafe.tar"
+            with tarfile.open(archive, "w") as tf:
+                payload = b"outside"
+                member = tarfile.TarInfo("../escape.txt")
+                member.size = len(payload)
+                tf.addfile(member, io.BytesIO(payload))
+            destination = root / "out"
+            with self.assertRaises(ValueError):
+                module.safe_extract(archive, destination)
+            self.assertFalse((root / "escape.txt").exists())
 
     def test_zip_path_traversal_is_rejected(self):
         spec = importlib.util.spec_from_file_location("install_upstream", INSTALLER)

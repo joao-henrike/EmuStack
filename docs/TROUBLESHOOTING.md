@@ -4,13 +4,27 @@ Use a seção que corresponde ao sintoma. Preserve a saída útil e evite apagar
 
 ## 🌐 O dashboard não abre
 
+Comece incluindo contêineres parados na inspeção: `docker compose ps` normalmente mostra apenas os ativos.
+
 ```bash
-docker compose ps
+docker compose ps -a
 docker compose logs --tail=200 dashboard
-curl -i http://127.0.0.1:8765/api/health
+docker compose logs --tail=200 dashboard-proxy
+docker compose logs --tail=100 env-rpcs3
+CID="$(docker compose ps -aq dashboard-proxy)"
+if [ -n "$CID" ]; then
+  docker inspect "$CID" --format 'state={{.State.Status}} exit={{.State.ExitCode}} oom={{.State.OOMKilled}} error={{.State.Error}}'
+fi
+curl -i --max-time 5 http://127.0.0.1:8765/api/health
 ```
 
-Confirme que `host-setup.sh` foi executado, que a stack está saudável e que você está acessando a máquina local. O endereço publicado é `127.0.0.1:8765`; o projeto não oferece acesso remoto/LAN suportado. Se subiu a stack manualmente e precisa de GUI/áudio, inclua `-f compose.override.yaml` quando o arquivo existir.
+Use os mesmos arquivos `-f` e o mesmo projeto Compose usados na inicialização. A porta pertence a `dashboard-proxy`, não ao serviço `dashboard`: o dashboard fica somente em redes internas e não publica a porta diretamente. Um contêiner em estado `created` ou `exited` não tem porta publicada ativa; `HostConfig.PortBindings` sozinho mostra apenas a configuração pretendida. Confirme também `NetworkSettings.Ports` no contêiner `dashboard-proxy`.
+
+O dashboard é iniciado depois que os contêineres dos agentes começam, mas não espera que todos passem no healthcheck. Assim, a interface pode abrir em modo degradado e mostrar agentes offline; a aceitação completa continua exigindo os 20 agentes saudáveis. O proxy aguarda o dashboard iniciar e publica a interface somente no loopback.
+
+**Não acrescente `compose.nvidia.yaml` incondicionalmente.** Esse overlay solicita `gpus: all` para todos os 20 agentes e depende do NVIDIA Container Toolkit no host. Para uma execução sem GPU NVIDIA, use apenas `compose.yaml` e, quando existir, `compose.override.yaml`. Para habilitar NVIDIA, configure o toolkit e use `USE_NVIDIA=1` nos scripts documentados.
+
+Confirme também que `host-setup.sh` foi executado e que você está acessando a máquina local. O endereço publicado pelo proxy é `127.0.0.1:8765`; o projeto não oferece acesso remoto/LAN suportado. Se subiu a stack manualmente e precisa de GUI/áudio, inclua `-f compose.override.yaml` quando o arquivo existir. O proxy está em `read_only: true`; todos os diretórios temporários do Nginx (client body, proxy, FastCGI, uWSGI e SCGI) precisam usar `/tmp`, fornecido pelo `tmpfs`. Se o log mencionar `/var/cache/nginx`, confira as diretivas `*_temp_path` de `proxy/nginx.conf`.
 
 ## 🧩 Agente offline ou token rejeitado
 
@@ -26,7 +40,7 @@ Troque o nome pelo ID afetado. Confira o `.env` local: cada um dos 20 `EMUSTACK_
 
 “Agente saudável” só informa que o controlador responde. Consulte `install-report.json` e `release-lock.json`. O build pode indicar asset indisponível, formato incompatível, erro de download ou build falho. Em particular, as entradas `skip-upstream` não representam binários instalados pelo lock atual. Não baixe executáveis de fontes aleatórias para preencher o catálogo.
 
-Um override em `data/environments/<id>/emulators/` só será útil quando o binário for reconhecido pelo catálogo e compatível com o runner configurado.
+Um override em `data/environments/<id>/emulators/` só será útil quando o binário for reconhecido pelo catálogo e compatível com o runner configurado. Para Dolphin e Mupen64Plus instalados pelos pacotes Debian, confira `command -v dolphin-emu` e `command -v mupen64plus`; os pacotes Trixie instalam esses executáveis em `/usr/games`, diretório incluído no `PATH` da imagem. Depois de atualizar a imagem, recrie os serviços para que a detecção seja refeita.
 
 ## 🎮 Jogo ausente na biblioteca
 
@@ -76,7 +90,7 @@ Esse teste confirma conectividade do caminho testado, não volume nem áudio de 
 
 ## 🎨 Vulkan/GPU mostra llvmpipe ou falha
 
-`llvmpipe`/`lavapipe` são renderizadores de software no contexto do probe. Para NVIDIA:
+`llvmpipe`/`lavapipe` são renderizadores de software no contexto do probe. O probe considera falha de aceleração somente quando todos os dispositivos Vulkan enumerados são renderizadores de software. Se a saída listar uma GPU NVIDIA/AMD/Intel e também `llvmpipe`, a presença do fallback não invalida a GPU física; isso confirma enumeração do hardware, mas ainda não prova que um emulador específico escolheu esse dispositivo. Para NVIDIA:
 ```bash
 nvidia-smi
 USE_NVIDIA=1 ./scripts/build-and-audit.sh

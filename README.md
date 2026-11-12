@@ -1,5 +1,7 @@
 # 🎮 EmuStack
 
+**Fase 1 — implementação Docker-first preparada para aceitação posterior:** builds de cinco perfis, pacotes versionados com assets, importação por SHA-256, rollback, inspeção de dependências e logs, purge explícito de pacotes órfãos, e critérios de aceitação nos agentes. Guia: [Fase 1](docs/PHASE1_IMPLEMENTATION.md). Status de instalação não significa execução aprovada.
+
 <p align="center">
   <strong>Um painel local para organizar, isolar e auditar ambientes de emulação no Linux.</strong><br>
   Um perfil por sistema · dados separados · execução verificável · sem ROMs distribuídas
@@ -17,6 +19,54 @@
 > **20 perfis não significam 20 consoles integralmente emulados.** Um perfil listado pode não ter um binário instalável para Linux, pode depender de arquivos de sistema do usuário ou pode estar deliberadamente bloqueado. EmuStack separa perfis, dados e controle; ele não cria compatibilidade que o emulador upstream ainda não possui.
 
 **EmuStack** é um painel de controle local com agentes isolados por perfil. O objetivo é tornar mais seguros e auditáveis a descoberta de binários, a organização de bibliotecas, a configuração, o armazenamento, os diagnósticos e a aceitação de runtime. A interface não imita o XMB, o Home Menu nem outros sistemas originais em HTML: quando há uma rota real, ela chama o emulador e depende do seu comportamento verdadeiro.
+
+## 📦 Códigos-fonte oficiais gerenciados
+
+O EmuStack agora mantém **24 referências Git fixadas** para os projetos que cobrem os **18 perfis com emuladores** (incluindo os sete módulos oficiais de Mupen64Plus); Xbox One e Xbox Series continuam sem runner suportado. As fontes aparecem em `third_party/` após uma sincronização explícita. **São submódulos, não cópias completas incluídas no histórico do EmuStack;** o build de binários permanece independente.
+
+```bash
+python3 scripts/upstream-manager.py audit
+python3 scripts/upstream-manager.py sync --jobs 4
+python3 scripts/upstream-manager.py audit --require-checkout
+```
+
+Para atualizar commits com revisão e sem alterar silenciosamente todos os módulos, veja o [guia de códigos-fonte upstream](docs/UPSTREAM_SOURCES.md).
+
+## 📺 Fase 2 — experiência de console
+
+Na branch de desenvolvimento, o painel ganha **Modo TV**, navegação por teclado/controle via Gamepad API, tela cheia, contraste e movimento configuráveis no navegador e **centro de sessões** com filtros, logs e encerramento. Tudo usa a UI e os endpoints existentes, sem novas permissões Docker/GPU ou conteúdo proprietário. A experiência ainda requer verificação manual no navegador/controle/desktop real. [Contrato e aceitação](docs/PHASE2_IMPLEMENTATION.md).
+
+## 🐳 Docker-first: host mínimo, engenharia padronizada
+
+**Princípio do projeto:** dashboard, agentes, emuladores, ferramentas de build, Qt, SDL e testes executam dentro de containers. O host mantém Docker/Compose, driver da GPU/sessão gráfica/áudio e as interfaces de hardware inevitáveis. O novo `scripts/phase1.sh` executa validação, status, dependências e builds dos **cinco perfis** dentro do mesmo builder Trixie, sem instalar toolchains no host:
+
+```bash
+bash scripts/phase1.sh validate
+bash scripts/phase1.sh deps melonds
+bash scripts/phase1.sh build melonds --yes-run-upstream-code --jobs 2
+```
+
+Outros scripts de bootstrap ainda dependem do Python do host; a migração total do bootstrap não foi declarada concluída. Ver [arquitetura Docker-first e dívida técnica](docs/DOCKER_FIRST_ARCHITECTURE.md).
+
+## 🛠️ Fase 1 — Instalação e rollback por perfil
+
+A imagem Docker continua instalando assets oficiais pelo `release-lock.json` e pacotes APT. Adicionalmente, a **CLI Docker-first de gerenciamento** instala executáveis revisados em `data/environments/<id>/emulators/`, isolados por console, com SHA-256, versões anteriores, rollback e remoção controlada. Cinco receitas de build-fonte opt-in foram integradas: **KytyPS5, shadPS4, PPSSPP, melonDS e bsnes**. A compilação e execução real ainda exigem validação no host; nada é declarado compatível apenas por existir um binário.
+
+```bash
+bash scripts/phase1.sh status
+bash scripts/phase1.sh deps ppsspp
+bash scripts/phase1.sh history ppsspp
+```
+
+A instalação e o build são ações explícitas via CLI Docker no terminal do operador, **nunca executadas pelo dashboard**. Não há download de jogos, firmware ou BIOS. Consulte [Gerenciamento de emuladores e builds](docs/EMULATOR_MANAGER.md) antes de usar importação ou compilação.
+
+### Builder isolado para todos os cinco perfis
+
+O host Debian 12 não precisa receber pacotes de outra versão para compilar shadPS4, PPSSPP e KytyPS5. Foi adicionado um builder **opt-in** em Debian 13 Trixie, com CMake mais recente, Qt 6.8 e SDL3, mantendo o código-fonte do host somente leitura e a área `data/` separada. Exemplo: `bash scripts/phase1.sh build shadps4 --yes-run-upstream-code --jobs 2`. Para PPSSPP/KytyPS5, troque o ID. Essa compilação ainda exige avaliação no runtime, especialmente recursos/Qt do Kyty. [Procedimento e segurança](docs/EMULATOR_MANAGER.md).
+
+### Fase 1 — Aceitação parcial no Debian (31/10/2026)
+
+O operador compilou e instalou **bsnes** no mount privado do perfil, com SHA-256 registrado; `runtime_tested` continua falso. Os submódulos internos de KytyPS5 (14), shadPS4 (54) e PPSSPP (28) foram sincronizados no Debian. Na tentativa seguinte, KytyPS5/shadPS4 consultaram o SHA errado do EmuStack para prebuilds de FFmpeg (staging Git corrigido), PPSSPP exigiu SDL3/SDL3_ttf (receita corrigida), e melonDS permaneceu sem Qt6 de desenvolvimento (o APT foi executado apenas em modo simulado). Para os três primeiros, use a inspeção `plan-deps` e a sincronização explícita `sync-deps`. Para melonDS, execute `bash scripts/phase1.sh deps melonds`: Qt6, CMake e SDL são instalados **no builder Docker**, não no host. O guia completo está em [Gerenciador da Fase 1](docs/EMULATOR_MANAGER.md). Nenhuma falha de instalação é tratada como prova de incompatibilidade do console.
 
 ## ✨ Visão geral
 
@@ -88,8 +138,9 @@ O arquivo `release-lock.json` atual é estrito e abrange os 20 IDs: **11 assets 
 ```mermaid
 flowchart TB
     Browser["Navegador local"]
-    Dashboard["Dashboard :8765<br/>127.0.0.1 apenas"]
-    Browser --> Dashboard
+    Proxy["Proxy Nginx :8765<br/>127.0.0.1 apenas"]
+    Dashboard["Dashboard/API<br/>sem porta publicada"]
+    Browser --> Proxy --> Dashboard
     Dashboard -->|"token individual + IP de gateway permitido"| A1["Agente / perfil A"]
     Dashboard -->|"token individual + IP de gateway permitido"| A2["Agente / perfil B"]
     Dashboard -->|"token individual + IP de gateway permitido"| AN["... 20 perfis"]
@@ -100,6 +151,8 @@ flowchart TB
     A2 -. "rede interna exclusiva" .- N2["net B"]
     AN -. "rede interna exclusiva" .- NN["net N"]
 ```
+
+O navegador entra por um proxy Nginx mínimo fixado por digest e publicado somente em `127.0.0.1:8765`. O dashboard permanece sem porta publicada e conectado apenas às bridges internas dos agentes e a uma rede backend interna exclusiva do proxy. O proxy não compartilha redes com os agentes e preserva `Host`, `Origin` e `X-EmuStack-Request`; a origem confiável é o IP TCP fixo do proxy, não headers encaminhados.
 
 Cada agente compartilha o kernel Linux do host e a imagem de programas do runtime; **não** é uma VM independente. O dashboard é um orquestrador privilegiado, não deve ser exposto remotamente. Leia o [modelo de segurança](docs/SECURITY.md) e a [arquitetura detalhada](docs/ARCHITECTURE-AND-TESTS.md).
 

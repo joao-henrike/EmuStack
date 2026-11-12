@@ -1,5 +1,7 @@
 # 🔄 Releases, assets e atualização
 
+**Fase 1:** a compilação pinada gera pacote completo por perfil e launcher cuja versão é rastreável; versões anteriores preservam executável, metadados e recursos. Use `bash scripts/phase1.sh history <id>`, `rollback` e `uninstall`, sem editar hashes manualmente. Após desinstalar, `purge <id> --yes-delete-managed-backups` elimina histórico/pacotes de forma irreversível; não afeta ROMs, BIOS ou saves. O release lock de ativos Docker é separado deste histórico. [Detalhes](PHASE1_IMPLEMENTATION.md).
+
 ## 🎯 Princípio
 
 A atualização de upstream pode alterar código, artefatos, comandos, dependências e comportamento. EmuStack mantém o lock estrito para assets efetivamente baixados e validados; não transforma mudanças upstream em compatibilidade garantida.
@@ -41,6 +43,10 @@ Detalhes e exemplo de comando em [Build e reprodutibilidade](BUILD_REPRODUCIBILI
 ## 🧾 Evidência e changelog
 
 Cada atualização deve capturar: commit, referência upstream, asset/URL, SHA-256, plataforma de build, resultado do build, tests/acceptance e falhas conhecidas. Atualize `CHANGELOG.md` e a matriz por perfil. Diferencie “CI verde”, “build concluído” e “jogo testado”.
+
+## 🛠️ Binários locais e atualização por perfil (Fase 1)
+
+O `scripts/emulator-manager.py` gerencia somente binários extras na pasta privada `data/environments/<id>/emulators/`. Os comandos `status`, `deps`, `build`, `install-file`, `history`, `rollback` e `uninstall` não alteram hashes do Docker nem atualizam silenciosamente o upstream. Primeiro revise `python3 scripts/upstream-manager.py plan`, faça `pin` somente em branch de revisão, e depois compile explicitamente. Há cinco receitas de build de fonte Linux registradas; execução real exige aceitação no Debian. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md).
 
 ## 🧯 Rollback
 

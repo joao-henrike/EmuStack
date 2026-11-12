@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "description": "Conservative per-profile save and persistent-data inventory. Paths are candidates based on upstream documentation, not proof of actual runtime writes. All paths are relative to the environment's /home/emu unless explicitly stated otherwise.",
+  "profiles": [
+    {
+      "id": "kytyps5",
+      "storage_model": "unsupported",
+      "confidence": "not-applicable",
+      "home_paths": [],
+      "source_url": "https://github.com/KytyPS5/KytyPS5",
+      "notes": "No supported runner is enabled by this profile. No save path is inferred or created."
+    },
+    {
+      "id": "shadps4",
+      "storage_model": "manual",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://github.com/shadps4-emu/shadPS4",
+      "notes": "No verified path contract is recorded for the pinned Linux payload. Inspect the selected build's user-data location before moving or redirecting files."
+    },
+    {
+      "id": "rpcs3",
+      "storage_model": "manual",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://github.com/RPCS3/rpcs3",
+      "notes": "The home tree is snapshotted, but no exact save path is approved here because packaging/data-directory behavior must be confirmed for the selected runner. Do not create generic symlinks."
+    },
+    {
+      "id": "duckstation",
+      "storage_model": "home-relative",
+      "confidence": "documented-upstream",
+      "home_paths": [
+        {
+          "path": ".local/share/duckstation",
+          "kind": "user-data",
+          "purpose": "Upstream Linux user directory; includes settings and default memory-card/save-state data. Nested save paths may be configured in the emulator."
+        }
+      ],
+      "source_url": "https://github.com/stenzek/duckstation/blob/master/README.pt-br.md",
+      "notes": "XDG_DATA_HOME is not set by the current image, so the documented fallback is /home/emu/.local/share/duckstation. The existing BIOS mount is nested under this user directory."
+    },
+    {
+      "id": "pcsx2",
+      "storage_model": "home-relative",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [
+        {
+          "path": ".config/PCSX2/memcards",
+          "kind": "memory-card",
+          "purpose": "Default file-based memory cards in the current Linux user-data layout."
+        },
+        {
+          "path": ".config/PCSX2/sstates",
+          "kind": "save-state",
+          "purpose": "Save-state directory seen in current Linux user-data layouts; not a replacement for normal in-game memory-card saves."
+        }
+      ],
+      "source_url": "https://pcsx2.net/docs/configuration/memcards/",
+      "notes": "The upstream UI is authoritative for the actual Memory Cards directory. The paths here are candidates for the current Linux user-data layout and must be confirmed in the selected build before declaring them active."
+    },
+    {
+      "id": "ppsspp",
+      "storage_model": "home-relative",
+      "confidence": "documented-upstream",
+      "home_paths": [
+        {
+          "path": ".config/ppsspp/PSP/SAVEDATA",
+          "kind": "save-data",
+          "purpose": "Common Memory Stick savedata directory for Linux."
+        },
+        {
+          "path": ".config/ppsspp",
+          "kind": "user-data",
+          "purpose": "PPSSPP's documented Linux user folder; other Memory Stick content may be below it."
+        }
+      ],
+      "source_url": "https://www.ppsspp.org/docs/troubleshooting/my-saves-wont-load/",
+      "notes": "Confirm the chosen Memory Stick folder in PPSSPP settings. This entry records a documented default, not a guarantee for every custom configuration."
+    },
+    {
+      "id": "vita3k",
+      "storage_model": "manual",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://github.com/Vita3K/Vita3K",
+      "notes": "Save data is associated with the emulator's virtual user storage. The exact user-data directory must be discovered from the selected build/runtime before mapping."
+    },
+    {
+      "id": "xbox-one",
+      "storage_model": "unsupported",
+      "confidence": "not-applicable",
+      "home_paths": [],
+      "notes": "No supported full-system runner is configured; no save path is inferred."
+    },
+    {
+      "id": "xenia-canary",
+      "storage_model": "manual",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://github.com/xenia-canary/xenia-canary-releases/releases",
+      "notes": "The Windows/Wine execution path can change the user-data root. Confirm the prefix and Xenia content directory before attempting any save redirection."
+    },
+    {
+      "id": "xbox-series",
+      "storage_model": "unsupported",
+      "confidence": "not-applicable",
+      "home_paths": [],
+      "notes": "No supported full-system runner is configured; no save path is inferred."
+    },
+    {
+      "id": "xemu",
+      "storage_model": "system-nand",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://xemu.app/",
+      "notes": "Persistent Xbox content can be part of a virtual HDD/system image and configuration, not a generic per-game save folder. Back up the complete environment home and separately supplied system images."
+    },
+    {
+      "id": "eden",
+      "storage_model": "manual",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://eden-emu.dev/",
+      "notes": "Do not assume a portable save location from the executable filename. Inspect the selected build's user-data and virtual-system storage before mapping."
+    },
+    {
+      "id": "cemu",
+      "storage_model": "system-nand",
+      "confidence": "documented-upstream",
+      "home_paths": [
+        {
+          "path": ".local/share/Cemu/mlc01/usr/save",
+          "kind": "system-nand-save-data",
+          "purpose": "Save data within the MLC path configured by EMUSTACK_CEMU_MLC_PATH."
+        }
+      ],
+      "source_url": "https://wiki.cemu.info/wiki/Folder_structure",
+      "notes": "Cemu's MLC contains system data and saved games. Treat it as console storage, not as a regular folder of interchangeable save files. The current image sets the MLC root to /home/emu/.local/share/Cemu/mlc01."
+    },
+    {
+      "id": "dolphin",
+      "storage_model": "home-relative",
+      "confidence": "documented-upstream",
+      "home_paths": [
+        {
+          "path": ".local/share/dolphin-emu",
+          "kind": "user-data",
+          "purpose": "Default Linux/XDG global user directory; memory cards and Wii user-data reside inside its profile structure."
+        }
+      ],
+      "source_url": "https://pt.dolphin-emu.org/docs/guides/controlling-global-user-directory/",
+      "notes": "Older/legacy builds may use ~/.dolphin-emu, and portable/custom builds can override the directory. Runtime verification is required before migration."
+    },
+    {
+      "id": "azahar",
+      "storage_model": "manual",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://github.com/azahar-emu/azahar",
+      "notes": "The save data depends on the selected user-data/NAND configuration. Do not infer a stable path until the chosen AppImage/build is launched and inspected."
+    },
+    {
+      "id": "melonds",
+      "storage_model": "manual",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://melonds.kuribo64.net/",
+      "notes": "Firmware and save-data paths vary with configuration and build. Keep the complete per-environment home backed up until a runtime trace establishes specific locations."
+    },
+    {
+      "id": "mgba",
+      "storage_model": "rom-adjacent-or-configured",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://github.com/mgba-emu/mgba",
+      "notes": "Battery saves may be written beside a ROM or to a configured save location. Because /games is read-only in EmuStack, verify and configure a writable save directory before declaring saves functional."
+    },
+    {
+      "id": "mupen64plus",
+      "storage_model": "rom-adjacent-or-configured",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://github.com/mupen64plus",
+      "notes": "Save-type files and paths depend on the frontend/plugins/configuration. The read-only /games mount means the default path must be tested; no writable path is assumed."
+    },
+    {
+      "id": "bsnes",
+      "storage_model": "rom-adjacent-or-configured",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://github.com/bsnes-emu/bsnes",
+      "notes": "Save and state paths can depend on the selected build/settings. Validate actual writes against the read-only /games mount before promising persistence."
+    },
+    {
+      "id": "mesen",
+      "storage_model": "manual",
+      "confidence": "needs-runtime-validation",
+      "home_paths": [],
+      "source_url": "https://www.mesen.ca/",
+      "notes": "The exact Linux user-data/save directory depends on the selected build and configuration. Discover it at runtime before mapping or migrating data."
+    }
+  ]
+}

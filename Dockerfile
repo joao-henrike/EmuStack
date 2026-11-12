@@ -68,6 +68,7 @@ COPY docs/ /opt/emustack/docs/
 COPY web/ /opt/emustack/web/
 COPY scripts/install-available-apt.sh /tmp/install-available-apt.sh
 COPY scripts/install-upstream.py /opt/emustack/scripts/install-upstream.py
+COPY scripts/phase1-smoke.py /opt/emustack/scripts/phase1-smoke.py
 COPY --from=kyty-builder /out/kytyps5 /opt/emustack/installed/kytyps5
 RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
       case "$APT_SNAPSHOT_TIMESTAMP" in [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9][0-9][0-9]Z) ;; *) echo "Invalid APT_SNAPSHOT_TIMESTAMP" >&2; exit 2;; esac; \
@@ -93,7 +94,7 @@ RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
     && rm -f /tmp/install-available-apt.sh \
     && rm -rf /var/lib/apt/lists/*
 USER ${PUID}:${PGID}
-ENV PATH="/opt/emustack/installed/kytyps5:/opt/emustack/installed:/home/emu/.local/bin:/usr/local/bin:/usr/bin:/bin" \
+ENV PATH="/usr/games:/opt/emustack/installed/kytyps5:/opt/emustack/installed:/home/emu/.local/bin:/usr/local/bin:/usr/bin:/bin" \
     EMUSTACK_WEB_DOCS_DIR=/opt/emustack/docs \
     EMUSTACK_SOURCES_PATH=/opt/emustack/game-sources.json \
     XDG_CONFIG_HOME=/home/emu/.config \
