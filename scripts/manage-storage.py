@@ -7,6 +7,7 @@ folder before the verified snapshot is promoted.
 """
 from __future__ import annotations
 import argparse
+import gzip
 import hashlib
 import json
 import os
@@ -141,6 +142,19 @@ def assert_stopped(env_id: str, allow_running: bool = False) -> None:
 def backup_env(env_id: str, output: Path | None, allow_running: bool) -> Path:
     env_id = validate_env(env_id)
     assert_stopped(env_id, allow_running)
+
+    created = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    requested_destination = output or (BACKUP_ROOT / env_id / f"emustack-{env_id}-{created}.tar.gz")
+    requested_destination = Path(requested_destination).expanduser()
+    if requested_destination.is_symlink() or requested_destination.exists():
+        raise FileExistsError(f"Refusing to overwrite existing backup: {requested_destination}")
+    requested_destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    destination = requested_destination.parent.resolve() / requested_destination.name
+    # The preflight check gives a clear error; os.link below also closes the race
+    # where another process creates the destination while this backup is running.
+    if destination.is_symlink() or destination.exists():
+        raise FileExistsError(f"Refusing to overwrite existing backup: {destination}")
+
     root = env_root(env_id)
     ensure_layout(env_id)
     files = []
@@ -151,26 +165,30 @@ def backup_env(env_id: str, output: Path | None, allow_running: bool) -> Path:
         if total > MAX_BACKUP_BYTES:
             raise ValueError("Environment exceeds the configured 2 TiB snapshot safety limit")
         files.append({"path": path.relative_to(root).as_posix(), "size": size, "sha256": sha256_file(path)})
-    created = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    destination = output or (BACKUP_ROOT / env_id / f"emustack-{env_id}-{created}.tar.gz")
-    destination = destination.expanduser().resolve()
-    destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     manifest = {"format": "emustack-environment-snapshot", "schema_version": 1, "project_version": VERSION,
                 "environment_id": env_id, "created_utc": datetime.now(timezone.utc).isoformat(),
                 "source_root": f"data/environments/{env_id}", "file_count": len(files), "total_bytes": total, "files": files}
     manifest_bytes = json.dumps(manifest, ensure_ascii=False, indent=2).encode("utf-8")
-    tmp = destination.with_name(destination.name + ".partial")
+
+    fd, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.", suffix=".partial", dir=destination.parent
+    )
+    os.close(fd)
+    temporary_path = Path(temporary_name)
     try:
-        with tarfile.open(tmp, "w:gz", compresslevel=5) as archive:
+        with tarfile.open(temporary_path, "w:gz", compresslevel=5) as archive:
             archive.addfile(_tar_info("manifest.json", len(manifest_bytes)), _BytesReader(manifest_bytes))
             for name in ALLOWED_DIRS:
                 path = root / name
                 archive.add(path, arcname=f"environment/{env_id}/{name}", recursive=True, filter=_safe_tar_filter)
-        tmp.replace(destination)
+        os.chmod(temporary_path, 0o600)
+        # A hard-link creation is atomic and fails if destination already exists;
+        # unlike Path.replace(), it never overwrites another backup.
+        os.link(temporary_path, destination)
     except Exception:
-        tmp.unlink(missing_ok=True)
+        temporary_path.unlink(missing_ok=True)
         raise
-    os.chmod(destination, 0o600)
+    temporary_path.unlink(missing_ok=True)
     return destination
 
 
@@ -230,17 +248,44 @@ def restore_env(env_id: str, archive_path: Path, allow_running: bool) -> Path:
             if manifest_file is None:
                 raise ValueError("Cannot read snapshot manifest")
             manifest = json.loads(manifest_file.read().decode("utf-8"))
+            if not isinstance(manifest, dict):
+                raise ValueError("Snapshot manifest must be a JSON object")
             if manifest.get("format") != "emustack-environment-snapshot" or manifest.get("schema_version") != 1:
                 raise ValueError("Unsupported snapshot format")
             if manifest.get("environment_id") != env_id:
                 raise ValueError("Snapshot belongs to a different environment")
-            for item in manifest.get("files", []):
-                rel = PurePosixPath(str(item.get("path", "")))
+            manifest_files = manifest.get("files")
+            if not isinstance(manifest_files, list):
+                raise ValueError("Snapshot manifest 'files' must be a list")
+            declared_total = 0
+            for index, item in enumerate(manifest_files):
+                if not isinstance(item, dict):
+                    raise ValueError(f"Snapshot manifest files[{index}] must be an object")
+                raw_path = item.get("path")
+                if not isinstance(raw_path, str) or not raw_path.strip():
+                    raise ValueError(f"Invalid path in snapshot manifest files[{index}]")
+                rel = PurePosixPath(raw_path)
                 if rel.is_absolute() or not rel.parts or any(p in {"", ".", ".."} for p in rel.parts):
                     raise ValueError("Invalid relative path in snapshot manifest")
                 if rel.parts[0] not in ALLOWED_DIRS:
                     raise ValueError("Snapshot manifest attempts to write outside allowed environment directories")
-                expected[rel.as_posix()] = item
+                normalized = rel.as_posix()
+                if normalized in expected:
+                    raise ValueError(f"Duplicate path in snapshot manifest: {normalized}")
+                size = item.get("size")
+                if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+                    raise ValueError(f"Invalid size in snapshot manifest for {normalized}")
+                digest = item.get("sha256")
+                if not isinstance(digest, str) or len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest.lower()):
+                    raise ValueError(f"Invalid SHA-256 in snapshot manifest for {normalized}")
+                declared_total += size
+                expected[normalized] = item
+            file_count = manifest.get("file_count")
+            if isinstance(file_count, bool) or not isinstance(file_count, int) or file_count != len(expected):
+                raise ValueError("Snapshot manifest file_count does not match files list")
+            total_bytes = manifest.get("total_bytes")
+            if isinstance(total_bytes, bool) or not isinstance(total_bytes, int) or total_bytes != declared_total:
+                raise ValueError("Snapshot manifest total_bytes does not match files list")
             total = 0
             seen_files: set[str] = set()
             for member in members:
@@ -300,6 +345,8 @@ def restore_env(env_id: str, archive_path: Path, allow_running: bool) -> Path:
         for path in dest.iterdir():
             if path.is_dir(): os.chmod(path, 0o700)
         return rollback_root if rollback_root.exists() else dest
+    except (tarfile.TarError, gzip.BadGzipFile, EOFError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise ValueError(f"Snapshot is corrupt or truncated: {exc}") from exc
     finally:
         shutil.rmtree(stage, ignore_errors=True)
 
