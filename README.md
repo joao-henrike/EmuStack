@@ -16,6 +16,9 @@
 </p>
 
 > [!IMPORTANT]
+> **Imagens segregadas:** Dolphin e Mupen64Plus são construídos em targets Docker próprios. Os outros 18 agentes, dashboard e CLI usam o runtime comum. Cada imagem recebe seu próprio SBOM e scan Trivy, com matriz comparativa de CVEs. [Arquitetura](docs/DOCKER_FIRST_ARCHITECTURE.md).
+
+> [!IMPORTANT]
 > **20 perfis não significam 20 consoles integralmente emulados.** Um perfil listado pode não ter um binário instalável para Linux, pode depender de arquivos de sistema do usuário ou pode estar deliberadamente bloqueado. EmuStack separa perfis, dados e controle; ele não cria compatibilidade que o emulador upstream ainda não possui.
 
 **EmuStack** é um painel de controle local com agentes isolados por perfil. O objetivo é tornar mais seguros e auditáveis a descoberta de binários, a organização de bibliotecas, a configuração, o armazenamento, os diagnósticos e a aceitação de runtime. A interface não imita o XMB, o Home Menu nem outros sistemas originais em HTML: quando há uma rota real, ela chama o emulador e depende do seu comportamento verdadeiro.
