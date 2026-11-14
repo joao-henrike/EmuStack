@@ -7,9 +7,11 @@
 
 ## 1. Interpretação dos números
 
-O inventário inicial contém 560 pacotes/componentes e 401 achados em nível de pacote: 9 marcados CRITICAL e 392 HIGH. Esses achados correspondem a **139 CVE IDs únicos**: 7 CRITICAL e 132 HIGH. Um mesmo CVE pode aparecer em vários pacotes binários oriundos do mesmo pacote-fonte; não contar cada linha como uma vulnerabilidade independente.
+O inventário inicial (12/11) continha 560 pacotes/componentes e 401 achados em nível de pacote: 9 CRITICAL e 392 HIGH, correspondendo a **139 CVE IDs únicos** (7 CRITICAL e 132 HIGH). Após a atualização APT, a execução #233 (14/11) passou a 399 achados: 9 CRITICAL e 390 HIGH, correspondendo a **138 CVE IDs únicos** (7 CRITICAL e 131 HIGH). A execução #234 repetiu esses números e acrescentou as cadeias de dependência SPDX ao relatório.
 
-O scanner da CI usa o snapshot de sua base de vulnerabilidades de 12/11/2026. O resultado deve ser atualizado após cada rebuild.
+O CVE-2026-109518 desapareceu do inventário após a imagem passar a usar APT 3.0.4; foram removidos os dois achados em nível de pacote associados a `apt` e `libapt-pkg7.0`. Os 7 CVEs únicos CRITICAL continuam pendentes de tratamento. Um mesmo CVE pode aparecer em vários pacotes binários oriundos do mesmo pacote-fonte; não contar cada linha como uma vulnerabilidade independente.
+
+Execução #234: 175 testes Python aprovados, 20 agentes saudáveis e testes de fronteira entre agentes aprovados. A validação ocorreu em runner GitHub-hosted; GPU física, áudio, controles, BIOS/firmware e compatibilidade de jogos não foram certificados. O resultado do scanner é um snapshot de sua base de vulnerabilidades em 14/11/2026 e deve ser atualizado após cada rebuild.
 
 ## 2. Grupos inicialmente marcados CRITICAL
 
