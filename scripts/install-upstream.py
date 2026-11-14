@@ -35,7 +35,7 @@ GITHUB_SOURCES = {
         "binary_candidates": [], "prerelease": True,
     },
     "vita3k": {
-        "repos": ["Vita3K/Vita3K"],
+        "repos": ["Vita3K/Vita3K-builds", "Vita3K/Vita3K"],
         "pattern": r"(?i).*Vita3K.*(x86_64|linux).*\.(AppImage|zip|tar\.gz)$", "kind": "auto",
         "binary_candidates": ["Vita3K", "vita3k"], "prerelease": True,
     },
@@ -282,17 +282,44 @@ def safe_extract(archive_path: Path, destination: Path) -> None:
         with tarfile.open(archive_path, "r:*") as tf:
             members = []
             for member in tf.getmembers():
-                name = member.name
-                if name.startswith("/") or ".." in PurePosixPath(name).parts or member.issym() or member.islnk():
-                    if member.isdir() is False and member.isfile() is False:
-                        continue
-                    if name.startswith("/") or ".." in PurePosixPath(name).parts:
-                        raise ValueError(f"Chemin dangereux dans TAR: {name}")
-                target = (destination / name).resolve()
+                # Normalize separators before validating so Windows-style traversal
+                # is rejected even when the installer runs on POSIX.
+                name = member.name.replace("\\", "/")
+                relative = PurePosixPath(name)
+                if (
+                    not name
+                    or "\x00" in name
+                    or name.startswith("/")
+                    or re.match(r"^[A-Za-z]:", name)
+                    or ".." in relative.parts
+                ):
+                    raise ValueError(f"Chemin dangereux dans TAR: {member.name}")
+
+                # Never materialize symlinks, hardlinks, devices, FIFOs, or other
+                # special entries. The source archives only need regular files
+                # and directories, which also keeps extraction compatible with
+                # Python 3.11 (TarFile.extractall(filter=...) is Python 3.12+).
+                if not (member.isdir() or member.isfile()):
+                    continue
+
+                normalized_name = relative.as_posix()
+                member.name = normalized_name
+                target = (destination / Path(*relative.parts)).resolve()
                 if root not in target.parents and target != root:
-                    raise ValueError(f"Chemin TAR hors destination: {name}")
+                    raise ValueError(f"Chemin TAR hors destination: {member.name}")
+
+                # Apply the security properties of the "data" filter on older
+                # Python versions: no ownership restoration and no special bits.
+                member.mode = (member.mode or 0) & 0o755
+                member.uid = None
+                member.gid = None
+                member.uname = None
+                member.gname = None
                 members.append(member)
-            tf.extractall(destination, members=members, filter="data")
+
+            # Do not pass the Python 3.12-only "filter" keyword. All accepted
+            # members have already been normalized and reduced to files/dirs.
+            tf.extractall(path=destination, members=members)
         return
     raise ValueError(f"Format d'archive non supporté: {archive_path.name}")
 
@@ -511,7 +538,13 @@ def main() -> int:
     parser.add_argument("--report", default="/opt/emustack/install-report.json", type=Path)
     parser.add_argument("--lock", default=Path("/opt/emustack/release-lock.json"), type=Path)
     parser.add_argument("--skip-network", action="store_true")
+    parser.add_argument("--exclude-dolphin", action="store_true",
+                        help="Keep Dolphin out of the shared image; only its dedicated target installs it.")
+    parser.add_argument("--only-profile", choices=("dolphin", "mupen64plus"),
+                        help="Update one dedicated image's installation result without resetting the base report.")
     args = parser.parse_args()
+    if args.only_profile and args.exclude_dolphin:
+        parser.error("--exclude-dolphin cannot be combined with --only-profile")
     args.target.mkdir(parents=True, exist_ok=True)
     data = json.loads(args.catalog.read_text(encoding="utf-8"))
     by_id = {x["id"]: x for x in data["emulators"]}
@@ -531,6 +564,41 @@ def main() -> int:
     lock_items = lock_data.get("items", {})
     strict_lock = lock_data.get("strict", False)
 
+    # Dedicated stages inherit the complete report from the shared runtime.
+    # Only mutate their own profile, retaining accurate upstream statuses for
+    # all other environments and the explicit unsupported-console entries.
+    if args.only_profile:
+        if not args.report.is_file():
+            raise SystemExit("--only-profile needs a complete shared-image report")
+        try:
+            previous = json.loads(args.report.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise SystemExit(f"Cannot read shared-image installation report: {exc}")
+        if (not isinstance(previous, dict) or not isinstance(previous.get("items"), dict)
+                or set(previous["items"]) != set(by_id)):
+            raise SystemExit("--only-profile refuses an incomplete or malformed shared-image report")
+        report = previous["items"]
+        identifier = args.only_profile
+        if identifier == "dolphin" and not args.skip_network:
+            install_dolphin_appimage(args.target, report, by_id,
+                                     lock_items.get("dolphin"), strict_lock)
+        if report.get(identifier, {}).get("status") != "installed":
+            for command in by_id[identifier].get("commands", []):
+                path = shutil.which(command)
+                if path:
+                    record(report, identifier, "installed", version="Debian package",
+                           source="APT fallback", binary=path,
+                           details="Executable found on PATH; gameplay is not validated.")
+                    break
+            else:
+                record(report, identifier, "not-available",
+                       reason="No executable was detected in the dedicated image")
+        previous["items"] = report
+        args.report.write_text(json.dumps(previous, indent=2, ensure_ascii=False) + "\n",
+                               encoding="utf-8")
+        print(f"Dedicated image {identifier}: {report[identifier]['status']}")
+        return 0
+
     # Binaries built into the image from apt packages are checked separately by `emustack list`.
     for identifier, spec in GITHUB_SOURCES.items():
         if identifier in by_id and not args.skip_network:
@@ -538,7 +606,12 @@ def main() -> int:
                                  lock_items.get(identifier), strict_lock)
     if not args.skip_network:
         install_eden(args.target, report, by_id, lock_items.get("eden"), strict_lock)
-        install_dolphin_appimage(args.target, report, by_id, lock_items.get("dolphin"), strict_lock)
+        if not args.exclude_dolphin:
+            install_dolphin_appimage(args.target, report, by_id, lock_items.get("dolphin"), strict_lock)
+
+    if args.exclude_dolphin:
+        record(report, "dolphin", "profile-image-only",
+               reason="Dolphin binaries are installed only in the runtime-dolphin target")
 
     # Never manufacture fake launchers for projects that do not publish a runnable emulator binary.
     record(report, "xbox-one", "unsupported-no-runner",
@@ -555,6 +628,8 @@ def main() -> int:
     # Record packages that APT actually installed, including fallback packages after
     # a release endpoint did not offer a matching standalone asset.
     for identifier, item in by_id.items():
+        if identifier == "dolphin" and args.exclude_dolphin:
+            continue
         if report.get(identifier, {}).get("status") == "installed":
             continue
         for command in item.get("commands", []):

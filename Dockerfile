@@ -8,6 +8,7 @@ ARG APT_SNAPSHOT_TIMESTAMP
 ARG BUILD_KYTYPS5=1
 ARG KYTYPS5_REF=KytyPS5-2026-10-26-f90a8b1
 ARG KYTYPS5_EXPECTED_SHORT=f90a8b1
+COPY scripts/phase1-builder/apt-security-bootstrap.sh /tmp/apt-security-bootstrap.sh
 RUN mkdir -p /out/kytyps5
 RUN set -eu; \
     if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
@@ -16,7 +17,8 @@ RUN set -eu; \
       printf 'Types: deb\nURIs: https://snapshot.debian.org/archive/debian/%s/\nSuites: trixie trixie-updates\nComponents: main\nCheck-Valid-Until: no\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: https://snapshot.debian.org/archive/debian-security/%s/\nSuites: trixie-security\nComponents: main\nCheck-Valid-Until: no\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n' "$APT_SNAPSHOT_TIMESTAMP" "$APT_SNAPSHOT_TIMESTAMP" > /etc/apt/sources.list.d/emustack-snapshot.sources; \
     fi; \
     if [ "$BUILD_KYTYPS5" = "1" ]; then \
-      if apt-get update && apt-get install -y --no-install-recommends \
+      sh /tmp/apt-security-bootstrap.sh; \
+      if apt-get install -y --no-install-recommends \
         ca-certificates git cmake ninja-build clang lld glslang-tools python3 pkg-config \
         qt6-base-dev libvulkan-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev \
         libxfixes-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev libxkbcommon-dev \
@@ -66,8 +68,10 @@ COPY README.md /opt/emustack/README.md
 COPY game-sources.json /opt/emustack/game-sources.json
 COPY docs/ /opt/emustack/docs/
 COPY web/ /opt/emustack/web/
+COPY scripts/phase1-builder/apt-security-bootstrap.sh /tmp/apt-security-bootstrap.sh
 COPY scripts/install-available-apt.sh /tmp/install-available-apt.sh
 COPY scripts/install-upstream.py /opt/emustack/scripts/install-upstream.py
+COPY scripts/phase1-smoke.py /opt/emustack/scripts/phase1-smoke.py
 COPY --from=kyty-builder /out/kytyps5 /opt/emustack/installed/kytyps5
 RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
       case "$APT_SNAPSHOT_TIMESTAMP" in [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9][0-9][0-9]Z) ;; *) echo "Invalid APT_SNAPSHOT_TIMESTAMP" >&2; exit 2;; esac; \
@@ -75,14 +79,15 @@ RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
       printf 'Types: deb\nURIs: https://snapshot.debian.org/archive/debian/%s/\nSuites: trixie trixie-updates\nComponents: main\nCheck-Valid-Until: no\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: https://snapshot.debian.org/archive/debian-security/%s/\nSuites: trixie-security\nComponents: main\nCheck-Valid-Until: no\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n' "$APT_SNAPSHOT_TIMESTAMP" "$APT_SNAPSHOT_TIMESTAMP" > /etc/apt/sources.list.d/emustack-snapshot.sources; \
     fi \
     && chmod +x /tmp/install-available-apt.sh /opt/emustack/emustack.py /opt/emustack/console_agent.py /opt/emustack/scripts/install-upstream.py \
+    && sh /tmp/apt-security-bootstrap.sh \
     && /tmp/install-available-apt.sh \
     && mkdir -p /opt/emustack/installed /opt/emustack/dropin /games /bios /saves /home/emu/.config /home/emu/.cache \
     && if [ "$INSTALL_UPSTREAM" = "1" ]; then \
          python3 /opt/emustack/scripts/install-upstream.py \
            --target /opt/emustack/installed --catalog /opt/emustack/catalog.json \
-           --report /opt/emustack/install-report.json --lock /opt/emustack/release-lock.json; \
+           --report /opt/emustack/install-report.json --lock /opt/emustack/release-lock.json --exclude-dolphin; \
        else \
-         python3 /opt/emustack/scripts/install-upstream.py --skip-network \
+         python3 /opt/emustack/scripts/install-upstream.py --skip-network --exclude-dolphin \
            --target /opt/emustack/installed --catalog /opt/emustack/catalog.json \
            --report /opt/emustack/install-report.json --lock /opt/emustack/release-lock.json; \
        fi \
@@ -90,13 +95,52 @@ RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
     && if ! getent passwd "${PUID}" >/dev/null; then useradd -m -u "${PUID}" -g "${PGID}" -s /bin/bash emu; fi \
     && chown -R "${PUID}:${PGID}" /home/emu /opt/emustack/installed /games /bios /saves \
     && ln -sf /opt/emustack/emustack.py /usr/local/bin/emustack \
-    && rm -f /tmp/install-available-apt.sh \
+    && rm -f /tmp/install-available-apt.sh /tmp/apt-security-bootstrap.sh \
     && rm -rf /var/lib/apt/lists/*
 USER ${PUID}:${PGID}
-ENV PATH="/opt/emustack/installed/kytyps5:/opt/emustack/installed:/home/emu/.local/bin:/usr/local/bin:/usr/bin:/bin" \
+ENV PATH="/usr/games:/opt/emustack/installed/kytyps5:/opt/emustack/installed:/home/emu/.local/bin:/usr/local/bin:/usr/bin:/bin" \
     EMUSTACK_WEB_DOCS_DIR=/opt/emustack/docs \
     EMUSTACK_SOURCES_PATH=/opt/emustack/game-sources.json \
     XDG_CONFIG_HOME=/home/emu/.config \
     XDG_CACHE_HOME=/home/emu/.cache
 ENTRYPOINT ["python3", "/opt/emustack/emustack.py"]
 CMD ["list"]
+# Only Dolphin obtains the Dolphin APT and optional pinned official AppImage.
+# Building this target preserves the common read-only agent runtime and its reports.
+FROM runtime AS runtime-dolphin
+ARG PUID=1000
+ARG PGID=1000
+ARG INSTALL_UPSTREAM=1
+USER root
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends dolphin-emu; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*; \
+    if [ "$INSTALL_UPSTREAM" = "1" ]; then \
+      python3 /opt/emustack/scripts/install-upstream.py --only-profile dolphin; \
+    else \
+      python3 /opt/emustack/scripts/install-upstream.py --only-profile dolphin --skip-network; \
+    fi
+USER ${PUID}:${PGID}
+
+# The legacy Mupen64Plus frontend and plugins are not installed in any
+# other agent or in the dashboard image.
+FROM runtime AS runtime-mupen64plus
+ARG PUID=1000
+ARG PGID=1000
+USER root
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      mupen64plus-ui-console \
+      mupen64plus-audio-sdl mupen64plus-input-sdl \
+      mupen64plus-rsp-hle mupen64plus-video-rice \
+      mupen64plus-video-glide64mk2; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*; \
+    python3 /opt/emustack/scripts/install-upstream.py --only-profile mupen64plus --skip-network
+USER ${PUID}:${PGID}
+
+# Plain docker build remains backward compatible: default to common runtime.
+FROM runtime AS default

@@ -1,5 +1,7 @@
 # 📦 Build, lock de assets e reprodutibilidade
 
+**Bundle de runtime:** compilação gera árvore imutável de arquivos versionada por hash; não apenas um ELF. Recursos são revalidados no `status` (`bundle_hash_valid`) e antes do rollback. Isso não garante builds bit a bit iguais nem execução funcional. [Contrato Fase 1](PHASE1_IMPLEMENTATION.md).
+
 ## 🎯 Escopo do que é fixado
 
 A reprodutibilidade é parcial e explícita. Há três fontes que precisam ser consideradas separadamente:
@@ -20,9 +22,14 @@ sha256:89c1ea91e897f0fe0a3731595330bc45b8bdef4047464a07116f891a94054b31
 
 A revisão futura deve conferir o digest oficial, origem e estado de segurança antes de atualizá-lo. Referência: [tags oficiais da imagem Debian](https://hub.docker.com/_/debian/tags/).
 
+## 🌐 Proxy local do dashboard
+
+O serviço `dashboard-proxy` usa a imagem oficial `nginx:alpine` fixada pelo digest multi-plataforma `sha256:785835ea65db4bba6f021acc0f3be91b0fef76a53fe41f8588c6698d2aed0606`. O digest foi conferido no manifesto oficial em 21 de outubro de 2026. Consulte o [manifesto de tags e digests do Nginx oficial](https://github.com/docker-library/repo-info/blob/master/repos/nginx/remote/alpine.md) antes de qualquer atualização. O proxy não faz parte do release lock dos emuladores.
 ## 🗃️ Repositórios APT
 
 No padrão, o build utiliza repositórios Trixie atuais para receber atualizações; assim, as versões de pacotes podem mudar mesmo que a imagem base esteja pinada. Para selecionar um snapshot datado:
+
+A imagem inclui `/usr/games` no `PATH`: no Debian Trixie, os executáveis dos pacotes `dolphin-emu` e `mupen64plus-ui-console` ficam nesse diretório. Esses fallbacks são pacotes Debian, não assets upstream do `release-lock.json`; a versão depende dos repositórios/snapshot APT usados no build.
 
 ```bash
 APT_SNAPSHOT_TIMESTAMP=20261027T000000Z FREEZE_RELEASE_LOCK=1 ./scripts/build-and-audit.sh
@@ -33,6 +40,8 @@ O timestamp é ilustrativo: escolha uma data revisada. Snapshot melhora a estabi
 ## 🔐 Assets oficiais no release lock
 
 O `release-lock.json` atualmente é estrito e cobre os 20 IDs. O estado verificado consiste em **11 assets baixáveis oficiais com SHA-256** e **9 entradas `skip-upstream`** com razão explícita. Os modos `pinned` e `pinned-url` fixam referência/URL e hash do asset baixado; `skip-upstream` significa que o asset não é instalado pelo caminho upstream pinado nessa entrada.
+
+No lock atual, Vita3K usa o release versionado `Vita3K/Vita3K-builds@4246` e o asset `Vita3K-x86_64.AppImage`; DuckStation usa o asset `DuckStation-x64-SSE2.AppImage` do canal `preview`, com o SHA-256 atual fixado. Como `preview` é um canal móvel, a próxima substituição upstream deve falhar no hash até que o lock seja revisado deliberadamente.
 
 O lock não afirma que:
 - todo perfil tem binário instalado/compatível com Linux;
@@ -71,6 +80,20 @@ FREEZE_RELEASE_LOCK=1 ./scripts/build-and-audit.sh
 ```
 
 Antes de aceitar a mudança, valide o rebuild estrito, veja o relatório do asset e teste o runtime. Nunca use somente o nome de tag ou a resposta HTTP do upstream como verificação de integridade.
+
+## 🧰 Builds locais de fonte pinada — gerenciador de host
+
+O gerenciador `scripts/emulator-manager.py` possui receitas explícitas para KytyPS5, shadPS4, PPSSPP, melonDS e bsnes. Para essas cinco integrações, ele confere commit do submódulo, gitlink no índice, ausência de modificações e submódulos internos consistentes antes do build. Compila em cópia temporária, registra log e SHA-256 do executável e mantém rollback do binário anterior por perfil.
+
+Isso **não** torna o build bit a bit reproduzível: toolchain, bibliotecas, flags, sistema e dependências aninhadas ainda variam conforme o host. Os outros 13 projetos pinados não têm receita genérica de compilação nesta etapa, embora 11 assets binários do Docker estejam fixados pelo release lock e fallbacks Debian sejam utilizados. Consulte [Gerenciador de emuladores](EMULATOR_MANAGER.md).
+
+## Git temporário para builds de fonte
+
+O gerenciador recria metadados Git para cada repo na cópia temporária, incluindo submódulos FFmpeg. Os objetos originais são acessados por alternates sem alterações dos repositórios pinados, garantindo que o SHA consultado no estágio seja do projeto upstream, não do EmuStack. Isso não torna um build bit a bit reproduzível, nem certifica dependências de runtime.
+
+## Ambiente de build separado
+
+`scripts/phase1-builder/Dockerfile` utiliza a mesma imagem base Trixie pinada pelo digest do Dockerfile principal. O processo de build roda não-root, sob bind read-only do código, e não modifica bibliotecas de desenvolvimento do Debian 12 do host. O apt dessa imagem **não é fixado a um snapshot imutável**; registramos as versões efetivas em `toolchain_info`/logs, mas isso ainda não produz builds bit a bit reproduzíveis. O instalador por perfil usa pacotes com assets endereçados por hash e histórico de executáveis/metadados; no rollback exige integridade do pacote anterior. A desinstalação pode ser seguida por purge confirmado de backups órfãos, sem remover ROMs/BIOS/saves. A saída gráfica e dependências de runtime não são garantidas.
 
 ## ⚠️ Limites de reprodutibilidade
 

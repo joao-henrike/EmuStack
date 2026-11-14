@@ -34,17 +34,7 @@ services:
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: graphics,display,utility,compute,video
-  env-xbox-one:
-    gpus: all
-    environment:
-      NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: graphics,display,utility,compute,video
   env-xenia-canary:
-    gpus: all
-    environment:
-      NVIDIA_VISIBLE_DEVICES: all
-      NVIDIA_DRIVER_CAPABILITIES: graphics,display,utility,compute,video
-  env-xbox-series:
     gpus: all
     environment:
       NVIDIA_VISIBLE_DEVICES: all

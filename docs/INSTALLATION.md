@@ -1,10 +1,18 @@
 # 🛠️ Instalação do EmuStack 0.7.1
 
+> **Branch de desenvolvimento:** a Fase 1 descrita aqui está em `fix/dashboard-degraded-startup` e não foi integrada à `main`. Para testar esta implementação num clone da `main`, execute `git fetch origin fix/dashboard-degraded-startup && git switch --track origin/fix/dashboard-degraded-startup` antes de seguir.
+
+**Fluxo atual da Fase 1:** após checkout/setup, utilize `bash scripts/phase1.sh validate` e, apenas após revisão de upstream, `bash scripts/phase1.sh build <perfil> --yes-run-upstream-code --jobs 2`. Não instale Qt/SDL/CMake no host por causa da compilação. Veja [etapas e limites](PHASE1_IMPLEMENTATION.md).
+
 Este guia conduz do clone até o primeiro dashboard. Para limites de recursos e todas as variáveis, consulte [Configuração](CONFIGURATION.md).
+
+## 🐳 Padrão de instalação
+
+**A engenharia prioriza Docker-first.** Ferramentas de build, CMake/Qt/SDL, dependências de desenvolvimento, testes e emuladores ficam em containers. O host deve manter Docker Engine/Compose, a configuração de GPU/driver e as interfaces de sessão gráfica/áudio/controle estritamente necessárias. Para a Fase 1, use `bash scripts/phase1.sh validate` e `bash scripts/phase1.sh build melonds --yes-run-upstream-code --jobs 2`. O bootstrap existente ainda usa Python 3 para algumas etapas; leia [o mapa das dependências do host](DOCKER_FIRST_ARCHITECTURE.md).
 
 ## ✅ Requisitos
 
-- Linux x86-64; ambiente de referência: Debian 13.
+- Host Linux x86-64 (Debian 12/13 como referência); o **builder Docker** usa Debian 13 Trixie, independentemente da versão Debian do host.
 - Docker Engine funcionando e plugin **Docker Compose v2**.
 - Usuário com permissão para acessar o daemon Docker.
 - Rede para baixar pacotes/assets no build inicial; espaço para imagem, cache, executáveis, jogos e arquivos de sistema do usuário.
@@ -25,7 +33,7 @@ python3 scripts/host-doctor.py
 ./scripts/runtime-acceptance.sh
 ```
 
-Abra **http://127.0.0.1:8765** na mesma máquina. Se o `host-setup.sh` detectar uma sessão X11/XWayland ou áudio compatível, ele pode gerar `compose.override.yaml` com a integração opt-in. O script de build usa esse override explicitamente quando existe.
+Abra **http://127.0.0.1:8765** na mesma máquina. A porta é publicada pelo `dashboard-proxy`; o dashboard permanece sem porta de host e nas redes internas. Se o `host-setup.sh` detectar uma sessão X11/XWayland ou áudio compatível, ele pode gerar `compose.override.yaml` com a integração opt-in. O script de build usa esse override explicitamente quando existe.
 
 ### O que cada comando faz
 
@@ -35,6 +43,34 @@ Abra **http://127.0.0.1:8765** na mesma máquina. Se o `host-setup.sh` detectar 
 4. `build-and-audit.sh` valida Compose, constrói a imagem, registra os assets detectados e inicia a stack.
 5. `runtime-acceptance.sh` executa os probes de runtime no daemon Docker do host atual.
 
+## 🛠️ Gerenciar instalações adicionais por console
+
+Depois do setup e de sincronizar os submódulos, use **no host**, sem sudo:
+
+```bash
+bash scripts/phase1.sh status
+bash scripts/phase1.sh deps melonds
+bash scripts/phase1.sh history melonds
+```
+
+O novo gerenciador oferece compilação revisável para KytyPS5, shadPS4, PPSSPP, melonDS e bsnes, importação de binários por SHA-256, rollback e remoção. Ele **não substitui** a instalação padrão da imagem Docker nem eleva permissões; a UI continua sem acesso ao gerenciador de pacotes do host. Veja todos os comandos e avisos em [Gerenciador de emuladores](EMULATOR_MANAGER.md).
+
+### Submódulos internos e Qt6 durante a Fase 1
+
+A inicialização dos 24 submódulos do EmuStack não instala automaticamente os submódulos próprios de KytyPS5, shadPS4 e PPSSPP. Para revisar o primeiro nível sem download, execute:
+
+```bash
+bash scripts/phase1.sh plan-deps kytyps5
+bash scripts/phase1.sh plan-deps shadps4
+bash scripts/phase1.sh plan-deps ppsspp
+```
+
+Depois de auditar as URLs, `bash scripts/phase1.sh sync-deps <id> --yes-download-submodules --jobs 2` baixa commits gitlink fixados, sem compilar. As dependências Qt/SDL do melonDS ficam **na imagem Docker de builder**, não no host; não misture versões Debian do sistema. Consulte [Fase 1](EMULATOR_MANAGER.md).
+
+### Toolchain isolada para compilação em Debian 12
+
+Se shadPS4 falhar com `BUILD_LOCAL_INTERFACE`, KytyPS5 exigir Qt 6.8 ou PPSSPP exigir SDL3, **não adicione repositórios do Debian 13 ao host**. O builder opcional `bash scripts/phase1.sh build shadps4 --yes-run-upstream-code --jobs 2` usa a imagem Debian Trixie fixada pelo digest do projeto, executa a fonte dentro de container sem privilégios e escreve somente em `data/`. Para KytyPS5 ou PPSSPP, substitua o ID. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md) e considere os custos de disco/CPU; compilação não implica funcionamento do emulador.
+
 ## 🧭 Subir ou inspecionar manualmente
 
 Se o host setup gerou um override, inclua-o em cada comando manual que precise das integrações:
@@ -43,6 +79,7 @@ Se o host setup gerou um override, inclua-o em cada comando manual que precise d
 docker compose -f compose.yaml -f compose.override.yaml config --quiet
 docker compose -f compose.yaml -f compose.override.yaml ps
 docker compose -f compose.yaml -f compose.override.yaml logs --tail=200 dashboard
+docker compose -f compose.yaml -f compose.override.yaml logs --tail=200 dashboard-proxy
 ```
 
 Sem override, use apenas `-f compose.yaml`. Os caminhos explícitos `-f` impedem que o Compose descubra automaticamente arquivos não incluídos na invocação.

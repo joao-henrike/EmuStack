@@ -1,19 +1,30 @@
 # 🛡️ Modelo de segurança — EmuStack 0.7.1
 
+**Serialização e isolamento:** operações mutáveis usam um `flock` no estado do gerenciador, impedindo builds/rollbacks/purges simultâneos conflitantes. Para `sync-deps`, o único acesso de escrita a Git é ao checkout `third_party/<id>` selecionado e a seus metadados `.git/modules/third_party/<id>`; os outros projetos permanecem somente leitura.
+
+**Complemento Fase 1:** limpeza `purge` só opera após desinstalação, exige consentimento destrutivo, valida nomes/conteúdo gerenciados e preserva jogos, BIOS e saves.
+
+**Segurança da Fase 1:** build não tem socket Docker, capabilities nem escrita em jogos, saves ou BIOS. Pacotes versionados são conferidos por SHA-256 e symlinks bloqueados; rollback verifica recursos antigos. `sync-deps` modifica apenas origens Git pinadas dentro de mounts RW explícitos. Acesso ao daemon Docker no host continua altamente privilegiado. [Detalhes](PHASE1_IMPLEMENTATION.md).
+
+## Isolamento de toolchain — Docker-first
+
+Compilações e inspeções de perfis usam `bash scripts/phase1.sh`, que não compartilha o Docker socket com os containers, monta o checkout somente leitura e mantém apenas `data/` como pasta persistente gravável. Testes/inspeções são sem rede; a rede da compilação é explicitamente necessária para alguns upstreams. Essa abordagem **não garante ausência de risco**: código upstream ainda é executado, e quem pode usar o Docker daemon no host tem privilégios elevados. Mantenha o dashboard longe do daemon. Leia [arquitetura Docker-first](DOCKER_FIRST_ARCHITECTURE.md).
+
 ## 🎯 Objetivo
 
 Reduzir a exposição desnecessária entre dashboard, agentes e dados persistentes dos perfis. A configuração é voltada a uso **local e individual**. Não é uma plataforma multiusuário nem uma sandbox de alta garantia para executar arquivos deliberadamente maliciosos.
 
 ## ✅ Defaults de segurança relevantes
 
-- Dashboard publicado apenas em `127.0.0.1:8765`; não projetado para LAN/Internet ou reverse proxy.
-- Dashboard restringe endpoints operacionais por origem TCP confiável: loopback/gateways allowlisted, conforme o modo de rede.
-- 20 bridges internas exclusivas com IPAM previsível; o gateway é `.1`, o agente `.2` e dashboard `.3` em cada subnet.
-- Allowlist de IP contém gateways previstos, não os IPs dos agentes. Headers HTTP forjados não substituem a verificação da origem TCP.
+- Apenas `dashboard-proxy` publica `127.0.0.1:8765`. O serviço `dashboard` não publica portas e permanece nas redes internas; não há suporte a publicação LAN/Internet nem a proxies externos.
+- Dashboard restringe endpoints operacionais por origem TCP confiável: gateways das 20 bridges de agentes e o IP fixo do proxy na bridge backend privada. Headers `X-Forwarded-For` não participam da decisão.
+- 20 bridges internas exclusivas com IPAM previsível; o gateway é `.1`, o agente `.2` e dashboard `.3` em cada subnet. Uma 21ª bridge interna conecta somente dashboard (`172.29.0.3`) e proxy (`172.29.0.2`).
+- Allowlist de IP contém gateways previstos e o IP fixo do proxy, nunca os IPs dos agentes. Headers HTTP forjados não substituem a verificação da origem TCP.
 - Cada agente possui token distinto de 256 bits gerado no setup, em `.env` com permissões restritas.
 - Nenhum socket Docker é montado no dashboard ou nos agentes.
 - Dashboard não monta pastas persistentes de jogos/BIOS/saves/HOME dos agentes.
 - Mounts de jogos/BIOS read-only; estado gravável limitado a HOME/saves do ambiente correspondente.
+- Dolphin e Mupen64Plus usam imagens Docker específicas, sem os seus pacotes APT na imagem compartilhada. Os scanners Syft/Trivy produzem inventários separados por imagem.
 - Contêineres de agente usam, conforme manifestos, filesystem root read-only, `cap_drop: ALL`, `no-new-privileges`, `tmpfs` e limites de recursos.
 - APIs validam ID e parâmetros, rejeitam paths inseguros e não aceitam shell/binário arbitrário via requisição.
 - Nenhum input é mapeado por padrão. GUI/áudio/GPU/controle precisam de concessão local explícita.
@@ -31,9 +42,9 @@ Reduzir a exposição desnecessária entre dashboard, agentes e dados persistent
 
 ## 🌐 Dashboard, redes e allowlist
 
-Porta de host vinculada a loopback não é o único controle: as rotas do dashboard também verificam a origem TCP dos clientes. A topologia esperada coloca dashboard e agentes nas redes internas para coordenação. O teste de runtime tenta POSTs de estado e acessos de metadados a partir dos 20 agentes; essas tentativas devem receber recusa (normalmente HTTP 403), enquanto o health não confiável deve revelar somente informação mínima.
+Porta de host vinculada a loopback não é o único controle: as rotas do dashboard também verificam a origem TCP dos clientes. O dashboard permanece somente nas redes internas. Um proxy Nginx sem privilégios, com filesystem read-only e configuração fixa, compartilha uma bridge interna dedicada com o dashboard e uma bridge não interna usada apenas para a publicação da porta. Essa segunda bridge dá ao proxy um caminho de gateway; o dashboard não recebe egress por ela. O proxy não compartilha redes com agentes, não é um forward proxy e encaminha somente para `dashboard:8765`. O teste de runtime tenta POSTs de estado e acessos de metadados a partir dos 20 agentes; essas tentativas devem receber recusa (normalmente HTTP 403), enquanto o health não confiável deve revelar somente informação mínima.
 
-Não remova a allowlist para contornar erro. Se a rede local/VPN se sobrepõe à faixa padrão `172.28.0.0/16`, escolha uma faixa apropriada e atualize em conjunto IPAM, gateways, endereços e allowlist. Não publique a porta via proxy nem encaminhe-a no roteador.
+Não remova a allowlist para contornar erro. Se a rede local/VPN se sobrepõe às faixas padrão `172.28.0.0/16` ou `172.29.0.0/24`, escolha faixas apropriadas e atualize em conjunto IPAM, gateways, endereços e allowlist. Não exponha o proxy por outro IP, reverse proxy externo ou encaminhamento no roteador.
 
 ## 🔑 Tokens e segredos
 
@@ -55,6 +66,16 @@ Não remova a allowlist para contornar erro. Se a rede local/VPN se sobrepõe à
 
 Para código ou arquivos de terceiros dos quais você não confia, prefira uma VM/host descartável com credenciais e dados separados e sem dispositivos do desktop mapeados.
 
+## 🧰 Ferramentas de host e builds de upstream
+
+`scripts/emulator-manager.py` opera no host como usuário normal, sem expor ações de instalar/desinstalar na API. Arquivos importados precisam ter nome permitido pelo catálogo e hash SHA-256 explícito; checksum não é assinatura de fornecedor. O gerenciador rejeita symlinks nos destinos e mantém cópias antigas fora dos mounts dos agentes. Builds de KytyPS5, shadPS4, PPSSPP, melonDS e bsnes **executam código de terceiros no host** somente após sinalizador de aceite: revide a origem e prefira VM descartável para código não confiável. Nunca execute como root. Testes de fronteira Docker não certificam segurança de um build executado fora do contêiner.
+
+## 📦 Atualizações APT no build
+
+A imagem Trixie executa `scripts/phase1-builder/apt-security-bootstrap.sh` antes de instalar dependências. A rotina desativa retries na primeira atualização de índices, exige APT **3.0.4 ou superior**, instala a versão corrigida e aplica upgrades de segurança antes de instalar os pacotes de runtime. Isso trata o CVE-2026-109518, corrigido no Trixie em 3.0.4 (DSA-6607-1: https://lists.debian.org/debian-security-announce/2026/msg00526.html).
+
+Se `APT_SNAPSHOT_TIMESTAMP` apontar para um snapshot anterior à publicação da correção, o build falha fechado; não reduza o mínimo para contornar esse bloqueio. O upgrade APT não elimina vulnerabilidades sem correção disponível no Trixie. Consulte o [registro de triagem](SECURITY_TRIAGE_2026-11-14.md).
+
 ## 🧪 Verificação operacional
 
 ```bash
@@ -69,3 +90,9 @@ A aceitação deve verificar IPAM, allowlist, mounts, hardening e tentativa de a
 ## 🚨 Reportar um problema
 
 Não publique segredos, arquivos proprietários nem detalhes exploráveis sensíveis em uma issue pública. Use o mecanismo privado de reporte de vulnerabilidades do GitHub se estiver habilitado para o repositório; caso contrário, solicite um canal privado ao mantenedor antes de divulgar detalhes. Informe versão/commit, impacto, condições de reprodução minimizadas e evidência sanitizada.
+
+## Auditoria de imagens separadas
+
+Use `bash scripts/supply-chain-matrix.sh` para auditar as três imagens. A política de achados continua `report-only` até que haja triagem e correção/aceitação formal de riscos, mas falhas de download, hash, execução do scanner ou artefatos faltantes bloqueiam a auditoria. Os resultados completos ficam em `artifacts/{common,dolphin,mupen64plus}/`, e a matriz em `artifacts/matrix-summary.md`.
+
+O isolamento por imagem reduz a exposição do **dashboard e dos 18 agentes comuns**, mas Dolphin e Mupen64Plus continuam carregando suas próprias dependências; qualquer vulnerabilidade presente nesses perfis requer tratamento. Não confunda divisão de imagem com correção de CVE ou certificação de compatibilidade de jogos.

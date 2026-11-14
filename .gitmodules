@@ -1,0 +1,96 @@
+[submodule "third_party/kytyps5"]
+	path = third_party/kytyps5
+	url = https://github.com/KytyPS5/KytyPS5.git
+	branch = main
+[submodule "third_party/shadps4"]
+	path = third_party/shadps4
+	url = https://github.com/shadps4-emu/shadPS4.git
+	branch = main
+[submodule "third_party/rpcs3"]
+	path = third_party/rpcs3
+	url = https://github.com/RPCS3/rpcs3.git
+	branch = master
+[submodule "third_party/duckstation"]
+	path = third_party/duckstation
+	url = https://github.com/stenzek/duckstation.git
+	branch = master
+[submodule "third_party/pcsx2"]
+	path = third_party/pcsx2
+	url = https://github.com/PCSX2/pcsx2.git
+	branch = master
+[submodule "third_party/ppsspp"]
+	path = third_party/ppsspp
+	url = https://github.com/hrydgard/ppsspp.git
+	branch = master
+[submodule "third_party/vita3k"]
+	path = third_party/vita3k
+	url = https://github.com/Vita3K/Vita3K.git
+	branch = master
+[submodule "third_party/xenia-canary"]
+	path = third_party/xenia-canary
+	url = https://github.com/xenia-canary/xenia-canary.git
+	branch = canary_experimental
+[submodule "third_party/xemu"]
+	path = third_party/xemu
+	url = https://github.com/xemu-project/xemu.git
+	branch = master
+[submodule "third_party/cemu"]
+	path = third_party/cemu
+	url = https://github.com/cemu-project/Cemu.git
+	branch = main
+[submodule "third_party/dolphin"]
+	path = third_party/dolphin
+	url = https://github.com/dolphin-emu/dolphin.git
+	branch = master
+[submodule "third_party/azahar"]
+	path = third_party/azahar
+	url = https://github.com/azahar-emu/azahar.git
+	branch = master
+[submodule "third_party/melonds"]
+	path = third_party/melonds
+	url = https://github.com/melonDS-emu/melonDS.git
+	branch = master
+[submodule "third_party/mgba"]
+	path = third_party/mgba
+	url = https://github.com/mgba-emu/mgba.git
+	branch = master
+[submodule "third_party/bsnes"]
+	path = third_party/bsnes
+	url = https://github.com/bsnes-emu/bsnes.git
+	branch = master
+[submodule "third_party/mesen"]
+	path = third_party/mesen
+	url = https://github.com/SourMesen/Mesen2.git
+	branch = master
+[submodule "third_party/mupen64plus-core"]
+	path = third_party/mupen64plus-core
+	url = https://github.com/mupen64plus/mupen64plus-core.git
+	branch = master
+[submodule "third_party/mupen64plus-ui-console"]
+	path = third_party/mupen64plus-ui-console
+	url = https://github.com/mupen64plus/mupen64plus-ui-console.git
+	branch = master
+[submodule "third_party/mupen64plus-audio-sdl"]
+	path = third_party/mupen64plus-audio-sdl
+	url = https://github.com/mupen64plus/mupen64plus-audio-sdl.git
+	branch = master
+[submodule "third_party/mupen64plus-input-sdl"]
+	path = third_party/mupen64plus-input-sdl
+	url = https://github.com/mupen64plus/mupen64plus-input-sdl.git
+	branch = master
+[submodule "third_party/mupen64plus-rsp-hle"]
+	path = third_party/mupen64plus-rsp-hle
+	url = https://github.com/mupen64plus/mupen64plus-rsp-hle.git
+	branch = master
+[submodule "third_party/mupen64plus-video-rice"]
+	path = third_party/mupen64plus-video-rice
+	url = https://github.com/mupen64plus/mupen64plus-video-rice.git
+	branch = master
+[submodule "third_party/mupen64plus-video-glide64mk2"]
+	path = third_party/mupen64plus-video-glide64mk2
+	url = https://github.com/mupen64plus/mupen64plus-video-glide64mk2.git
+	branch = master
+[submodule "third_party/eden"]
+	path = third_party/eden
+	url = https://git.eden-emu.dev/eden-emu/eden.git
+	branch = master

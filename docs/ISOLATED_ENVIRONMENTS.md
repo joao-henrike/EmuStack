@@ -8,7 +8,8 @@ Cada ID do catálogo tem um agente e uma raiz persistente exclusivos. Os ambient
 
 | Serviço | Responsabilidade | Dados/autoridade |
 |---|---|---|
-| `dashboard` | UI/API e coordenação dos agentes | Publica apenas `127.0.0.1:8765`; guarda tokens dos agentes, mas não monta bibliotecas persistentes nem socket Docker. |
+| `dashboard` | UI/API e coordenação dos agentes | Sem porta publicada; guarda tokens dos agentes, mas não monta bibliotecas persistentes nem socket Docker. |
+| `dashboard-proxy` | Entrada HTTP local | Proxy Nginx fixado por digest, sem privilégios e com filesystem read-only; publica apenas `127.0.0.1:8765`. |
 | `env-<id>` | Agente de controle por perfil | Recebe apenas os mounts desse perfil; participa de uma rede interna exclusiva. |
 | `emustack` | CLI/relatórios/manutenção | Rede de gerenciamento; não recebe as raízes persistentes de todos os consoles como volumes graváveis. |
 | Imagem de runtime | Programas de emulação instalados no build | Camada comum, imutável para os serviços de runtime; cada override local é específico do ambiente. |
@@ -31,12 +32,14 @@ O mapeamento específico de cada serviço é definido em `compose.yaml`; a tabel
 
 - Cada agente tem uma bridge `internal: true` exclusiva e não participa diretamente da rede de outro perfil.
 - As redes usam IPAM estático no intervalo padrão `172.28.1.0/24` até `172.28.20.0/24`.
-- Em cada rede, gateway é `.1`, agente é `.2` e dashboard é `.3`.
-- A allowlist de clientes confiáveis do dashboard contém os gateways definidos, não os endereços dos agentes.
+- Em cada rede de agente, gateway é `.1`, agente é `.2` e dashboard é `.3`.
+- Uma bridge interna dedicada conecta somente dashboard (`172.29.0.3`) e proxy (`172.29.0.2`).
+- O proxy também entra em uma bridge de publicação não interna, que não contém agentes nem dashboard. Somente o proxy publica a porta local; o dashboard não recebe essa rota de egress.
+- A allowlist de clientes confiáveis do dashboard contém os 20 gateways definidos e o IP fixo do proxy, nunca os endereços dos agentes.
 - Cada agente tem um token exclusivo gerado pelo `host-setup.sh`, armazenado no `.env` local com permissão restrita.
-- Os agentes não têm egress externo por padrão; o dashboard não é um proxy genérico para essa rede.
+- Os agentes e o dashboard não têm egress externo por padrão. O proxy tem uma rota de gateway para viabilizar a publicação Docker, mas sua configuração é fixa e só encaminha requisições para o serviço dashboard.
 
-Se a LAN/VPN do host se sobrepõe a `172.28.0.0/16`, planeje uma faixa sem conflito e altere **em conjunto** IPAM, gateways, IPs e allowlist. Não altere apenas uma das partes nem exponha o dashboard por reverse proxy.
+Se a LAN/VPN do host se sobrepõe a `172.28.0.0/16` ou `172.29.0.0/24`, planeje faixas sem conflito e altere **em conjunto** IPAM, gateways, IPs e allowlist. Não altere apenas uma das partes nem exponha o proxy fora do loopback.
 
 ## 🛡️ Hardening de runtime
 

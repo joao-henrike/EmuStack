@@ -94,18 +94,19 @@ function formatBytes(bytes) {
   return `${value.toFixed(1)} ${units[idx]}`;
 }
 function setView(view) {
-  const ids = ['overview','environments','consoles','emulators','library','sources','docs'];
+  const ids = ['overview','environments','consoles','emulators','library','sessions','sources','docs'];
   if (!ids.includes(view)) view = 'overview';
   state.currentView = view;
   $$('.view').forEach(el => el.classList.toggle('active', el.id === `view-${view}`));
   $$('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.view === view));
-  const labels = {overview:'Visão geral',environments:'Ambientes isolados',consoles:'Sistemas originais',emulators:'Emuladores',library:'Biblioteca',sources:'Fontes de jogos',docs:'Documentação'};
+  const labels = {overview:'Visão geral',environments:'Ambientes isolados',consoles:'Sistemas originais',emulators:'Emuladores',library:'Biblioteca',sessions:'Sessões',sources:'Fontes de jogos',docs:'Documentação'};
   $('#crumb-current').textContent = labels[view];
   $('#sidebar').classList.remove('open');
   if (view === 'environments') renderEnvironments();
   if (view === 'consoles') renderConsoleSystems();
   if (view === 'emulators') renderEmulators();
   if (view === 'library') renderLibrary();
+  if (view === 'sessions') renderSessions();
   if (view === 'sources') renderSources();
   if (view === 'docs') renderDocs();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -160,18 +161,27 @@ function renderOverview() {
 
 function renderSessions() {
   const host = $('#process-list');
-  if (!host) return;
+  const center = $('#session-center-list');
+  if (!host && !center) return;
   const sessions = state.sessions || [];
-  if (!sessions.length) {
-    host.innerHTML = '<div class="empty-state">Nenhuma sessão iniciada. Os processos e logs são mantidos pelo agente do ambiente correspondente.</div>';
-    return;
-  }
-  host.innerHTML = sessions.map(session => {
+  const running = sessions.filter(session => session.status === 'running').length;
+  if ($('#session-total')) $('#session-total').textContent = String(sessions.length);
+  if ($('#session-running')) $('#session-running').textContent = String(running);
+  if ($('#session-finished')) $('#session-finished').textContent = String(sessions.length - running);
+  const empty = '<div class="empty-state">Nenhuma sessão nesta seleção. Atualize a lista ou inicie um emulador.</div>';
+  const renderRows = items => items.map(session => {
     const running = session.status === 'running';
     const statusTone = running ? 'good' : session.status === 'failed' ? 'bad' : 'muted';
     const key = session.session_key || String(session.pid);
     return `<article class="session-row"><div class="session-main"><div class="session-mark ${running ? 'running' : ''}">${running ? '▶' : session.status === 'failed' ? '!' : '✓'}</div><div class="session-copy"><b>${escapeHtml(session.emulator_name || session.emulator)}</b><small>Ambiente ${escapeHtml(session.environment_id || 'local')} · PID ${escapeHtml(session.pid)} · ${escapeHtml(session.game || 'sem arquivo associado')} · ${escapeHtml(formatDate(session.started_at))}</small></div></div><div class="session-actions"><span class="session-status ${statusTone}">${escapeHtml(running ? 'Em execução' : session.status === 'failed' ? `Falhou (${session.exit_code ?? '?'})` : `${session.status === 'stopped' ? 'Encerrado pelo usuário' : `Finalizado (${session.exit_code ?? '?'})`}`)}</span><button class="row-action" data-process-log="${escapeHtml(key)}">Logs</button>${running ? `<button class="row-action danger-action" data-stop-process="${escapeHtml(key)}">Encerrar</button>` : ''}</div></article>`;
   }).join('');
+  if (host) host.innerHTML = sessions.length ? renderRows(sessions) : empty;
+  if (center) {
+    const filter = $('#session-filter')?.value || 'all';
+    const selected = sessions.filter(session => filter === 'all' ||
+      (filter === 'running' ? session.status === 'running' : session.status !== 'running'));
+    center.innerHTML = selected.length ? renderRows(selected) : empty;
+  }
 }
 
 function findSessionByKey(key) {
@@ -649,6 +659,8 @@ $('#launch-game-select').addEventListener('change', updateLaunchDialogForSelecti
 $('#refresh-button').addEventListener('click', refreshAll);
 $('#refresh-library').addEventListener('click', refreshAll);
 if ($('#refresh-sessions')) $('#refresh-sessions').addEventListener('click', refreshSessionsOnly);
+if ($('#refresh-session-center')) $('#refresh-session-center').addEventListener('click', refreshSessionsOnly);
+if ($('#session-filter')) $('#session-filter').addEventListener('change', renderSessions);
 if ($('#close-process-log')) $('#close-process-log').addEventListener('click', () => $('#process-log-dialog').close());
 $('#emulator-search').addEventListener('input', () => { $('#global-search').value=$('#emulator-search').value; renderEmulators(); });
 $('#platform-filter').addEventListener('change', () => { $('#platform-filter').dataset.family='all'; $$('#platform-strip .platform-pill').forEach(p=>p.classList.toggle('active',p.dataset.family==='all')); renderEmulators(); });
@@ -669,4 +681,5 @@ document.addEventListener('keydown', event => {
 });
 $('#mobile-menu').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
 
+window.EmuStackExperience.init({ onBack: () => setView('overview') });
 refreshAll();

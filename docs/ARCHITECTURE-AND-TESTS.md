@@ -1,15 +1,22 @@
 # 🧱 Arquitetura, validação e relatório de testes
 
+**Arquitetura Fase 1:** builder Trixie isolado prepara pacotes de conteúdo endereçado por hash; cada agente somente lê seu pacote pelo mount `/custom-emulators`. `phase1-smoke.py` confere resources/`ldd` no runtime sem executar jogos. Evidências de host e aprovação gráfica aguardam testes. [Detalhes](PHASE1_IMPLEMENTATION.md).
+
 **Versão documentada:** EmuStack 0.7.1  
-**Relatório atualizado:** 29 de outubro de 2026  
-**Evidência CI de referência:** [EmuStack CI — run 40798086510](https://github.com/joao-henrike/EmuStack/actions/runs/40798086510)
+**Relatório atualizado:** 31 de outubro de 2026  
+**Evidência CI histórica (commit 07e57c8):** [EmuStack CI — run 40798086510](https://github.com/joao-henrike/EmuStack/actions/runs/40798086510)  
+**Aceitação local relatada em 31/10/2026:** stack e hardware aprovados no Debian; os commits posteriores de correção do backend exigem revalidação.
 
 > [!IMPORTANT]
 > A CI acima passou pelo pipeline automatizado, incluindo build da imagem, inicialização do runtime isolado, testes de fronteira entre agentes e contratos da UI. Isso é evidência válida para aquele commit e ambiente CI; não certifica todos os jogos, firmwares, GPUs, controles ou desktops físicos.
 
+## 🐳 Princípio Docker-first
+
+Imagens especializadas abrigam toolchain e dependências dos builds; containers Compose abrigam dashboard e 20 agentes. O host expõe somente o hardware/sessão e o daemon Docker necessários, além de arquivos de dados persistentes por perfil. A CLI canônica para validar, inspecionar e compilar na Fase 1 é `bash scripts/phase1.sh`; não implica que todas as etapas legadas de bootstrap estejam migradas. Leia [Docker-first](DOCKER_FIRST_ARCHITECTURE.md).
+
 ## 🎯 Objetivo arquitetural
 
-EmuStack separa um **plano de controle** — dashboard local e CLI — de **20 agentes de perfil**. O dashboard lista capacidades e encaminha solicitações validadas. Ele não monta os diretórios persistentes de jogos/BIOS/HOME dos consoles nem o socket Docker. Cada agente usa sua própria raiz de dados e uma rede interna exclusiva.
+EmuStack separa um **plano de controle** — proxy local, dashboard e CLI — de **20 agentes de perfil**. O navegador acessa `127.0.0.1:8765` pelo proxy Nginx; o dashboard não publica uma porta no host. O dashboard lista capacidades e encaminha solicitações validadas. Ele não monta os diretórios persistentes de jogos/BIOS/HOME dos consoles nem o socket Docker. Cada agente usa sua própria raiz de dados e uma rede interna exclusiva.
 
 O projeto também descreve **21 entradas de sistema/menu**. Essa contagem é o número de estratégias documentadas, não a quantidade de boot menus comprovados.
 
@@ -19,7 +26,8 @@ O projeto também descreve **21 entradas de sistema/menu**. Essa contagem é o n
 flowchart TB
     User["Operador"]
     Browser["web/app.js · HTML/CSS"]
-    Dashboard["webapp.py · Dashboard/API"]
+    Proxy["Nginx · loopback :8765"]
+    Dashboard["webapp.py · Dashboard/API<br/>sem porta publicada"]
     Manifests["catalog.json · environments.json<br/>console-systems.json · game-sources.json"]
     AgentA["console_agent.py · agente A"]
     AgentB["console_agent.py · agente B"]
@@ -27,7 +35,7 @@ flowchart TB
     DataA["data/environments/A<br/>games · bios · saves · home"]
     DataB["data/environments/B<br/>games · bios · saves · home"]
     Runtime["Dockerfile · imagem comum"]
-    User --> Browser --> Dashboard
+    User --> Browser --> Proxy --> Dashboard
     Dashboard <--> Manifests
     Dashboard --> AgentA
     Dashboard --> AgentB
@@ -45,8 +53,9 @@ A imagem de runtime contém os programas que foram obtidos/instalados durante o 
 
 | Arquivo/componente | Responsabilidade |
 |---|---|
-| `web/app.js`, `web/index.html`, `web/styles.css` | Interface do navegador, navegação e chamadas ao dashboard. |
+| `web/app.js`, `web/index.html`, `web/app.css` | Interface do navegador, navegação e chamadas ao dashboard. |
 | `webapp.py` | API HTTP local, políticas de origem, orquestração e validação dos pedidos do dashboard. |
+| `proxy/nginx.conf` / `dashboard-proxy` | Proxy HTTP local fixado por digest; publica a UI no loopback e alcança apenas o dashboard pela bridge backend dedicada. |
 | `emustack.py` | CLI, detecção de launchers, diagnóstico, relatório de instalação, lock e tentativas de launch/boot. |
 | `console_agent.py` | API interna de cada ambiente, autorização por token e sessões do agente. |
 | `console_modes.py` | Estratégias de launch, verificação de pré-requisitos e estados dos sistemas/menu originais. |
@@ -70,8 +79,9 @@ Os manifests são interdependentes. Ao adicionar ou remover um perfil, atualize 
 2. A API valida rotas, IDs, estrutura do payload, origem e parâmetros do launch.
 3. O dashboard solicita operações ao agente associado ao ID, usando seu token individual.
 4. O agente autentica `X-EmuStack-Agent-Token`, confere a associação do sistema ao ambiente e rejeita paths inválidos.
-5. No Compose principal, cada bridge usa IPAM estático: gateway `.1`, agente `.2` e dashboard `.3`; os gateways esperados formam a allowlist de origem do dashboard.
-6. Probes do runtime tentam requisições não autorizadas a partir dos agentes e verificam a resposta esperada.
+5. No Compose principal, cada bridge de agente usa IPAM estático: gateway `.1`, agente `.2` e dashboard `.3`; os gateways esperados formam a allowlist de origem do dashboard. Uma bridge interna adicional liga apenas dashboard (`172.29.0.3`) e proxy (`172.29.0.2`).
+6. O proxy possui uma rede de publicação não interna separada, sem agentes ou dashboard; só ele publica `127.0.0.1:8765`. A aceitação inspeciona `NetworkSettings.Ports` para confirmar que a publicação está ativa.
+7. Probes do runtime tentam requisições não autorizadas a partir dos agentes e verificam a resposta esperada.
 
 `Host`, `Origin` e `X-EmuStack-Request` são checks complementares, **não a fronteira de confiança sozinhos**. A identidade TCP e os tokens fazem parte do controle. O dashboard é logicamente privilegiado porque coordena os agentes e guarda os tokens; mantenha-o local.
 
@@ -137,6 +147,21 @@ O workflow **EmuStack CI** do commit `07e57c816da7742a8c3b071b6c7e7c825a111f5a` 
 Os relatórios de engenharia anteriores também registram 79 testes Python, 13 testes JavaScript de recomendações de lançamento e 11 assertions estáticas da UI. Os totais dependem da revisão/escopo dos testes, portanto consulte o log do run vinculado antes de usar o número em release notes.
 
 **Limite da execução:** o build de CI desliga downloads upstream opcionais. O resultado não prova que cada binário possível esteja instalado e nem executa todos os jogos ou firmwares. A configuração de CI também não representa sua GPU, desktop, áudio ou controle físico.
+
+
+## 💻 Aceitação no Debian relatada em 31 de outubro de 2026
+
+Na saída de build/diagnóstico apresentada pelo operador (sem SHA de checkout registrado no trecho), observou-se:
+
+- **24/24 submódulos upstream:** checkouts com commits correspondentes ao source lock. Essa verificação não compila os projetos.
+- **13/20 launchers encontrados:** RPCS3, DuckStation, PCSX2, Vita3K, Xenia Canary (via Wine), xemu, Eden, Cemu, Dolphin, Azahar, mGBA, Mupen64Plus e Mesen. O relatório de instalação informou 11 entradas baixadas/instaladas; os fallbacks APT também podem disponibilizar launchers.
+- **5 sem launcher:** KytyPS5, shadPS4, PPSSPP, melonDS e bsnes. **2 sem emulador suportado:** Xbox One e Xbox Series. Serviços Docker iniciados não significam executáveis disponíveis nesses perfis.
+- **Aceitação de runtime: PASS:** 20 agentes saudáveis, mounts separados, redes internas, proxy somente em loopback, controle de acesso e probes de GUI/áudio/Vulkan/GPU aprovados com NVIDIA GeForce RTX 4050 Laptop GPU.
+- O contêiner auxiliar de diagnóstico apresentou `DISPLAY` ausente, mas o probe de runtime dos 20 agentes confirmou X11/XWayland. Os escopos são diferentes e não devem ser confundidos.
+- Nenhum controle foi mapeado por padrão. Boot original, execução de títulos, desempenho, áudio e controles em jogos reais continuam **não comprovados** por esse relatório.
+
+**Estado posterior:** a branch de desenvolvimento recebeu correções dos testes de Nginx e da duplicidade de `summarize()`, junto a testes de regressão. A aceitação acima é uma evidência histórica do host, **não é aprovação automática dos novos commits**. Execute novamente `./scripts/validate-project.sh`, o build e a aceitação de runtime após atualizar o checkout. O GitHub Actions pode falhar antes da atribuição de runner; uma execução sem etapas não prova erro nem aprovação do código.
+
 
 ## 📊 Matriz de evidência
 

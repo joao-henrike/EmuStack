@@ -1,5 +1,9 @@
 # ✅ Checklist de aceitação no host
 
+**Complemento Fase 1:** testes preparados cobrem importação, atualização, rollback, payload de recursos, adulteração, desinstalação e purge seguro; testes reais no host permanecem pendentes.
+
+**Aceitação da nova Fase 1 fica para a etapa posterior.** Use os scripts preparados `bash scripts/phase1.sh validate` e `bash scripts/phase1-acceptance.sh` somente depois de concluir os builds e reconstruir a imagem runtime. O segundo verifica libs/recursos sem rodar ROMs; testes gráficos e controles ainda são manuais. [Matriz completa](PHASE1_IMPLEMENTATION.md).
+
 Este procedimento separa a validação automatizada de código do que só pode ser verificado na máquina-alvo. Marque os resultados com host, data, commit e versão do emulador. **Um teste não executado é desconhecido, não aprovado.**
 
 ## 🧾 1. Preparação e baseline
@@ -20,14 +24,18 @@ A aceitação de runtime verifica que:
 
 - os 20 agentes esperados iniciam e ficam saudáveis;
 - cada agente usa mounts e rede específicos;
-- o dashboard tem os mounts/rede de controle esperados;
-- a porta do host é publicada somente no loopback;
+- o dashboard tem os mounts/rede de controle esperados e não publica portas diretamente;
+- `dashboard-proxy` está saudável, com filesystem read-only, sem capabilities e com somente duas redes dedicadas;
+- a publicação aparece ativa em `NetworkSettings.Ports` e está vinculada somente a `127.0.0.1:8765` no proxy;
 - flags de hardening e IPs/allowlist correspondem ao modelo documentado;
 - cada agente tenta acessar endpoints protegidos do dashboard com cabeçalhos forjados; a solicitação de controle/metadados deve ser recusada;
 - health/capability endpoints respondem conforme seu contrato;
 - sistemas marcados não suportados continuam bloqueados.
 
 Se algum desses checks falhar, **não remova a validação de origem, token ou caminho para fazer o teste passar**. Guarde logs e corrija a causa.
+
+O ciclo de vida do dashboard é deliberadamente independente do resultado dos healthchecks: ele aguarda os contêineres dos agentes iniciarem, mas pode ficar disponível enquanto um ou mais agentes ainda estão offline. Isso permite consultar o painel e diagnosticar falhas parciais. Essa disponibilidade degradada **não** aprova o ambiente: esta etapa de aceitação continua exigindo os 20 agentes saudáveis e todas as verificações de isolamento aprovadas.
+
 
 ## 🖥️ 3. GUI, áudio, Vulkan e GPU
 
@@ -69,6 +77,35 @@ O probe verifica presença/acesso e configuração de mapeamento; não executa u
 ## 📄 5. Relatórios
 
 A aceitação salva `data/runtime-acceptance.json`; o diagnóstico do host com `--write` grava `data/host-capabilities.json`. Esses relatórios podem registrar sistema operacional, arquitetura, GPU, paths e detalhes do ambiente. Revise antes de compartilhar e nunca compartilhe `.env`, conteúdo de firmware ou saves pessoais.
+
+## 🛠️ 5.1 Validação do gerenciamento de executáveis (Fase 1)
+
+Sem executar código upstream, valide o catálogo do host:
+
+```bash
+bash scripts/phase1.sh status
+bash scripts/phase1.sh deps kytyps5
+bash scripts/phase1.sh deps shadps4
+bash scripts/phase1.sh deps ppsspp
+bash scripts/phase1.sh deps melonds
+bash scripts/phase1.sh deps bsnes
+python3 -m unittest discover -s tests -p 'test_emulator_manager.py' -v
+```
+
+O gerenciador **não certifica** a execução apenas pelo hash: `binary_signature` é uma pista estática de formato, `managed_hash_valid` prova integridade perante seu estado registrado e `execution_tested` permanece falso até um teste real. Para cada receita registre compilador, dependências, commit, log e SHA-256. Repita instalação e rollback com o emulador encerrado. Veja [Fase 1](EMULATOR_MANAGER.md).
+
+### Evidência de build de 31/10/2026
+
+O relatório local mostrou **bsnes instalado** com `runtime_tested: false`. Os outros quatro builds foram bloqueados por submódulos internos (KytyPS5/shadPS4/PPSSPP) ou Qt6 ausente (melonDS). Os comandos `plan-deps` e `sync-deps` já foram executados no host com êxito: KytyPS5 (14), shadPS4 (54), PPSSPP (28) submódulos internos. Em tentativa intermediária, melonDS não encontrava Qt6 pois um comando APT foi simulação; posteriormente 41 pacotes Qt6 foram instalados e `deps melonds` passou sem pendências, ainda sem build Docker-first; PPSSPP exigiu SDL3 em vez de SDL2; KytyPS5 e shadPS4 consultaram incorretamente o SHA do EmuStack para os prebuilds de FFmpeg. Os metadados Git temporários e a receita SDL3 foram corrigidos, ainda sem reexecução no host. Execute novamente os testes e registre hashes antes de afirmar que o software é executável.
+
+### Nova tentativa de compilação em Debian 12
+
+- **melonDS:** dependências básicas Qt6 detectadas; compilação ainda não executada nesta rodada
+- **shadPS4:** CMake 3.25.1 rejeitou expressão do OpenAL adicionada em CMake 3.26
+- **KytyPS5:** launcher exige Qt 6.8, host possui Qt 6.4.2
+- **PPSSPP:** bibliotecas SDL3/SDL3_ttf indisponíveis no APT Bookworm configurado
+
+Para os três últimos, existe um builder Debian Trixie opt-in que usa os mesmos commits upstream previamente auditados, preserva as permissões do host e registra resultado por perfil. Depois da build, **validar bibliotecas efetivamente vinculadas, plugins/resources, inicialização gráfica e logs**; o builder, por si só, não certifica runtime ou jogo.
 
 ## 🧱 6. Boot real por sistema/jogo
 

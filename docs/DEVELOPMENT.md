@@ -1,5 +1,7 @@
 # 🧑‍💻 Desenvolvimento e contribuição
 
+**Desenvolvimento da Fase 1:** usar `bash scripts/phase1.sh validate` e o builder Docker para os cinco perfis em vez de instalar toolchains no host. A revisão dos commits fonte, bibliotecas runtime, pacotes completos e limitações de hardware é obrigatória. [Checklist](PHASE1_IMPLEMENTATION.md).
+
 Este guia descreve como mudar EmuStack sem enfraquecer os limites de segurança ou confundir capacidade planejada com comportamento testado.
 
 ## 🧰 Ambiente
@@ -32,6 +34,10 @@ Implemente uma alteração pequena e rastreável. Rode os testes relevantes, em 
 - `tests/`: testes de regressão e contratos que precisam acompanhar novos comportamentos.
 
 Ao adicionar/remover um ID, atualize todos os manifestos, os serviços, as redes/allowlist, as páginas da matriz e os testes de consistência. Não adicione um perfil apenas para aumentar a contagem.
+
+## 🛠️ Desenvolvimento do gerenciador de instalação por perfil
+
+O código de host em `scripts/emulator-manager.py` mantém receitas de build permitidas, checagem de pin, importação com SHA-256 e backup/rollback. As regressões estão em `tests/test_emulator_manager.py`; a cobertura estrutural não substitui compilar upstream real num host. Veja [Gerenciador de emuladores](EMULATOR_MANAGER.md) para os cinco projetos com receita explícita e critérios de aceite.
 
 ## 🧪 Testes obrigatórios por tipo de alteração
 

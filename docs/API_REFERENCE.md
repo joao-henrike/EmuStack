@@ -1,7 +1,13 @@
 # 🔌 Referência de API e CLI
 
+**CLI de operações (não é API do dashboard):** `bash scripts/phase1.sh` fornece `status`, `deps`, `plan-deps`, `sync-deps`, `build`, `build-all`, `install-file`, `history`, `rollback`, `uninstall`, `purge` (com confirmação destrutiva), `logs`, `test` e `validate`. Não foi adicionada permissão de build ao dashboard. Consulte [referência Fase 1](PHASE1_IMPLEMENTATION.md).
+
 > [!WARNING]
 > Esta é a API interna da versão 0.7.1, destinada à UI local e à comunicação entre dashboard e agentes. **Não é uma API pública estável.** Não exponha a porta, não use reverse proxy nem transforme os endpoints internos de agentes em endpoints acessíveis pela LAN.
+
+## 🛠️ Gerenciador exclusivo do host
+
+`scripts/emulator-manager.py` é uma CLI separada das APIs. Os comandos `status`, `deps`, `plan-deps`, `sync-deps`, `build`, `build-all`, `install-file`, `history`, `rollback` e `uninstall` emitem JSON ou erros em stderr. `status` exibe metadados do release lock, formato estático do binário gerenciado e estado da instalação, sem afirmar jogabilidade. **Não existem endpoints HTTP para instalar, atualizar ou apagar executáveis**, preservando a fronteira de privilégios do dashboard. Leia [Fase 1 — Gerenciador](EMULATOR_MANAGER.md).
 
 ## 🧭 Camadas de API
 
