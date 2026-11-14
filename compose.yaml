@@ -2,6 +2,7 @@ name: emustack-0.7.1
 
 x-build: &emustack-build
   context: .
+  target: runtime
   args:
     DEBIAN_BASE_IMAGE: "${DEBIAN_BASE_IMAGE:-debian:trixie-slim@sha256:89c1ea91e897f0fe0a3731595330bc45b8bdef4047464a07116f891a94054b31}"
     APT_SNAPSHOT_TIMESTAMP: ${APT_SNAPSHOT_TIMESTAMP:-}
@@ -11,6 +12,14 @@ x-build: &emustack-build
     KYTYPS5_REF: ${KYTYPS5_REF:-KytyPS5-2026-10-26-f90a8b1}
     KYTYPS5_EXPECTED_SHORT: ${KYTYPS5_EXPECTED_SHORT:-f90a8b1}
     INSTALL_UPSTREAM: ${INSTALL_UPSTREAM:-1}
+
+x-build-dolphin: &emustack-build-dolphin
+  <<: *emustack-build
+  target: runtime-dolphin
+
+x-build-mupen64plus: &emustack-build-mupen64plus
+  <<: *emustack-build
+  target: runtime-mupen64plus
 
 x-agent-environment: &agent-environment
   HOME: /home/emu
@@ -315,6 +324,8 @@ services:
 
   env-dolphin:
     <<: *agent-common
+    image: local/emustack-dolphin:0.7.1
+    build: *emustack-build-dolphin
     environment:
       <<: *agent-environment
       EMUSTACK_ENV_ID: dolphin
@@ -387,6 +398,8 @@ services:
 
   env-mupen64plus:
     <<: *agent-common
+    image: local/emustack-mupen64plus:0.7.1
+    build: *emustack-build-mupen64plus
     environment:
       <<: *agent-environment
       EMUSTACK_ENV_ID: mupen64plus

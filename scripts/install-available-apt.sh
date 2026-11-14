@@ -1,12 +1,13 @@
 #!/bin/sh
-# Install Debian runtime dependencies and available distro-packaged emulators.
+# Install shared Debian runtime dependencies and distro emulators.
+# Dolphin and Mupen64Plus are deliberately installed only in dedicated image targets.
 # This is intentionally filtered: one unavailable package never makes the full image fail.
 set -eu
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 
 base="ca-certificates python3 file x11-utils xauth xdg-utils procps libvulkan1 vulkan-tools mesa-vulkan-drivers libgl1 libegl1 libgl1-mesa-dri libgtk-3-0t64 libgtk-3-0 libasound2t64 libasound2 libpulse0 pulseaudio-utils libx11-6 libxrandr2 libxi6 libxinerama1 libxcursor1 libxkbcommon0 libxkbcommon-x11-0 libwayland-client0 libudev1 libsdl2-2.0-0 libsdl3-0 libsdl3-ttf-0 libqt6core6t64 libqt6gui6t64 libqt6widgets6t64 libqt6svg6 libqt6multimedia6 libqt6network6 libqt6concurrent6 libqt6opengl6 libqt6openglwidgets6 libarchive13 libzstd1 libfaad2 libopenal1 libfuse2t64 libfuse2"
-optional="ppsspp-qt ppsspp rpcs3 pcsx2 pcsx2-qt dolphin-emu cemu xemu mgba-qt mgba mupen64plus-ui-console mupen64plus-audio-sdl mupen64plus-input-sdl mupen64plus-rsp-hle mupen64plus-video-rice mupen64plus-video-glide64mk2 libretro-mgba libretro-mupen64plus bsnes mesen melonds wine wine64 winetricks"
+optional="ppsspp-qt ppsspp rpcs3 pcsx2 pcsx2-qt cemu xemu mgba-qt mgba libretro-mgba bsnes mesen melonds wine wine64 winetricks"
 
 # apt-cache show can exit successfully even when no install candidate exists.
 # Use the candidate selected by the configured Debian repositories instead.

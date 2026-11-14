@@ -172,6 +172,25 @@ def _check_compose(
         if isinstance(item.get("service_name"), str) and item.get("service_name")
     }
     declared_agent_services = {name for name in services if isinstance(name, str) and name.startswith("env-")}
+    # Enforce image/build split in the source manifests, not merely an
+    # implicit Compose build. This prevents accidentally sharing a vulnerable
+    # emulator package with all 20 agents or the dashboard.
+    expected_profiles = {
+        "env-dolphin": ("local/emustack-dolphin:0.7.1", "runtime-dolphin"),
+        "env-mupen64plus": ("local/emustack-mupen64plus:0.7.1", "runtime-mupen64plus"),
+    }
+    common_image = expected_image or "local/emustack:0.7.1"
+    for service_name in ("dashboard", "emustack", *sorted(expected_services)):
+        service_spec = services.get(service_name)
+        if not isinstance(service_spec, dict):
+            continue
+        image, target = expected_profiles.get(service_name, (common_image, "runtime"))
+        if service_spec.get("image") != image:
+            errors.append(f"compose.yaml:{service_name}: expected image {image!r}")
+        build = service_spec.get("build", {})
+        if not isinstance(build, dict) or build.get("target") != target:
+            errors.append(f"compose.yaml:{service_name}: expected Docker build target {target!r}")
+
     for missing in sorted(expected_services - set(services)):
         errors.append(f"compose.yaml: serviço declarado em environments.json mas ausente: '{missing}'")
     for extra in sorted(declared_agent_services - expected_services):

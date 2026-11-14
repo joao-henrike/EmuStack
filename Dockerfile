@@ -85,9 +85,9 @@ RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
     && if [ "$INSTALL_UPSTREAM" = "1" ]; then \
          python3 /opt/emustack/scripts/install-upstream.py \
            --target /opt/emustack/installed --catalog /opt/emustack/catalog.json \
-           --report /opt/emustack/install-report.json --lock /opt/emustack/release-lock.json; \
+           --report /opt/emustack/install-report.json --lock /opt/emustack/release-lock.json --exclude-dolphin; \
        else \
-         python3 /opt/emustack/scripts/install-upstream.py --skip-network \
+         python3 /opt/emustack/scripts/install-upstream.py --skip-network --exclude-dolphin \
            --target /opt/emustack/installed --catalog /opt/emustack/catalog.json \
            --report /opt/emustack/install-report.json --lock /opt/emustack/release-lock.json; \
        fi \
@@ -105,3 +105,42 @@ ENV PATH="/usr/games:/opt/emustack/installed/kytyps5:/opt/emustack/installed:/ho
     XDG_CACHE_HOME=/home/emu/.cache
 ENTRYPOINT ["python3", "/opt/emustack/emustack.py"]
 CMD ["list"]
+# Only Dolphin obtains the Dolphin APT and optional pinned official AppImage.
+# Building this target preserves the common read-only agent runtime and its reports.
+FROM runtime AS runtime-dolphin
+ARG PUID=1000
+ARG PGID=1000
+ARG INSTALL_UPSTREAM=1
+USER root
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends dolphin-emu; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*; \
+    if [ "$INSTALL_UPSTREAM" = "1" ]; then \
+      python3 /opt/emustack/scripts/install-upstream.py --only-profile dolphin; \
+    else \
+      python3 /opt/emustack/scripts/install-upstream.py --only-profile dolphin --skip-network; \
+    fi
+USER ${PUID}:${PGID}
+
+# The legacy Mupen64Plus frontend and plugins are not installed in any
+# other agent or in the dashboard image.
+FROM runtime AS runtime-mupen64plus
+ARG PUID=1000
+ARG PGID=1000
+USER root
+RUN set -eu; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      mupen64plus-ui-console \
+      mupen64plus-audio-sdl mupen64plus-input-sdl \
+      mupen64plus-rsp-hle mupen64plus-video-rice \
+      mupen64plus-video-glide64mk2; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*; \
+    python3 /opt/emustack/scripts/install-upstream.py --only-profile mupen64plus --skip-network
+USER ${PUID}:${PGID}
+
+# Plain docker build remains backward compatible: default to common runtime.
+FROM runtime AS default

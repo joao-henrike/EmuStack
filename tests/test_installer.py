@@ -20,13 +20,17 @@ class InstallerTests(unittest.TestCase):
         self.assertIn('[ "$candidate" != "(none)" ]', script)
         self.assertNotIn('apt-cache show "$package"', script)
 
-    def test_debian_games_path_exposes_dolphin_and_mupen_apt_fallbacks(self):
+    def test_dedicated_images_provide_dolphin_and_mupen_apt_fallbacks(self):
         dockerfile = (PROJECT / "Dockerfile").read_text(encoding="utf-8")
         install_script = (PROJECT / "scripts" / "install-available-apt.sh").read_text(encoding="utf-8")
         path_line = next(line for line in dockerfile.splitlines() if line.startswith("ENV PATH="))
         self.assertIn("/usr/games:", path_line)
-        self.assertIn("dolphin-emu", install_script)
-        self.assertIn("mupen64plus-ui-console", install_script)
+        self.assertNotIn("dolphin-emu", install_script.split('optional="', 1)[1].split('"', 1)[0])
+        self.assertNotIn("mupen64plus-", install_script.split('optional="', 1)[1].split('"', 1)[0])
+        self.assertIn("FROM runtime AS runtime-dolphin", dockerfile)
+        self.assertIn("FROM runtime AS runtime-mupen64plus", dockerfile)
+        self.assertIn("dolphin-emu", dockerfile)
+        self.assertIn("mupen64plus-ui-console", dockerfile)
 
     def test_skip_network_writes_a_complete_20_entry_report(self):
         with tempfile.TemporaryDirectory() as td:
