@@ -127,11 +127,13 @@ sbom = json.loads(Path(sbom_path).read_text(encoding="utf-8"))
 scan = json.loads(Path(trivy_path).read_text(encoding="utf-8"))
 packages = sbom.get("packages", [])
 severity_counts = Counter()
+unique_by_severity = {}
 findings = []
 for result in scan.get("Results") or []:
     for vulnerability in result.get("Vulnerabilities") or []:
         severity = str(vulnerability.get("Severity") or "UNKNOWN").upper()
         severity_counts[severity] += 1
+        unique_by_severity.setdefault(severity, set()).add(str(vulnerability.get("VulnerabilityID") or "UNKNOWN"))
         findings.append({
             "severity": severity,
             "id": str(vulnerability.get("VulnerabilityID") or "UNKNOWN"),
@@ -163,11 +165,18 @@ lines = [
     "",
     "## Finding counts",
     "",
-    "| Severity | Count |",
-    "|---|---:|",
+    "| Severity | Package-level findings | Unique CVEs |",
+    "|---|---:|---:|",
 ]
 for severity in ("CRITICAL", "HIGH", "UNKNOWN"):
-    lines.append(f"| {severity} | {severity_counts.get(severity, 0)} |")
+    lines.append(
+        f"| {severity} | {severity_counts.get(severity, 0)} | "
+        f"{len(unique_by_severity.get(severity, set()))} |"
+    )
+total_findings = sum(severity_counts.values())
+total_unique = len(set().union(*unique_by_severity.values())) if unique_by_severity else 0
+lines.append(f"| TOTAL | {total_findings} | {total_unique} |")
+lines.extend(["", f"- Package-level findings: {total_findings}", f"- Unique vulnerability IDs: {total_unique}"])
 lines.extend(["", "## HIGH/CRITICAL findings (up to 100 shown)", ""])
 if not findings:
     lines.append("No HIGH/CRITICAL findings were reported for the scanned image by this Trivy database snapshot.")

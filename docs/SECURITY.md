@@ -69,6 +69,12 @@ Para código ou arquivos de terceiros dos quais você não confia, prefira uma V
 
 `scripts/emulator-manager.py` opera no host como usuário normal, sem expor ações de instalar/desinstalar na API. Arquivos importados precisam ter nome permitido pelo catálogo e hash SHA-256 explícito; checksum não é assinatura de fornecedor. O gerenciador rejeita symlinks nos destinos e mantém cópias antigas fora dos mounts dos agentes. Builds de KytyPS5, shadPS4, PPSSPP, melonDS e bsnes **executam código de terceiros no host** somente após sinalizador de aceite: revide a origem e prefira VM descartável para código não confiável. Nunca execute como root. Testes de fronteira Docker não certificam segurança de um build executado fora do contêiner.
 
+## 📦 Atualizações APT no build
+
+A imagem Trixie executa `scripts/phase1-builder/apt-security-bootstrap.sh` antes de instalar dependências. A rotina desativa retries na primeira atualização de índices, exige APT **3.0.4 ou superior**, instala a versão corrigida e aplica upgrades de segurança antes de instalar os pacotes de runtime. Isso trata o CVE-2026-109518, corrigido no Trixie em 3.0.4 (DSA-6607-1: https://lists.debian.org/debian-security-announce/2026/msg00526.html).
+
+Se `APT_SNAPSHOT_TIMESTAMP` apontar para um snapshot anterior à publicação da correção, o build falha fechado; não reduza o mínimo para contornar esse bloqueio. O upgrade APT não elimina vulnerabilidades sem correção disponível no Trixie. Consulte o [registro de triagem](SECURITY_TRIAGE_2026-11-14.md).
+
 ## 🧪 Verificação operacional
 
 ```bash

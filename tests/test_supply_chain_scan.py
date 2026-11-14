@@ -60,6 +60,12 @@ class SupplyChainScanContractTests(unittest.TestCase):
         self.assertIn("--vuln-type os,library", self.script)
         self.assertIn("--severity HIGH,CRITICAL", self.script)
 
+    def test_summary_distinguishes_package_findings_from_unique_cves(self):
+        self.assertIn("unique_by_severity", self.script)
+        self.assertIn("Package-level findings", self.script)
+        self.assertIn("Unique CVEs", self.script)
+        self.assertIn("Unique vulnerability IDs", self.script)
+
     def test_image_reference_matches_the_compose_dashboard_image(self):
         policy_image = self.lock["target_image"]
         self.assertTrue(policy_image)

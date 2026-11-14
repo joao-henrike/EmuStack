@@ -42,7 +42,7 @@ bash scripts/phase1.sh build shadps4 --yes-run-upstream-code --jobs 2
 bash scripts/phase1.sh build kytyps5 --yes-run-upstream-code --jobs 2
 ```
 
-`scripts/build-phase1-isolated.sh` permanece como **alias legado** para `scripts/phase1.sh build`, sem implementar outra toolchain. `build` tem rede Docker bridge para downloads exigidos pelos upstreams; `status`, `deps`, `test` e `validate` usam `--network none`. Sempre confirme a origem dos códigos-fonte e libs prebuilt antes de executar. A imagem Trixie fixa o digest base mas, por enquanto, **pacotes APT não estão congelados por snapshot**. Não declare build bit a bit reproduzível.
+`scripts/build-phase1-isolated.sh` permanece como **alias legado** para `scripts/phase1.sh build`, sem implementar outra toolchain. `build` tem rede Docker bridge para downloads exigidos pelos upstreams; `status`, `deps`, `test` e `validate` usam `--network none`. Sempre confirme a origem dos códigos-fonte e libs prebuilt antes de executar. A imagem Trixie fixa o digest base mas, por enquanto, **pacotes APT não estão congelados por snapshot**. O bootstrap exige APT 3.0.4+ e aplica os upgrades disponíveis antes de instalar dependências; snapshots anteriores à correção são rejeitados. Não declare build bit a bit reproduzível.
 
 Os builds são limitados a quatro CPUs, 8 GiB de RAM e 512 processos, com `cap_drop=ALL`, `no-new-privileges`, execução não-root e filesystem read-only fora do mount `data/` e do tmpfs. A CLI de host confia no Docker Engine e portanto **acesso ao daemon Docker é altamente privilegiado**; não dê essa permissão a aplicações web ou usuários não confiáveis.
 

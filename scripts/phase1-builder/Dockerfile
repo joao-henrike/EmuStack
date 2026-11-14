@@ -3,8 +3,9 @@
 FROM debian:trixie-slim@sha256:89c1ea91e897f0fe0a3731595330bc45b8bdef4047464a07116f891a94054b31
 ENV DEBIAN_FRONTEND=noninteractive HOME=/tmp XDG_CACHE_HOME=/tmp/.cache \
     GIT_OPTIONAL_LOCKS=0 PYTHONDONTWRITEBYTECODE=1
+COPY apt-security-bootstrap.sh /tmp/apt-security-bootstrap.sh
 RUN set -eu; \
-    apt-get update; \
+    sh /tmp/apt-security-bootstrap.sh; \
     apt-get install -y --no-install-recommends \
       ca-certificates git python3 python3-yaml nodejs cmake ninja-build clang lld build-essential pkg-config \
       glslang-tools qt6-base-dev qt6-base-private-dev qt6-multimedia-dev qt6-svg-dev \

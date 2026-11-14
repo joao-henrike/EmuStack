@@ -24,6 +24,6 @@ else
   echo 'AVISO: Node.js não encontrado; testes JavaScript foram pulados.' >&2
 fi
 printf '\n== Shell syntax ==\n'
-for script in scripts/host-setup.sh scripts/install-available-apt.sh; do sh -n "$script"; done
+for script in scripts/host-setup.sh scripts/install-available-apt.sh scripts/phase1-builder/apt-security-bootstrap.sh; do sh -n "$script"; done
 for script in scripts/build-and-audit.sh scripts/validate-project.sh scripts/freeze-upstream-lock.sh scripts/runtime-acceptance.sh scripts/build-phase1-isolated.sh scripts/phase1.sh scripts/phase1-acceptance.sh scripts/supply-chain-scan.sh; do bash -n "$script"; done
 printf 'Shell syntax OK.\n'

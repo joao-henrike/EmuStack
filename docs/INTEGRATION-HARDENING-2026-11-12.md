@@ -23,3 +23,11 @@ Esta branch parte de `fix/dashboard-degraded-startup` (PR #7) e incorpora melhor
 5. Revisão do trabalho ainda exclusivo da PR #6: instalador, guardrails e demais melhorias não integradas. **Esta integração não equivale a merge completo da PR #6.**
 
 Não declarar emuladores operacionais ou mergear em `main` com base somente em testes estáticos.
+
+
+## Correção adicional — bootstrap APT (14/11/2026)
+
+- Exigência de APT 3.0.4+ antes da instalação de dependências, corrigindo CVE-2026-109518 no Debian Trixie.
+- Primeira atualização de índices e instalação do APT corrigido usam `Acquire::Retries=0`, reduzindo a exposição do APT vulnerável antes da atualização.
+- Atualização de pacotes instalados antes de adicionar dependências de runtime; snapshots antigos falham fechados.
+- Relatório Trivy agora diferencia contagem de achados por pacote e CVEs únicos para evitar inflar a interpretação do inventário.

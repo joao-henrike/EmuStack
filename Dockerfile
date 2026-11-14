@@ -8,6 +8,7 @@ ARG APT_SNAPSHOT_TIMESTAMP
 ARG BUILD_KYTYPS5=1
 ARG KYTYPS5_REF=KytyPS5-2026-10-26-f90a8b1
 ARG KYTYPS5_EXPECTED_SHORT=f90a8b1
+COPY scripts/phase1-builder/apt-security-bootstrap.sh /tmp/apt-security-bootstrap.sh
 RUN mkdir -p /out/kytyps5
 RUN set -eu; \
     if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
@@ -16,7 +17,8 @@ RUN set -eu; \
       printf 'Types: deb\nURIs: https://snapshot.debian.org/archive/debian/%s/\nSuites: trixie trixie-updates\nComponents: main\nCheck-Valid-Until: no\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: https://snapshot.debian.org/archive/debian-security/%s/\nSuites: trixie-security\nComponents: main\nCheck-Valid-Until: no\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n' "$APT_SNAPSHOT_TIMESTAMP" "$APT_SNAPSHOT_TIMESTAMP" > /etc/apt/sources.list.d/emustack-snapshot.sources; \
     fi; \
     if [ "$BUILD_KYTYPS5" = "1" ]; then \
-      if apt-get update && apt-get install -y --no-install-recommends \
+      sh /tmp/apt-security-bootstrap.sh; \
+      if apt-get install -y --no-install-recommends \
         ca-certificates git cmake ninja-build clang lld glslang-tools python3 pkg-config \
         qt6-base-dev libvulkan-dev libgl1-mesa-dev libx11-dev libxcursor-dev libxext-dev \
         libxfixes-dev libxi-dev libxrandr-dev libxss-dev libxtst-dev libxkbcommon-dev \
@@ -66,6 +68,7 @@ COPY README.md /opt/emustack/README.md
 COPY game-sources.json /opt/emustack/game-sources.json
 COPY docs/ /opt/emustack/docs/
 COPY web/ /opt/emustack/web/
+COPY scripts/phase1-builder/apt-security-bootstrap.sh /tmp/apt-security-bootstrap.sh
 COPY scripts/install-available-apt.sh /tmp/install-available-apt.sh
 COPY scripts/install-upstream.py /opt/emustack/scripts/install-upstream.py
 COPY scripts/phase1-smoke.py /opt/emustack/scripts/phase1-smoke.py
@@ -76,6 +79,7 @@ RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
       printf 'Types: deb\nURIs: https://snapshot.debian.org/archive/debian/%s/\nSuites: trixie trixie-updates\nComponents: main\nCheck-Valid-Until: no\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\nTypes: deb\nURIs: https://snapshot.debian.org/archive/debian-security/%s/\nSuites: trixie-security\nComponents: main\nCheck-Valid-Until: no\nSigned-By: /usr/share/keyrings/debian-archive-keyring.gpg\n' "$APT_SNAPSHOT_TIMESTAMP" "$APT_SNAPSHOT_TIMESTAMP" > /etc/apt/sources.list.d/emustack-snapshot.sources; \
     fi \
     && chmod +x /tmp/install-available-apt.sh /opt/emustack/emustack.py /opt/emustack/console_agent.py /opt/emustack/scripts/install-upstream.py \
+    && sh /tmp/apt-security-bootstrap.sh \
     && /tmp/install-available-apt.sh \
     && mkdir -p /opt/emustack/installed /opt/emustack/dropin /games /bios /saves /home/emu/.config /home/emu/.cache \
     && if [ "$INSTALL_UPSTREAM" = "1" ]; then \
@@ -91,7 +95,7 @@ RUN if [ -n "$APT_SNAPSHOT_TIMESTAMP" ]; then \
     && if ! getent passwd "${PUID}" >/dev/null; then useradd -m -u "${PUID}" -g "${PGID}" -s /bin/bash emu; fi \
     && chown -R "${PUID}:${PGID}" /home/emu /opt/emustack/installed /games /bios /saves \
     && ln -sf /opt/emustack/emustack.py /usr/local/bin/emustack \
-    && rm -f /tmp/install-available-apt.sh \
+    && rm -f /tmp/install-available-apt.sh /tmp/apt-security-bootstrap.sh \
     && rm -rf /var/lib/apt/lists/*
 USER ${PUID}:${PGID}
 ENV PATH="/usr/games:/opt/emustack/installed/kytyps5:/opt/emustack/installed:/home/emu/.local/bin:/usr/local/bin:/usr/bin:/bin" \
