@@ -103,7 +103,7 @@ jobs:
         run: docker compose -f compose.yaml build --build-arg BUILD_KYTYPS5=0 --build-arg INSTALL_UPSTREAM=0 dashboard env-dolphin env-mupen64plus
       - name: Verify image-specific binaries and complete 20-profile install reports
         run: bash scripts/verify-profile-images.sh
-      - name: Generate independent SPDX/Trivy reports for all three images
+      - name: Generate independent SPDX/Trivy reports and block new CRITICAL CVEs
         env:
           EMUSTACK_SECURITY_ARTIFACTS_DIR: artifacts
         run: bash scripts/supply-chain-matrix.sh
@@ -150,6 +150,7 @@ jobs:
           EOF
           cat artifacts/validation-report.md >> "$GITHUB_STEP_SUMMARY"
           if [[ -s artifacts/matrix-summary.md ]]; then cat artifacts/matrix-summary.md >> "$GITHUB_STEP_SUMMARY"; fi
+          if [[ -s artifacts/critical-cve-gate-summary.md ]]; then cat artifacts/critical-cve-gate-summary.md >> "$GITHUB_STEP_SUMMARY"; fi
       - name: Upload CI validation report
         if: always()
         uses: actions/upload-artifact@v4

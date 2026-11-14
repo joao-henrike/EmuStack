@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "source_run": 43630519112,
+  "source_artifact": "emustack-validation-report-249",
+  "source_url": "https://github.com/joao-henrike/EmuStack/actions/runs/43630519112",
+  "policy": {
+    "new_critical": "block",
+    "known_critical": "unresolved",
+    "note": "This inventory is not a vulnerability waiver, a risk acceptance, or proof that existing vulnerabilities are exploitable. It only prevents introducing CRITICAL IDs into profiles that did not previously contain them."
+  },
+  "images": {
+    "common": {
+      "image": "local/emustack:0.7.1",
+      "critical_ids": [
+        "CVE-2026-6653"
+      ]
+    },
+    "dolphin": {
+      "image": "local/emustack-dolphin:0.7.1",
+      "critical_ids": [
+        "CVE-2023-45666",
+        "CVE-2026-6653"
+      ]
+    },
+    "mupen64plus": {
+      "image": "local/emustack-mupen64plus:0.7.1",
+      "critical_ids": [
+        "CVE-2025-48429",
+        "CVE-2025-53618",
+        "CVE-2025-53619",
+        "CVE-2026-44172",
+        "CVE-2026-49261",
+        "CVE-2026-6653"
+      ]
+    }
+  },
+  "tracked": {
+    "CVE-2023-45666": {
+      "source_package": "libstb",
+      "review": "pending",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2023-45666"
+    },
+    "CVE-2025-48429": {
+      "source_package": "gdcm",
+      "review": "pending",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2025-48429"
+    },
+    "CVE-2025-53618": {
+      "source_package": "gdcm",
+      "review": "pending",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2025-53618"
+    },
+    "CVE-2025-53619": {
+      "source_package": "gdcm",
+      "review": "pending",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2025-53619"
+    },
+    "CVE-2026-44172": {
+      "source_package": "mariadb",
+      "review": "pending",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-44172"
+    },
+    "CVE-2026-49261": {
+      "source_package": "mariadb",
+      "review": "pending",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-49261"
+    },
+    "CVE-2026-6653": {
+      "source_package": "libxml2",
+      "review": "pending",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-6653"
+    }
+  }
+}

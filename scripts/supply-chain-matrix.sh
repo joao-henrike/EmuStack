@@ -19,3 +19,10 @@ for item in \
 done
 
 python3 "$ROOT/scripts/report-image-matrix.py" --artifacts-dir "$ARTIFACTS"
+
+echo "=== Enforcing per-image CRITICAL CVE regression policy ==="
+python3 "$ROOT/scripts/check-critical-cves.py" \
+  --matrix "$ARTIFACTS/matrix.json" \
+  --baseline "$ROOT/security-critical-baseline.json" \
+  --summary "$ARTIFACTS/critical-cve-gate-summary.md" \
+  --report "$ARTIFACTS/critical-cve-gate.json"

@@ -50,3 +50,7 @@ O relatório Trivy agora apresenta, por achado, a cadeia SPDX de dependência de
 ## Regressão de fronteira APT e matriz de CVEs
 
 Além das verificações de binários presentes/ausentes, a CI confere diretamente o banco `dpkg` das três imagens. O runtime comum não pode conter `dolphin-emu`, `mupen64plus-ui-console`, `libgdcm3.0t64`, `libmariadb3` ou `libstb0t64`. As imagens específicas devem conter suas dependências e não as da outra. A matriz da CI #248 apresenta 459, 475 e 545 componentes SPDX nas imagens comum, Dolphin e Mupen64Plus, respectivamente; essa contagem é contextual e não um teto fixo para builds futuros.
+
+## Gate CI para novos CRITICAL (14/11/2026)
+
+Adicionados `security-critical-baseline.json`, `scripts/check-critical-cves.py` e testes de regressão. Um novo CVE/GHSA CRITICAL em qualquer uma das três imagens bloqueia a CI e aparece no artefato. Os CVEs já existentes permanecem explicitamente não resolvidos; o gate não os oculta, não aprova release e não declara impacto ou exploração. A política exige três imagens, IDs únicos, correspondência de tags e contagens consistentes. Sem patchear upstream indevidamente, priorizar atualização oficial Debian e testes físicos antes de merge.

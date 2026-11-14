@@ -54,6 +54,14 @@ https://github.com/joao-henrike/EmuStack/actions/runs/43628959006.
 - Verificações de APT via `dpkg-query` impedem que pacotes críticos conhecidos voltem silenciosamente à imagem comum e que dependências dos dois perfis sejam misturadas.
 - CI em runner hospedado não substitui testes locais de GPU, Vulkan, áudio, controles ou compatibilidade de jogos.
 
+## 4.2. Controle de regressão CRITICAL por imagem (14/11/2026)
+
+A baseline estrita `security-critical-baseline.json` registra **somente** os sete CVEs únicos CRITICAL já observados na execução #249, discriminados pelas três imagens. O estado de todos os sete é `pending`: isto **não** configura aceite de risco ou exceção de segurança.
+
+Após gerar os relatórios Syft/Trivy, `scripts/check-critical-cves.py` falha caso um novo identificador CRITICAL apareça em qualquer imagem — inclusive se ele já existia em outro perfil — e falha quando a matriz estiver incompleta, inconsistente ou atribuída a tags erradas. Achados históricos continuam visíveis e pendentes; correções que eliminem um CVE são evidenciadas no relatório. Os relatórios ficam em `artifacts/critical-cve-gate.json` e `artifacts/critical-cve-gate-summary.md`.
+
+**Importante:** a CI verde significa que não houve novas introduções CRITICAL acima dessa baseline, **não que a imagem está segura ou pronta para release**. Para a libxml2, o Debian Trixie ainda registra CVE-2026-6653 vulnerável; para MariaDB, correções devem chegar via point release. Não substituir pacotes do Trixie por binários não revisados de outras distribuições.
+
 ## 4. Política de tratamento
 
 1. Não adicionar `--ignore-unfixed`, exclusões globais ou exceções sem prazo.
