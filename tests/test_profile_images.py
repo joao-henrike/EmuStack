@@ -37,6 +37,16 @@ class PerProfileImageContracts(unittest.TestCase):
             self.assertEqual(services[ident]["build"]["target"], "runtime")
         self.assertEqual(services["dashboard-proxy"]["ports"], ["127.0.0.1:8765:8765"])
 
+    def test_profile_image_attestation_checks_apt_package_boundaries(self):
+        script = (ROOT / "scripts" / "verify-profile-images.sh").read_text(encoding="utf-8")
+        for package in ("dolphin-emu", "mupen64plus-ui-console",
+                        "libgdcm3.0t64", "libmariadb3", "libstb0t64"):
+            self.assertIn(package, script)
+        self.assertIn("dpkg-query", script)
+        self.assertIn("Unexpected Dolphin/Mupen APT dependency in common image", script)
+        self.assertIn("Mupen APT dependencies leaked into Dolphin", script)
+        self.assertIn("Dolphin APT dependencies leaked into Mupen", script)
+
     def test_default_docker_build_still_uses_shared_runtime(self):
         docker = (ROOT / "Dockerfile").read_text(encoding="utf-8")
         self.assertTrue(docker.rstrip().endswith("FROM runtime AS default"))

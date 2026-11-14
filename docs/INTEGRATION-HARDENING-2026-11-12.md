@@ -46,3 +46,7 @@ O relatório Trivy agora apresenta, por achado, a cadeia SPDX de dependência de
 - Adicionadas verificações de executáveis ausentes/presentes, três IDs Docker distintos e CI que constrói as três imagens.
 - Syft + Trivy são executados individualmente; o artefato inclui matriz de CVEs novos por perfil, com contagens por pacote e CVEs únicos.
 - Pendente: revisar os resultados específicos, corrigir vulnerabilidades aplicáveis e validar GPU, áudio, controle e execução gráfica no host Debian.
+
+## Regressão de fronteira APT e matriz de CVEs
+
+Além das verificações de binários presentes/ausentes, a CI confere diretamente o banco `dpkg` das três imagens. O runtime comum não pode conter `dolphin-emu`, `mupen64plus-ui-console`, `libgdcm3.0t64`, `libmariadb3` ou `libstb0t64`. As imagens específicas devem conter suas dependências e não as da outra. A matriz da CI #248 apresenta 459, 475 e 545 componentes SPDX nas imagens comum, Dolphin e Mupen64Plus, respectivamente; essa contagem é contextual e não um teto fixo para builds futuros.

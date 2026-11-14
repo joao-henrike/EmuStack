@@ -18,7 +18,40 @@ for name, candidates in commands.items():
         assert not installed, f"{name} leaked into {expected}: {installed}"
 if expected == "common":
     assert items["dolphin"]["status"] == "profile-image-only", items["dolphin"]
-print(f"Profile package isolation and metadata PASS: {expected}")'
+# PATH-only checks miss packages that install shared libraries but no executable.
+# Query dpkg directly so an accidental APT regression cannot silently contaminate
+# the common runtime (or leak Mupen dependencies into Dolphin and vice versa).
+import subprocess
+def package_installed(name):
+    process = subprocess.run(
+        ["dpkg-query", "-W", "-f=${Status}", name],
+        capture_output=True, text=True, check=False,
+    )
+    return process.returncode == 0 and process.stdout.strip() == "install ok installed"
+
+packages = {
+    "dolphin": "dolphin-emu",
+    "mupen64plus": "mupen64plus-ui-console",
+    "mupen_gdcm": "libgdcm3.0t64",
+    "mupen_mariadb": "libmariadb3",
+    "dolphin_stb": "libstb0t64",
+}
+observed = {name: package_installed(pkg) for name, pkg in packages.items()}
+if expected == "common":
+    assert not any(observed.values()), f"Unexpected Dolphin/Mupen APT dependency in common image: {observed}"
+elif expected == "dolphin":
+    assert observed["dolphin"] and observed["dolphin_stb"], f"Dolphin APT dependencies missing: {observed}"
+    assert not observed["mupen64plus"] and not observed["mupen_gdcm"] and not observed["mupen_mariadb"], (
+        f"Mupen APT dependencies leaked into Dolphin: {observed}"
+    )
+elif expected == "mupen64plus":
+    assert observed["mupen64plus"] and observed["mupen_gdcm"] and observed["mupen_mariadb"], (
+        f"Mupen APT dependencies missing: {observed}"
+    )
+    assert not observed["dolphin"] and not observed["dolphin_stb"], (
+        f"Dolphin APT dependencies leaked into Mupen: {observed}"
+    )
+print(f"Profile package isolation and metadata PASS: {expected}; dpkg={observed}")'
 
 for item in   "common:local/emustack:0.7.1"   "dolphin:local/emustack-dolphin:0.7.1"   "mupen64plus:local/emustack-mupen64plus:0.7.1"; do
   profile="${item%%:*}"

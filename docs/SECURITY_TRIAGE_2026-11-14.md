@@ -37,6 +37,23 @@ O SBOM SPDX da execução #233 contém relações `DEPENDENCY_OF`. A cadeia apon
 
 **Separação implementada na branch de integração, pendente de aceitação da CI:** foram criados os targets `runtime-dolphin` e `runtime-mupen64plus`. A CI constrói as imagens separadamente, verifica binários/status e produz SBOM/Trivy por imagem. A ausência de um CVE na imagem comum **não significa** que foi corrigido no perfil que ainda contém a biblioteca. Corrigir, atualizar ou justificar os CVEs críticos restantes exige triagem específica dos novos resultados.
 
+## 4.1. Matriz efetivamente observada após separar as imagens (CI #248)
+
+| Imagem | Componentes SPDX | CRITICAL (pacotes) | HIGH (pacotes) | CVEs CRITICAL únicos | CVEs HIGH únicos |
+|---|---:|---:|---:|---:|---:|
+| comum | 459 | 1 | 324 | 1 | 89 |
+| Dolphin | 475 | 2 | 344 | 2 | 109 |
+| Mupen64Plus | 545 | 8 | 370 | 6 | 111 |
+
+Fonte: Syft/Trivy e matriz publicados como artefato da execução
+https://github.com/joao-henrike/EmuStack/actions/runs/43628959006.
+
+- O inventário da imagem **comum** deixou de conter os CVEs CRITICAL de GDCM, MariaDB e libstb trazidos pelos pacotes específicos.
+- Os achados continuam nas imagens em que os pacotes são necessários; isolamento de imagem **não corrige os CVEs**.
+- A matriz mostra o risco de cada imagem, não significa que cada CVE seja explorável no uso real.
+- Verificações de APT via `dpkg-query` impedem que pacotes críticos conhecidos voltem silenciosamente à imagem comum e que dependências dos dois perfis sejam misturadas.
+- CI em runner hospedado não substitui testes locais de GPU, Vulkan, áudio, controles ou compatibilidade de jogos.
+
 ## 4. Política de tratamento
 
 1. Não adicionar `--ignore-unfixed`, exclusões globais ou exceções sem prazo.
