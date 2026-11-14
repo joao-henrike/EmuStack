@@ -4,17 +4,18 @@ set -Eeuo pipefail
 
 probe='import json, shutil, sys
 expected = sys.argv[1]
-commands = {"dolphin": "dolphin-emu", "mupen64plus": "mupen64plus-ui-console"}
+commands = {"dolphin": ("dolphin-emu",), "mupen64plus": ("mupen64plus-ui-console", "mupen64plus")}
 with open("/opt/emustack/install-report.json", encoding="utf-8") as f:
     items = json.load(f)["items"]
 assert isinstance(items, dict) and len(items) == 20, "20-entry install report required"
-for name, command in commands.items():
-    executable = shutil.which(command)
+for name, candidates in commands.items():
+    executables = {cmd: shutil.which(cmd) for cmd in candidates}
+    installed = {cmd: path for cmd, path in executables.items() if path}
     if name == expected:
-        assert executable, f"{name} missing in {expected} image"
+        assert installed, f"{name} missing in {expected} image; tested: {candidates}"
         assert items[name]["status"] == "installed", f"{name}: {items[name]}"
     else:
-        assert not executable, f"{name} leaked to {expected}: {executable}"
+        assert not installed, f"{name} leaked into {expected}: {installed}"
 if expected == "common":
     assert items["dolphin"]["status"] == "profile-image-only", items["dolphin"]
 print(f"Profile package isolation and metadata PASS: {expected}")'
