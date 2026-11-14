@@ -35,7 +35,7 @@ O SBOM SPDX da execução #233 contém relações `DEPENDENCY_OF`. A cadeia apon
 - libstb: `dolphin-emu` → `libtinygltf6d` → `libstb0t64`.
 - libxml2: múltiplos consumidores, incluindo `dolphin-emu`/`retroarch` via `libavformat61`, Mupen64Plus via `libgphoto2` e Wine via `libxkbregistry0`.
 
-**Próxima alteração arquitetural recomendada, ainda não aplicada:** construir imagens de agente por perfil para que os pacotes APT de Dolphin e Mupen64Plus não sejam instalados em todos os 20 ambientes. Essa mudança deve vir acompanhada de SBOM/Trivy separado para cada imagem e testes de Compose que confirmem que apenas os serviços correspondentes usam os overlays. Não remover os pacotes do perfil atual sem uma imagem substituta validada.
+**Separação implementada na branch de integração, pendente de aceitação da CI:** foram criados os targets `runtime-dolphin` e `runtime-mupen64plus`. A CI constrói as imagens separadamente, verifica binários/status e produz SBOM/Trivy por imagem. A ausência de um CVE na imagem comum **não significa** que foi corrigido no perfil que ainda contém a biblioteca. Corrigir, atualizar ou justificar os CVEs críticos restantes exige triagem específica dos novos resultados.
 
 ## 4. Política de tratamento
 
