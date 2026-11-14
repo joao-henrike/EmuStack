@@ -24,6 +24,7 @@ Reduzir a exposição desnecessária entre dashboard, agentes e dados persistent
 - Nenhum socket Docker é montado no dashboard ou nos agentes.
 - Dashboard não monta pastas persistentes de jogos/BIOS/saves/HOME dos agentes.
 - Mounts de jogos/BIOS read-only; estado gravável limitado a HOME/saves do ambiente correspondente.
+- Dolphin e Mupen64Plus usam imagens Docker específicas, sem os seus pacotes APT na imagem compartilhada. Os scanners Syft/Trivy produzem inventários separados por imagem.
 - Contêineres de agente usam, conforme manifestos, filesystem root read-only, `cap_drop: ALL`, `no-new-privileges`, `tmpfs` e limites de recursos.
 - APIs validam ID e parâmetros, rejeitam paths inseguros e não aceitam shell/binário arbitrário via requisição.
 - Nenhum input é mapeado por padrão. GUI/áudio/GPU/controle precisam de concessão local explícita.
@@ -89,3 +90,9 @@ A aceitação deve verificar IPAM, allowlist, mounts, hardening e tentativa de a
 ## 🚨 Reportar um problema
 
 Não publique segredos, arquivos proprietários nem detalhes exploráveis sensíveis em uma issue pública. Use o mecanismo privado de reporte de vulnerabilidades do GitHub se estiver habilitado para o repositório; caso contrário, solicite um canal privado ao mantenedor antes de divulgar detalhes. Informe versão/commit, impacto, condições de reprodução minimizadas e evidência sanitizada.
+
+## Auditoria de imagens separadas
+
+Use `bash scripts/supply-chain-matrix.sh` para auditar as três imagens. A política de achados continua `report-only` até que haja triagem e correção/aceitação formal de riscos, mas falhas de download, hash, execução do scanner ou artefatos faltantes bloqueiam a auditoria. Os resultados completos ficam em `artifacts/{common,dolphin,mupen64plus}/`, e a matriz em `artifacts/matrix-summary.md`.
+
+O isolamento por imagem reduz a exposição do **dashboard e dos 18 agentes comuns**, mas Dolphin e Mupen64Plus continuam carregando suas próprias dependências; qualquer vulnerabilidade presente nesses perfis requer tratamento. Não confunda divisão de imagem com correção de CVE ou certificação de compatibilidade de jogos.
