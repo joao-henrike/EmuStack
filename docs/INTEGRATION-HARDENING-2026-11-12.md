@@ -36,3 +36,13 @@ Não declarar emuladores operacionais ou mergear em `main` com base somente em t
 ## SBOM — rastreamento de dependências
 
 O relatório Trivy agora apresenta, por achado, a cadeia SPDX de dependência desde o pacote raiz até o pacote vulnerável. A triagem de 14/11 identificou que GDCM/MariaDB chegam pelo stack APT do Mupen64Plus e libstb pelo Dolphin. A separação de imagens por perfil foi registrada como próxima mudança arquitetural, sem remover funcionalidades antes da validação de overlays e dos scans por imagem.
+
+
+## Imagens dedicadas por perfil
+
+- O alvo `runtime` é usado pelo dashboard, CLI e 18 agentes. Dolphin e Mupen64Plus recebem, respectivamente, `runtime-dolphin` e `runtime-mupen64plus`, com tags próprias.
+- Removidas do APT comum as dependências explícitas desses dois perfis. O instalador não coloca o AppImage Dolphin na imagem comum; o download oficial permanece disponível apenas no target Dolphin.
+- Registros de instalação por perfil atualizam o relatório herdado, sem apagar os estados de outros ambientes.
+- Adicionadas verificações de executáveis ausentes/presentes, três IDs Docker distintos e CI que constrói as três imagens.
+- Syft + Trivy são executados individualmente; o artefato inclui matriz de CVEs novos por perfil, com contagens por pacote e CVEs únicos.
+- Pendente: revisar os resultados específicos, corrigir vulnerabilidades aplicáveis e validar GPU, áudio, controle e execução gráfica no host Debian.
