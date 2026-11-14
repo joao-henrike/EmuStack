@@ -72,3 +72,17 @@ Host Debian Linux
 - **Não fazer:** instalar Debian 13 por cima do Debian 12; misturar repos APT do host; publicar dashboard em interface externa; dar socket Docker a agentes; copiar firmwares ou ROMs de terceiros para a imagem.
 
 Para uso geral, consulte [Instalação](INSTALLATION.md), [Gerenciador](EMULATOR_MANAGER.md), [Segurança](SECURITY.md) e [Aceitação](LOCAL_ACCEPTANCE.md).
+
+## Runtime por perfil: Dolphin e Mupen64Plus
+
+A imagem comum `local/emustack:0.7.1` (target `runtime`) não instala os pacotes APT do Dolphin/Mupen64Plus nem baixa o AppImage do Dolphin. Apenas `env-dolphin` usa o target `runtime-dolphin` e a imagem `local/emustack-dolphin:0.7.1`; apenas `env-mupen64plus` usa `runtime-mupen64plus` e `local/emustack-mupen64plus:0.7.1`. Os outros 18 agentes, dashboard e CLI usam a imagem comum. Os IPs, mounts de saves/jogos/BIOS e tokens exclusivos não mudaram.
+
+O instalador suporta `--exclude-dolphin` na imagem comum e `--only-profile dolphin|mupen64plus` nas variantes. No estágio dedicado, só o registro do perfil é atualizado, preservando os demais 19 resultados; `installed` continua indicando presença do executável, não compatibilidade de jogos.
+
+```bash
+docker compose -f compose.yaml build dashboard env-dolphin env-mupen64plus
+bash scripts/verify-profile-images.sh
+bash scripts/supply-chain-matrix.sh
+```
+
+A saída de segurança é segregada em `artifacts/common/`, `artifacts/dolphin/` e `artifacts/mupen64plus/`, com SPDX, Trivy JSON e sumários, mais `artifacts/matrix.json` e `artifacts/matrix-summary.md`. **Não use o scan da imagem comum como substituto dos scans específicos.** Essa separação não corrige automaticamente CVEs dos emuladores ou valida GPU/áudio/controle/jogos.
