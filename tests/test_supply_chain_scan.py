@@ -60,6 +60,12 @@ class SupplyChainScanContractTests(unittest.TestCase):
         self.assertIn("--vuln-type os,library", self.script)
         self.assertIn("--severity HIGH,CRITICAL", self.script)
 
+    def test_summary_exposes_dependency_chains_from_spdx_relationships(self):
+        self.assertIn('"DEPENDENCY_OF"', self.script)
+        self.assertIn("dependency_chains", self.script)
+        self.assertIn("dependency_chain", self.script)
+        self.assertIn("Dependency chain (root", self.script)
+
     def test_summary_distinguishes_package_findings_from_unique_cves(self):
         self.assertIn("unique_by_severity", self.script)
         self.assertIn("Package-level findings", self.script)

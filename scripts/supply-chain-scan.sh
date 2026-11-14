@@ -117,7 +117,7 @@ echo "Scanning OS/library vulnerabilities (HIGH,CRITICAL); findings are report-o
 python3 - "$LOCK_FILE" "$SBOM_PATH" "$TRIVY_PATH" "$SUMMARY_PATH" "$IMAGE_REF" "$IMAGE_ID" <<'PY'
 import json
 import sys
-from collections import Counter
+from collections import Counter, defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -126,6 +126,50 @@ lock = json.loads(Path(lock_path).read_text(encoding="utf-8"))
 sbom = json.loads(Path(sbom_path).read_text(encoding="utf-8"))
 scan = json.loads(Path(trivy_path).read_text(encoding="utf-8"))
 packages = sbom.get("packages", [])
+package_name_by_id = {
+    str(package.get("SPDXID")): str(package.get("name") or "UNKNOWN")
+    for package in packages
+    if package.get("SPDXID")
+}
+dependents = defaultdict(set)
+for relationship in sbom.get("relationships") or []:
+    if relationship.get("relationshipType") == "DEPENDENCY_OF":
+        dependency_id = relationship.get("spdxElementId")
+        parent_id = relationship.get("relatedSpdxElement")
+        if dependency_id in package_name_by_id and parent_id in package_name_by_id:
+            dependents[dependency_id].add(parent_id)
+
+dependency_chain_cache = {}
+def dependency_chains(package_name):
+    if package_name in dependency_chain_cache:
+        return dependency_chain_cache[package_name]
+    starts = sorted(
+        package_id for package_id, name in package_name_by_id.items()
+        if name == package_name
+    )
+    found = set()
+    for start in starts:
+        queue = deque([(start, [start])])
+        expanded = 0
+        while queue and expanded < 500:
+            current, path = queue.popleft()
+            expanded += 1
+            parents = sorted(
+                (parent for parent in dependents.get(current, set()) if parent not in path),
+                key=lambda parent: package_name_by_id.get(parent, "UNKNOWN"),
+            )
+            if not parents:
+                names = [package_name_by_id.get(package_id, "UNKNOWN") for package_id in reversed(path)]
+                found.add(" → ".join(names))
+                continue
+            if len(path) >= 12:
+                continue
+            for parent in parents[:12]:
+                queue.append((parent, path + [parent]))
+    result = sorted(found, key=lambda chain: (chain.count(" → "), chain))[:3]
+    dependency_chain_cache[package_name] = result
+    return result
+
 severity_counts = Counter()
 unique_by_severity = {}
 findings = []
@@ -134,13 +178,16 @@ for result in scan.get("Results") or []:
         severity = str(vulnerability.get("Severity") or "UNKNOWN").upper()
         severity_counts[severity] += 1
         unique_by_severity.setdefault(severity, set()).add(str(vulnerability.get("VulnerabilityID") or "UNKNOWN"))
+        package_name = str(vulnerability.get("PkgName") or "UNKNOWN")
+        chains = dependency_chains(package_name)
         findings.append({
             "severity": severity,
             "id": str(vulnerability.get("VulnerabilityID") or "UNKNOWN"),
-            "package": str(vulnerability.get("PkgName") or "UNKNOWN"),
+            "package": package_name,
             "installed": str(vulnerability.get("InstalledVersion") or "unknown"),
             "fixed": str(vulnerability.get("FixedVersion") or "no fix listed"),
             "target": str(result.get("Target") or "unknown"),
+            "dependency_chain": " ; ".join(chains) if chains else "not resolved from SPDX relationships",
         })
 rank = {"CRITICAL": 0, "HIGH": 1}
 findings.sort(key=lambda item: (rank.get(item["severity"], 9), item["package"], item["id"]))
@@ -182,11 +229,11 @@ if not findings:
     lines.append("No HIGH/CRITICAL findings were reported for the scanned image by this Trivy database snapshot.")
 else:
     lines.extend([
-        "| Severity | Vulnerability | Package | Installed | Fixed version | Target |",
-        "|---|---|---|---|---|---|",
+        "| Severity | Vulnerability | Package | Installed | Fixed version | Target | Dependency chain (root → vulnerable package) |",
+        "|---|---|---|---|---|---|---|",
     ])
     for finding in findings[:100]:
-        cells = [finding[key].replace("|", "\\|").replace("\n", " ") for key in ("severity", "id", "package", "installed", "fixed", "target")]
+        cells = [finding[key].replace("|", "\\|").replace("\n", " ").replace(";", "\\;")[:280] for key in ("severity", "id", "package", "installed", "fixed", "target", "dependency_chain")]
         lines.append("| " + " | ".join(cells) + " |")
 if len(findings) > 100:
     lines.extend(["", f"Showing 100 of {len(findings)} findings; see the complete JSON artifact."])

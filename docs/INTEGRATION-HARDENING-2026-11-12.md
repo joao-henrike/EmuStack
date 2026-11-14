@@ -31,3 +31,8 @@ Não declarar emuladores operacionais ou mergear em `main` com base somente em t
 - Primeira atualização de índices e instalação do APT corrigido usam `Acquire::Retries=0`, reduzindo a exposição do APT vulnerável antes da atualização.
 - Atualização de pacotes instalados antes de adicionar dependências de runtime; snapshots antigos falham fechados.
 - Relatório Trivy agora diferencia contagem de achados por pacote e CVEs únicos para evitar inflar a interpretação do inventário.
+
+
+## SBOM — rastreamento de dependências
+
+O relatório Trivy agora apresenta, por achado, a cadeia SPDX de dependência desde o pacote raiz até o pacote vulnerável. A triagem de 14/11 identificou que GDCM/MariaDB chegam pelo stack APT do Mupen64Plus e libstb pelo Dolphin. A separação de imagens por perfil foi registrada como próxima mudança arquitetural, sem remover funcionalidades antes da validação de overlays e dos scans por imagem.

@@ -24,6 +24,17 @@ O scanner da CI usa o snapshot de sua base de vulnerabilidades de 12/11/2026. O 
 
 O relatório também encontrou APT 3.0.3, vulnerável ao CVE-2026-109518. O Debian corrigiu o Trixie em APT 3.0.4 (DSA-6607-1, 04/11/2026). A branch de integração passa a exigir APT 3.0.4+, desativar retries na atualização inicial e atualizar pacotes antes de instalar dependências.
 
+## 4. Caminhos de dependência observados no SBOM
+
+O SBOM SPDX da execução #233 contém relações `DEPENDENCY_OF`. A cadeia aponta os seguintes consumidores raiz:
+
+- GDCM: `mupen64plus-*` → `libmupen64plus2` → `libopencv-videoio410` → `libopencv-imgcodecs410` → `libgdcm3.0t64`.
+- MariaDB client: `mupen64plus-*` → `libmupen64plus2` → `libopencv-videoio410` → `libgdal36` → `libmariadb3` → `mariadb-common`.
+- libstb: `dolphin-emu` → `libtinygltf6d` → `libstb0t64`.
+- libxml2: múltiplos consumidores, incluindo `dolphin-emu`/`retroarch` via `libavformat61`, Mupen64Plus via `libgphoto2` e Wine via `libxkbregistry0`.
+
+**Próxima alteração arquitetural recomendada, ainda não aplicada:** construir imagens de agente por perfil para que os pacotes APT de Dolphin e Mupen64Plus não sejam instalados em todos os 20 ambientes. Essa mudança deve vir acompanhada de SBOM/Trivy separado para cada imagem e testes de Compose que confirmem que apenas os serviços correspondentes usam os overlays. Não remover os pacotes do perfil atual sem uma imagem substituta validada.
+
 ## 4. Política de tratamento
 
 1. Não adicionar `--ignore-unfixed`, exclusões globais ou exceções sem prazo.
